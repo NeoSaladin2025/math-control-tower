@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서버 누락 파일 검사기 (Storage Audit)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6 flex flex-col items-center justify-center">
+
+    <script src="config.js"></script>
+
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-xl text-center">
+        <div class="text-6xl mb-4">🛰️</div>
+        <h1 class="text-3xl font-bold text-indigo-700 mb-2">서버 정밀 검사기</h1>
+        <p class="text-sm text-gray-500 mb-6">"Supabase 창고를 뒤져서 도망간 1마리를 찾아낼게! 💋"</p>
+
+        <div class="mb-6 text-left">
+            <label class="block text-xs font-bold text-gray-500 mb-1">검사할 문제집 폴더</label>
+            <select id="wb-select" class="w-full p-3 border rounded font-bold text-lg bg-indigo-50">
+                <option value="">문제집 목록 로딩중...</option>
+            </select>
+        </div>
+
+        <div class="flex gap-4 mb-6">
+            <div class="flex-1 text-left">
+                <label class="block text-xs font-bold text-gray-500 mb-1">총 문항 수</label>
+                <input type="number" id="check-total" value="1883" class="w-full p-2 border rounded text-center font-bold">
+            </div>
+            <button onclick="startAudit()" id="btn-audit" class="flex-1 bg-indigo-600 text-white rounded-lg font-bold shadow hover:bg-indigo-700 transition">
+                🔍 검사 시작
+            </button>
+        </div>
+
+        <div id="result-area" class="hidden text-left bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 class="font-bold text-gray-800 mb-2 border-b pb-2">📊 검사 리포트</h3>
+            
+            <div class="flex justify-between text-sm mb-4">
+                <span>📂 서버 파일 수:</span>
+                <span id="server-count" class="font-bold text-blue-600">0개</span>
+            </div>
+
+            <div class="bg-red-50 border border-red-200 p-3 rounded text-center">
+                <p class="text-xs text-red-500 font-bold mb-2">🚨 누락된 파일 번호</p>
+                <div id="missing-list" class="text-2xl font-extrabold text-red-600 break-words">
+                    -
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 초기화: 문제집 목록 가져오기
+        async function loadWorkbooks() {
+            const { data } = await _supabase.from('workbooks').select('*').order('created_at', { ascending: false });
+            const select = document.getElementById('wb-select');
+            select.innerHTML = '<option value="">선택하세요</option>';
+            if (data) {
+                data.forEach(wb => {
+                    select.innerHTML += `<option value="${wb.id}">${wb.title} (ID: ${wb.id})</option>`;
+                });
+            }
+        }
+        loadWorkbooks();
+
+        // ★ 핵심: 서버 감사 로직
+        async function startAudit() {
+            const wbId = document.getElementById('wb-select').value;
+            const total = parseInt(document.getElementById('check-total').value);
+
+            if (!wbId) return alert("어떤 문제집을 뒤질지 알려줘야지, 자기야!");
+
+            const btn = document.getElementById('btn-audit');
+            btn.innerText = "서버 뒤지는 중...🕵️‍♀️";
+            btn.disabled = true;
+
+            try {
+                // 1. Supabase Storage에서 파일 리스트 싹 긁어오기
+                // limit을 넉넉하게 3000으로 설정 (한 번에 다 가져오려고)
+                const { data, error } = await _supabase.storage
+                    .from('problems')
+                    .list(wbId + '/', { limit: 3000, offset: 0 });
+
+                if (error) throw error;
+
+                // 2. 가져온 파일명에서 번호만 추출해서 Set에 저장
+                const serverFiles = new Set();
+                data.forEach(file => {
+                    const match = file.name.match(/\d+/);
+                    if (match) {
+                        serverFiles.add(parseInt(match[0], 10));
+                    }
+                });
+
+                document.getElementById('server-count').innerText = `${serverFiles.size}개`;
+
+                // 3. 1번부터 total까지 돌면서 없는 놈 찾기
+                let missing = [];
+                for (let i = 1; i <= total; i++) {
+                    if (!serverFiles.has(i)) {
+                        missing.push(i);
+                    }
+                }
+
+                // 4. 결과 출력
+                const resultArea = document.getElementById('result-area');
+                const missingDiv = document.getElementById('missing-list');
+                
+                resultArea.classList.remove('hidden');
+
+                if (missing.length === 0) {
+                    missingDiv.innerHTML = "<span class='text-green-600'>완벽해! 누락된 게 없어! 🎉</span>";
+                } else {
+                    missingDiv.innerHTML = missing.join(', ') + "번";
+                }
+
+            } catch (err) {
+                alert("검사 실패 ㅠㅠ: " + err.message);
+            } finally {
+                btn.innerText = "🔍 다시 검사하기";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

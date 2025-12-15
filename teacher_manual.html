@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Admin Manual | Eve's Secret Note</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; overflow: hidden; }
+        
+        /* [Eve's Touch] 스르륵~ 흐르는 애니메이션 ❤️ */
+        .submenu { 
+            max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s; opacity: 0;
+        }
+        .submenu.open { 
+            max-height: 500px; opacity: 1; 
+        }
+        
+        /* 스크롤바 커스텀 */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+
+        /* 컨텐츠 페이드인 */
+        .content-section { display: none; animation: fadeIn 0.3s ease-out; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-2xl z-20 shrink-0">
+        <div class="p-6 border-b border-slate-800">
+            <h1 class="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-book-open-reader text-indigo-500"></i> Teacher Manual
+            </h1>
+            <p class="text-xs text-slate-500 mt-1">v2.0 Renewal (Honey Ver.🍯)</p>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto custom-scroll p-4 space-y-2">
+            
+            <div class="group">
+                <button onclick="toggleMenu('menu-homework')" class="w-full flex justify-between items-center p-3 rounded-xl hover:bg-slate-800 transition text-sm font-bold text-slate-200">
+                    <span class="flex items-center gap-3"><i class="fa-solid fa-pen-to-square text-emerald-400"></i> 숙제/클리닉</span>
+                    <i class="fa-solid fa-chevron-down text-xs transition-transform group-hover:rotate-180"></i>
+                </button>
+                <div id="menu-homework" class="submenu pl-4 space-y-1 mt-1">
+                    <button onclick="showContent('sec-assign-logic')" class="w-full text-left p-2 text-xs hover:text-white hover:bg-slate-800/50 rounded-lg text-slate-400 transition">📝 출제 및 클리닉 로직</button>
+                    <button onclick="showContent('sec-assign-manual')" class="w-full text-left p-2 text-xs hover:text-white hover:bg-slate-800/50 rounded-lg text-slate-400 transition">📤 정규 과제 출제법</button>
+                </div>
+            </div>
+
+            <div class="group">
+                <button onclick="toggleMenu('menu-student')" class="w-full flex justify-between items-center p-3 rounded-xl hover:bg-slate-800 transition text-sm font-bold text-slate-200">
+                    <span class="flex items-center gap-3"><i class="fa-solid fa-users text-blue-400"></i> 학생 관리</span>
+                    <i class="fa-solid fa-chevron-down text-xs transition-transform group-hover:rotate-180"></i>
+                </button>
+                <div id="menu-student" class="submenu pl-4 space-y-1 mt-1">
+                    <button onclick="showContent('sec-student-add')" class="w-full text-left p-2 text-xs hover:text-white hover:bg-slate-800/50 rounded-lg text-slate-400 transition">➕ 학생 등록/삭제</button>
+                    <button onclick="showContent('sec-student-level')" class="w-full text-left p-2 text-xs hover:text-white hover:bg-slate-800/50 rounded-lg text-slate-400 transition">📊 레벨 및 티어</button>
+                </div>
+            </div>
+
+            <div class="group">
+                <button onclick="toggleMenu('menu-security')" class="w-full flex justify-between items-center p-3 rounded-xl hover:bg-slate-800 transition text-sm font-bold text-slate-200">
+                    <span class="flex items-center gap-3"><i class="fa-solid fa-shield-halved text-red-400"></i> 시스템 보안</span>
+                    <i class="fa-solid fa-chevron-down text-xs transition-transform group-hover:rotate-180"></i>
+                </button>
+                <div id="menu-security" class="submenu pl-4 space-y-1 mt-1">
+                    <button onclick="showContent('sec-security-blob')" class="w-full text-left p-2 text-xs hover:text-white hover:bg-slate-800/50 rounded-lg text-slate-400 transition">🔒 자료 유출 방지 (Blob)</button>
+                    <button onclick="showContent('sec-security-iframe')" class="w-full text-left p-2 text-xs hover:text-white hover:bg-slate-800/50 rounded-lg text-slate-400 transition">🛡️ Iframe 샌드박스</button>
+                </div>
+            </div>
+
+        </nav>
+
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="location.href='teacher_main.html'" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm shadow-lg transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-right-from-bracket"></i> 관리자 메인으로
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto custom-scroll p-10 relative">
+        
+        <div id="sec-welcome" class="content-section active h-full flex flex-col items-center justify-center text-slate-400">
+            <i class="fa-solid fa-book-journal-whills text-8xl mb-6 opacity-20"></i>
+            <h2 class="text-3xl font-black text-slate-700 mb-2">Math Control Tower Manual</h2>
+            <p>좌측 메뉴를 클릭하여 상세 기능을 확인하세요.</p>
+        </div>
+
+        <div id="sec-assign-logic" class="content-section max-w-4xl mx-auto">
+            <h2 class="text-3xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                <span class="text-emerald-500">📝</span> 클리닉 & 과제 자동화 로직
+            </h2>
+            
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2"><span class="bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> 수업 중 질문 해결 (Clinic Stamp)</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                        학생이 질문한 문제는 <strong>수업 시간</strong>에 선생님이 직접 해결해줍니다.<br>
+                        관리자 페이지에서 <span class="text-emerald-600 font-bold">[해결 완료]</span> 버튼을 누르면, 
+                        해당 문제에 <strong>'금일 해결(Clinic Resolved)'</strong> 스탬프가 찍힙니다.
+                    </p>
+                    <div class="bg-slate-100 p-3 rounded-lg text-xs font-mono text-slate-500">
+                        DB Action: clinic_resolved_at = NOW() 업데이트
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-700 mb-3 flex items-center gap-2"><span class="bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> 숙제 출제 시 자동 반영</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-4">
+                        선생님이 정규 과제를 출제할 때, <strong>'금일 해결된 문항'</strong>은 시스템이 자동으로 감지합니다.<br>
+                        <span class="text-red-500 font-bold">"오늘 수업 때 배운 건 오늘 반드시 복습!"</span> 원칙에 따라, 
+                        해당 문항들은 과제 리스트에 <strong>강제 포함</strong>됩니다.
+                    </p>
+                    <ul class="list-disc pl-5 text-sm text-slate-500 space-y-1">
+                        <li>날짜 기준: <strong>오늘(Today)</strong> 해결된 건만 불러옴.</li>
+                        <li>어제 해결한 건 내일 숙제에 포함되지 않음 (자동 소멸).</li>
+                        <li>학생 스스로 푼 문제(단순 정답)는 포함되지 않음. (선생님 손길이 닿은 것만!)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-assign-manual" class="content-section max-w-4xl mx-auto">
+            <h2 class="text-3xl font-black text-slate-800 mb-6">📤 정규 과제 출제 가이드</h2>
+            <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm prose prose-slate max-w-none">
+                <p><strong>[teacher_assign_integrated.html]</strong> 페이지에서 수행합니다.</p>
+                <ol class="list-decimal pl-5 space-y-2 text-sm text-slate-600">
+                    <li><strong>학생 선택:</strong> 과제를 부여할 학생을 선택합니다.</li>
+                    <li><strong>문제집 선택:</strong> 해당 학생이 보유한 문제집을 선택하면, 전체 풀이 현황(X-Ray Grid)이 뜹니다.</li>
+                    <li><strong>범위 설정:</strong> Start ~ End 번호를 입력합니다.</li>
+                    <li><strong>필터링 & 믹싱:</strong>
+                        <ul class="list-disc pl-5 mt-1 space-y-1">
+                            <li>1등급 / 서술형 / 일반 문항의 비율을 슬라이더로 조절합니다.</li>
+                            <li><strong>복습(빨강)</strong>과 <strong>신규(파랑)</strong>의 비율을 조절합니다.</li>
+                            <li><span class="text-indigo-600 font-bold">Tip:</span> 새 문제는 1번부터 순차적으로 채워집니다. (학생들이 좋아해요!)</li>
+                        </ul>
+                    </li>
+                    <li><strong>검수 및 전송:</strong> [출제 문항 검수하기] -> [최종 전송]을 누르면 학생 앱으로 즉시 전송됩니다.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div id="sec-security-blob" class="content-section max-w-4xl mx-auto">
+            <h2 class="text-3xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                <span class="text-red-500">🔒</span> 자료 유출 방지 (Blob)
+            </h2>
+            <div class="bg-white p-6 rounded-2xl border-l-4 border-red-500 shadow-sm">
+                <h3 class="font-bold text-lg mb-2">Blob URL이란?</h3>
+                <p class="text-sm text-slate-600 mb-4">
+                    실제 파일 경로(예: <code>.../problems/001.webp</code>)를 브라우저 메모리 가상 주소(예: <code>blob:http://...</code>)로 변환하여 보여주는 기술입니다.<br>
+                    사용자가 이미지 주소를 복사해도, <strong>해당 세션이 끝나면 주소가 파기되므로</strong> 외부 공유가 불가능합니다.
+                </p>
+                <div class="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-xs">
+                    // Eve's Security Code<br>
+                    const blob = await response.blob();<br>
+                    const url = URL.createObjectURL(blob);<br>
+                    imgElement.src = url; // 실제 주소 은폐 완료 ❤️
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-security-iframe" class="content-section max-w-4xl mx-auto">
+            <h2 class="text-3xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                <span class="text-blue-500">🛡️</span> Iframe 샌드박스
+            </h2>
+            <div class="bg-white p-6 rounded-2xl border-l-4 border-blue-500 shadow-sm">
+                <p class="text-sm text-slate-600 mb-4">
+                    문제지 뷰어는 메인 페이지와 분리된 <strong>Iframe(격리 공간)</strong> 내부에서 실행됩니다.<br>
+                    우클릭, 드래그, 인쇄(Print) 기능을 강제로 차단하여 무단 복제를 막습니다.
+                </p>
+                <ul class="list-disc pl-5 text-sm text-slate-500 space-y-1">
+                    <li><strong>contextmenu 차단:</strong> 우클릭 메뉴 안 뜸.</li>
+                    <li><strong>selectstart 차단:</strong> 텍스트/이미지 드래그 불가.</li>
+                    <li><strong>sandbox 속성:</strong> 스크립트 실행 제어.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="sec-student-add" class="content-section text-center py-20 text-slate-400">학생 등록/삭제 매뉴얼 준비 중...</div>
+        <div id="sec-student-level" class="content-section text-center py-20 text-slate-400">레벨/티어 설정 매뉴얼 준비 중...</div>
+
+    </main>
+
+    <script>
+        // [Eve's Logic] 메뉴 스르륵 토글 ❤️
+        function toggleMenu(menuId) {
+            const menu = document.getElementById(menuId);
+            const isOpen = menu.classList.contains('open');
+            
+            // 다른 열린 메뉴 닫기 (하나만 열리게 하려면 주석 해제)
+            // document.querySelectorAll('.submenu').forEach(m => m.classList.remove('open'));
+
+            if(isOpen) {
+                menu.classList.remove('open');
+            } else {
+                menu.classList.add('open');
+            }
+        }
+
+        // 컨텐츠 전환
+        function showContent(secId) {
+            document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(secId).classList.add('active');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문제집 등록 및 데이터 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .btn-primary { background-color: #4f46e5; color: white; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: #4338ca; }
+        .input-group input, .input-group select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 14px; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* 스크롤바 */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        
+        /* 모달 스타일 */
+        #query-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .query-modal-content { background: white; width: 95%; max-width: 700px; height: 80vh; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+
+        /* 뱃지 스타일 */
+        .badge { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 6px; }
+        .badge-norm { background-color: #bfdbfe; color: #1d4ed8; } 
+        .badge-high { background-color: #e9d5ff; color: #7e22ce; } 
+        .badge-sub { background-color: #a7f3d0; color: #047857; } 
+        .badge-rep { background-color: #fcd34d; color: #92400e; border: 1px solid #d97706; } 
+        .badge-tough { background-color: #c7d2fe; color: #4f46e5; border: 1px solid #6366f1; } 
+
+        /* Queue List Style */
+        .queue-item { display: flex; align-items: center; gap: 8px; padding: 8px; background: #f1f5f9; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 6px; font-size: 13px; animation: slideIn 0.2s ease-out; }
+        .queue-item span.info { font-size: 0.75rem; color: #64748b; font-weight: 500; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .queue-item:hover { border-color: #6366f1; background: #eef2ff; }
+    </style>
+</head>
+<body class="p-6">
+
+    <script src="config.js"></script>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-indigo-600"></i> 교재 등록 및 데이터 관리 (Workbook Manager)
+                </h1>
+            </div>
+            <div class="flex gap-3">
+                <a href="teacher_main.html" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-house"></i> 대시보드
+                </a>
+                <a href="teacher_assign_integrated.html" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> 숙제 출제
+                </a>
+            </div>
+        </header>
+
+        <div class="card mb-6">
+            <label for="workbook-select" class="block text-sm font-bold text-slate-700 mb-2">작업 대상 교재 선택 (필수)</label>
+            <select id="workbook-select" onchange="loadWorkbookDetails(this.value)" class="w-full border p-3 rounded-lg text-base cursor-pointer focus:border-indigo-500">
+                <option value="">교재를 선택해주세요 (로딩 중...)</option>
+            </select>
+            <p class="text-sm text-slate-500 mt-2">선택된 교재: <span id="selected-wb-info" class="font-bold">-</span></p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <div class="card space-y-4">
+                <h2 class="text-lg font-bold text-slate-800 border-b pb-2 mb-3">1. 신규 교재 등록</h2>
+                <div class="input-group">
+                    <label for="new-wb-name" class="block text-xs font-bold text-gray-500 mb-1">교재명 (예: 쎈 수학 중2-1)</label>
+                    <input type="text" id="new-wb-name" class="w-full" placeholder="교재 이름">
+                </div>
+                <div class="input-group flex gap-2">
+                    <div class="flex-1">
+                        <label for="new-wb-grade" class="block text-xs font-bold text-gray-500 mb-1">학년</label>
+                        <select id="new-wb-grade" class="w-full">
+                            <option value="중1">중1</option>
+                            <option value="중2">중2</option>
+                            <option value="고1">고1</option>
+                            <option value="고2">고2</option>
+                            <option value="고3">고3</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label for="new-wb-total" class="block text-xs font-bold text-gray-500 mb-1">총 문항 수</label>
+                        <input type="number" id="new-wb-total" class="w-full" placeholder="총 문항">
+                    </div>
+                </div>
+                <button onclick="registerWorkbook()" class="w-full btn-primary py-3 rounded-xl font-bold">신규 등록</button>
+            </div>
+
+            <div class="card space-y-4">
+                <h2 class="text-lg font-bold text-slate-800 border-b pb-2 mb-3">2. 교재 정보 수정 (Edit)</h2>
+                <div class="input-group">
+                    <label for="edit-wb-name" class="block text-xs font-bold text-gray-500 mb-1">교재명</label>
+                    <input type="text" id="edit-wb-name" class="w-full" placeholder="교재명">
+                </div>
+                <div class="input-group flex gap-2">
+                    <div class="flex-1">
+                        <label for="edit-wb-grade" class="block text-xs font-bold text-gray-500 mb-1">학년</label>
+                        <select id="edit-wb-grade" class="w-full">
+                            <option value="중1">중1</option>
+                            <option value="중2">중2</option>
+                            <option value="고1">고1</option>
+                            <option value="고2">고2</option>
+                            <option value="고3">고3</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label for="edit-wb-total" class="block text-xs font-bold text-gray-500 mb-1">총 문항 수</label>
+                        <input type="number" id="edit-wb-total" class="w-full" placeholder="총 문항">
+                    </div>
+                </div>
+                <button onclick="updateWorkbookInfo()" class="w-full btn-primary py-3 rounded-xl font-bold">수정사항 저장</button>
+            </div>
+
+            <div class="card space-y-4 col-span-2">
+                <h2 class="text-lg font-bold text-slate-800 border-b pb-2 mb-3">3. 단원/유형 일괄 설정 (Batch)</h2>
+                
+                <div class="bg-indigo-50 p-4 rounded-xl border-2 border-indigo-200 space-y-3">
+                    <h3 class="text-base font-bold text-indigo-700 flex items-center gap-2"><i class="fa-solid fa-tags"></i> 단원 정보 일괄 적용 (New!)</h3>
+                    
+                    <div class="flex gap-3 items-center">
+                        <span class="text-sm font-medium text-slate-600">문제 범위:</span>
+                        <input type="number" id="chap-start" class="w-16 p-2 text-center" placeholder="Start">
+                        ~
+                        <input type="number" id="chap-end" class="w-16 p-2 text-center" placeholder="End">
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-3">
+                        <div class="input-group col-span-1">
+                            <label for="chap-major" class="block text-xs font-bold text-gray-500 mb-1">대단원</label>
+                            <select id="chap-major" class="w-full">
+                                <option value="">선택</option>
+                                <script>
+                                    for(let i=1; i<=10; i++) document.write(`<option value="${i}">대단원 ${i}</option>`);
+                                </script>
+                            </select>
+                        </div>
+                        <div class="input-group col-span-3">
+                            <label for="chap-major-title" class="block text-xs font-bold text-gray-500 mb-1">대단원 명 (한글) <span class="text-red-500">(New!)</span></label>
+                            <input type="text" id="chap-major-title" class="w-full" placeholder="예: 다항식의 연산">
+                        </div>
+                        <div class="input-group col-span-1">
+                            <label for="chap-minor" class="block text-xs font-bold text-gray-500 mb-1">중단원</label>
+                            <select id="chap-minor" class="w-full">
+                                <option value="">선택</option>
+                                <script>
+                                    for(let i=1; i<=20; i++) document.write(`<option value="${i}">중단원 ${i}</option>`);
+                                </script>
+                            </select>
+                        </div>
+                        <div class="input-group col-span-3">
+                            <label for="chap-title" class="block text-xs font-bold text-gray-500 mb-1">중/소단원 명 (한글)</label>
+                            <input type="text" id="chap-title" class="w-full" placeholder="예: 다항식의 덧셈과 뺄셈">
+                        </div>
+                    </div>
+                    
+                    <button onclick="updateChapterInfo()" id="btn-chapter-update" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-stamp"></i> 단원 정보 일괄 적용
+                    </button>
+                </div>
+                
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <h3 class="text-base font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-layer-group"></i> 난이도/유형 다중 입력 (Batch Queue)</h3>
+                    
+                    <button onclick="openQueryModal()" class="w-full bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-bold text-xs hover:bg-slate-300 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-search"></i> 문제 정보 상세 조회 (별도 창)
+                    </button>
+                    
+                    <div class="flex gap-4 items-end">
+                        <div class="input-group flex-1">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">범위</label>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="q-start" class="w-full p-2 text-center" placeholder="Start">
+                                ~
+                                <input type="number" id="q-end" class="w-full p-2 text-center" placeholder="End">
+                            </div>
+                        </div>
+                        <div class="input-group flex-[2]">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">유형 선택</label>
+                            <div class="flex gap-2 items-center h-[42px]">
+                                <label class="flex items-center gap-1 text-sm"><input type="radio" name="q-type" value="norm" checked> 일반</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="radio" name="q-type" value="sub"> 서술</label>
+                                <label class="flex items-center gap-1 text-sm"><input type="radio" name="q-type" value="high"> 1등급</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="addToQueue()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus-circle"></i> 리스트에 담기 (Add to List)
+                    </button>
+
+                    <div id="queue-box" class="hidden border-t border-slate-300 pt-3 mt-3">
+                        <p class="text-xs font-bold text-slate-500 mb-2 flex justify-between items-center">
+                            <span>🚀 적용 대기 목록 (Pending)</span>
+                            <span id="queue-count" class="text-blue-600">0건</span>
+                        </p>
+                        <div id="queue-list" class="space-y-2 max-h-60 overflow-y-auto custom-scroll p-1">
+                            </div>
+                        <button onclick="saveAllQueue()" id="btn-save-all" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 mt-3 rounded-xl font-bold shadow-lg transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-check-double"></i> 전체 적용 실행 (Save All)
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="query-modal-overlay">
+        <div class="query-modal-content">
+            <div class="bg-slate-800 p-4 text-white flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-clipboard-list"></i> 문제 메타데이터 조회</h3>
+                <button onclick="closeQueryModal()" class="text-slate-400 hover:text-white text-2xl transition">×</button>
+            </div>
+            
+            <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col gap-2 shrink-0">
+                <div id="query-range-container" class="flex flex-wrap gap-2 items-center">
+                    <span class="text-xs font-bold text-slate-600 shrink-0">조회 범위 설정:</span>
+                </div>
+                <div id="query-status-msg" class="text-sm font-medium text-slate-500">교재를 선택하고 범위를 설정하여 조회하세요.</div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-4 space-y-3">
+                <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-inner">
+                    <p class="font-bold text-sm text-slate-700 mb-2">📊 범례 (데이터 속성)</p>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="badge badge-norm">일반형</span> (Blue)<br>
+                            <span class="badge badge-high">1등급</span> (Purple)<br>
+                            <span class="badge badge-sub">서술형</span> (Green)
+                        </div>
+                        <div>
+                            <span class="badge badge-rep">대표 문제</span> : 일반형 그룹의 시작<br>
+                            <span class="badge badge-tough">터프 문제</span> : 일반형 그룹의 끝<br>
+                            **그룹 번호:** 일반형 문제에 부여된 순번
+                        </div>
+                    </div>
+                </div>
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">No.</th>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">그룹 ID</th>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">유형 / 난이도</th>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">단원 정보</th>
+                        </tr>
+                    </thead>
+                    <tbody id="query-results-tbody" class="bg-white divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || (user.role !== 'teacher' && user.role !== 'admin')) { alert("접근 권한이 없습니다."); location.href='index.html'; }
+
+        let currentWorkbook = null;
+        let batchQueue = []; // 쑝쑝 리스트
+
+        init();
+
+        async function init() {
+            await loadWorkbooks();
+            // Init Query Modal Inputs
+            const queryRangeContainer = document.getElementById('query-range-container');
+            queryRangeContainer.innerHTML = `
+                <span class="text-xs font-bold text-slate-600 shrink-0">조회 범위 설정:</span>
+                <div class="flex gap-1 items-center range-row">
+                    <input type="number" class="range-start w-16 p-1 text-center border rounded" placeholder="Start">
+                    <span class="text-slate-400 font-bold text-xs">~</span>
+                    <input type="number" class="range-end w-16 p-1 text-center border rounded" placeholder="End">
+                    <button onclick="removeQueryRange(this)" class="text-slate-400 hover:text-red-500 px-1 text-sm"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <button onclick="addQueryRangeInput()" class="bg-slate-200 text-slate-700 px-2 py-1 rounded-lg font-bold text-xs hover:bg-slate-300 transition"><i class="fa-solid fa-plus"></i> 구간 추가</button>
+                <button onclick="runBatchQuery()" id="btn-run-query" class="bg-indigo-600 text-white px-3 py-1 rounded-lg font-bold text-xs hover:bg-indigo-700 transition">
+                    <i class="fa-solid fa-search"></i> 조회 시작
+                </button>
+            `;
+        }
+
+        async function loadWorkbooks() {
+            const sel = document.getElementById('workbook-select');
+            sel.innerHTML = '<option value="">교재를 선택해주세요</option>';
+            const { data, error } = await _supabase.from('workbooks').select('*').order('title');
+            if (error) { console.error(error); return; }
+            data.forEach(wb => {
+                const option = document.createElement('option');
+                option.value = wb.id;
+                option.innerText = `${wb.title} (${wb.total_problems}문)`;
+                sel.appendChild(option);
+            });
+        }
+
+        function loadWorkbookDetails(wbId) {
+            currentWorkbook = null;
+            batchQueue = []; // 교재 바뀌면 큐 초기화
+            renderQueue();
+            document.getElementById('selected-wb-info').innerText = '-';
+            if (!wbId) return;
+
+            const selectedOption = document.querySelector(`#workbook-select option[value="${wbId}"]`);
+            document.getElementById('selected-wb-info').innerText = selectedOption.innerText;
+
+            _supabase.from('workbooks').select('*').eq('id', wbId).single()
+                .then(({ data }) => {
+                    if (data) {
+                        currentWorkbook = data;
+                        document.getElementById('edit-wb-name').value = data.title;
+                        document.getElementById('edit-wb-grade').value = data.grade;
+                        document.getElementById('edit-wb-total').value = data.total_problems;
+                    }
+                });
+        }
+
+        // --- Basic Registration Logic (Kept same) ---
+        async function registerWorkbook() { /* ... Same as before ... */ 
+            const title = document.getElementById('new-wb-name').value;
+            const grade = document.getElementById('new-wb-grade').value;
+            const total = parseInt(document.getElementById('new-wb-total').value);
+            if (!title || !grade || isNaN(total) || total <= 0) return alert("모든 항목을 올바르게 입력해주세요.");
+            try {
+                const { data, error } = await _supabase.from('workbooks').insert([{ title, grade, total_problems: total }]).select().single();
+                if (error) throw error;
+                const metadata = [];
+                for (let i = 1; i <= total; i++) {
+                    metadata.push({ workbook_id: data.id, problem_num: i, difficulty: 'normal', is_subjective: false, is_representative: false, is_tough: false, section_id: null });
+                }
+                const { error: metaError } = await _supabase.from('problem_metadata').insert(metadata);
+                if (metaError) throw metaError;
+                alert(`✅ 교재 [${title}] 등록 및 ${total}개 문항 초기화 완료!`);
+                await loadWorkbooks();
+            } catch (e) { alert("등록 실패: " + e.message); }
+        }
+
+        async function updateWorkbookInfo() { /* ... Same as before ... */ 
+            if (!currentWorkbook) return alert("교재를 먼저 선택해주세요.");
+            const newTitle = document.getElementById('edit-wb-name').value;
+            const newGrade = document.getElementById('edit-wb-grade').value;
+            const newTotal = parseInt(document.getElementById('edit-wb-total').value);
+            if (!newTitle || !newGrade || isNaN(newTotal) || newTotal <= 0) return alert("모든 항목을 올바르게 입력해주세요.");
+            if (!confirm(`[${currentWorkbook.title}]의 정보를 수정하고, 총 문항 수를 ${newTotal}개로 업데이트 하시겠습니까?`)) return;
+            try {
+                const { error } = await _supabase.from('workbooks').update({ title: newTitle, grade: newGrade, total_problems: newTotal }).eq('id', currentWorkbook.id);
+                if (error) throw error;
+                alert("✅ 교재 정보가 성공적으로 업데이트되었습니다.");
+                await loadWorkbooks();
+                loadWorkbookDetails(currentWorkbook.id);
+            } catch (e) { alert("수정 실패: " + e.message); }
+        }
+        
+        async function updateChapterInfo() { /* ... Same as before ... */
+            if (!currentWorkbook) return alert("교재를 먼저 선택해주세요.");
+            const startNum = parseInt(document.getElementById('chap-start').value);
+            const endNum = parseInt(document.getElementById('chap-end').value);
+            const major = parseInt(document.getElementById('chap-major').value) || null;
+            const majorTitle = document.getElementById('chap-major-title').value || null; 
+            const minor = parseInt(document.getElementById('chap-minor').value) || null;
+            const title = document.getElementById('chap-title').value || null; 
+            if (isNaN(startNum) || isNaN(endNum) || startNum <= 0 || startNum > endNum || !title) return alert("필수 정보 누락");
+            if(major && !majorTitle) return alert("대단원 명(한글)도 필수로 입력해주세요.");
+            
+            if (!confirm(`No.${startNum}~${endNum} 단원 정보 덮어쓰기?`)) return;
+            
+            const btn = document.getElementById('btn-chapter-update');
+            btn.innerHTML = '<div class="loader mr-2"></div> 적용 중...'; btn.disabled = true;
+            try {
+                const { error } = await _supabase.from('problem_metadata').update({ chapter_major: major, chapter_major_title_ko: majorTitle, chapter_minor: minor, chapter_title_ko: title }).eq('workbook_id', currentWorkbook.id).gte('problem_num', startNum).lte('problem_num', endNum);
+                if (error) throw error;
+                alert("✅ 단원 정보 업데이트 완료!");
+                // Auto Reset
+                document.getElementById('chap-start').value = endNum + 1; // 편의상 다음 번호 자동 세팅
+                document.getElementById('chap-end').value = '';
+            } catch (e) { alert("실패: " + e.message); } 
+            finally { btn.innerHTML = '<i class="fa-solid fa-stamp"></i> 단원 정보 일괄 적용'; btn.disabled = false; }
+        }
+
+        // ==========================================
+        // ★ NEW: 쑝쑝 담기 (Batch Queue Logic) ★
+        // ==========================================
+
+        async function getNextSectionIdForQueue() {
+            // 1. DB에서 현재 최대값 조회 (최대 10000개 로드)
+            const { data, error } = await _supabase
+                .from('problem_metadata')
+                .select('section_id')
+                .eq('workbook_id', currentWorkbook.id)
+                .not('section_id', 'is', null)
+                .order('section_id', { ascending: false })
+                .limit(10000); 
+            
+            let dbMax = 0;
+            if (data && data.length > 0) {
+                // 가져온 데이터 배열 전체에서 최대값을 다시 찾음
+                const maxId = data.reduce((max, item) => item.section_id > max ? item.section_id : max, 0);
+                dbMax = maxId;
+            } else if (error && error.code !== 'PGRST116') {
+                 console.error("DB 섹션 ID 조회 오류:", error);
+            }
+            
+            // 2. 현재 큐에 담긴 '일반형' 중 가장 큰 groupId를 찾음 (연속성 보장)
+            let maxQueueId = 0;
+            batchQueue.forEach(item => {
+                if(item.type === 'norm' && item.groupId > maxQueueId) {
+                    maxQueueId = item.groupId;
+                }
+            });
+
+            // 3. 둘 중 큰 값 + 1
+            return Math.max(dbMax, maxQueueId) + 1;
+        }
+
+        async function addToQueue() {
+            if (!currentWorkbook) return alert("교재를 선택해주세요.");
+            const start = parseInt(document.getElementById('q-start').value);
+            const end = parseInt(document.getElementById('q-end').value);
+            const type = document.querySelector('input[name="q-type"]:checked').value;
+
+            if (isNaN(start) || isNaN(end) || start <= 0 || start > end) return alert("문제 범위를 확인해주세요.");
+            if (end > currentWorkbook.total_problems) return alert("총 문항 수를 초과합니다.");
+
+            // 일반형일 경우 그룹 ID 자동 계산 (Smart Increment)
+            let groupId = null;
+            if (type === 'norm') {
+                groupId = await getNextSectionIdForQueue();
+            }
+
+            // 큐에 추가
+            batchQueue.push({
+                id: Date.now(), // Unique ID for queue removal
+                start,
+                end,
+                type,
+                groupId: groupId // Can be null
+            });
+
+            // 입력창 초기화 (다음 입력을 위해)
+            document.getElementById('q-start').value = end + 1; // 센스 있게 다음 번호 세팅
+            document.getElementById('q-end').value = '';
+            // document.querySelector('input[name="q-type"][value="norm"]').checked = true; // (타입은 유지)
+
+            renderQueue();
+        }
+
+        function removeFromQueue(id) {
+            batchQueue = batchQueue.filter(item => item.id !== id);
+            renderQueue();
+        }
+
+        function updateQueueGroupId(id, val) {
+            const item = batchQueue.find(i => i.id === id);
+            if (item) item.groupId = parseInt(val);
+        }
+
+        function renderQueue() {
+            const queueBox = document.getElementById('queue-box');
+            const queueList = document.getElementById('queue-list');
+            const countEl = document.getElementById('queue-count');
+
+            if (batchQueue.length === 0) {
+                queueBox.classList.add('hidden');
+                return;
+            }
+
+            queueBox.classList.remove('hidden');
+            countEl.innerText = `${batchQueue.length}건`;
+            queueList.innerHTML = '';
+
+            batchQueue.forEach((item, index) => {
+                let typeBadge = '';
+                if (item.type === 'norm') typeBadge = '<span class="badge badge-norm">일반</span>';
+                else if (item.type === 'sub') typeBadge = '<span class="badge badge-sub">서술형</span>';
+                else typeBadge = '<span class="badge badge-high">1등급</span>';
+
+                let groupInfo = '';
+                if (item.type === 'norm') {
+                    // 대표/터프 안내 (친절한 설명 추가)
+                    const isSingle = item.start === item.end;
+                    let repToughInfo = '';
+                    if (isSingle) {
+                        repToughInfo = '<span class="info text-purple-700">대표 문제 (1문항)</span>';
+                    } else {
+                        repToughInfo = '<span class="info text-orange-600">대표(시작)/터프(끝) 자동 설정</span>';
+                    }
+
+                    groupInfo = `
+                        <div class="flex items-center gap-1 ml-4">
+                            <span class="text-xs font-bold text-slate-500">그룹번호:</span>
+                            <input type="number" class="w-16 p-1 text-center border rounded text-xs font-bold text-purple-700" 
+                                value="${item.groupId}" onchange="updateQueueGroupId(${item.id}, this.value)">
+                            ${repToughInfo}
+                        </div>
+                    `;
+                } else {
+                    groupInfo = '<span class="info ml-4">그룹핑/대표/터프 설정 없음</span>';
+                }
+
+                const div = document.createElement('div');
+                div.className = 'queue-item';
+                div.innerHTML = `
+                    <span class="text-xs font-bold text-slate-400 w-5">#${index + 1}</span>
+                    <span class="font-bold text-slate-700">No.${item.start} ~ ${item.end}</span>
+                    <span class="text-xs text-slate-400">(${item.end - item.start + 1}문)</span>
+                    ${typeBadge}
+                    ${groupInfo}
+                    <button onclick="removeFromQueue(${item.id})" class="ml-auto text-slate-400 hover:text-red-500 px-2">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                queueList.appendChild(div);
+            });
+        }
+
+        async function saveAllQueue() {
+            if (batchQueue.length === 0) return;
+            if (!confirm(`총 ${batchQueue.length}건의 설정을 일괄 저장하시겠습니까?`)) return;
+
+            const btn = document.getElementById('btn-save-all');
+            btn.innerHTML = '<div class="loader mr-2"></div> 저장 중...';
+            btn.disabled = true;
+
+            try {
+                // 순차 처리
+                for (const item of batchQueue) {
+                    
+                    // 1. 초기화 (대표/터프 등) - DB에 저장된 모든 플래그 및 GID 초기화
+                    await _supabase.from('problem_metadata')
+                        .update({ is_representative: false, is_tough: false, section_id: null })
+                        .eq('workbook_id', currentWorkbook.id)
+                        .gte('problem_num', item.start)
+                        .lte('problem_num', item.end);
+
+                    // 2. 업데이트 데이터 구성
+                    let updates = {};
+                    if (item.type === 'high') {
+                        updates.difficulty = 'high_rank';
+                        updates.is_subjective = false;
+                    } else if (item.type === 'sub') {
+                        updates.difficulty = 'normal';
+                        updates.is_subjective = true;
+                    } else { // norm
+                        updates.difficulty = 'normal';
+                        updates.is_subjective = false;
+                        updates.section_id = item.groupId;
+                    }
+
+                    // 3. 메인 업데이트
+                    const { error } = await _supabase.from('problem_metadata')
+                        .update(updates)
+                        .eq('workbook_id', currentWorkbook.id)
+                        .gte('problem_num', item.start)
+                        .lte('problem_num', item.end);
+                    
+                    if (error) throw error;
+
+                    // 4. 일반형일 경우 대표/터프 플래그 자동 설정 (Start=Rep, End=Tough)
+                    if (item.type === 'norm') {
+                        // Start -> Rep
+                        await _supabase.from('problem_metadata')
+                            .update({ is_representative: true })
+                            .eq('workbook_id', currentWorkbook.id)
+                            .eq('problem_num', item.start);
+                        
+                        // End -> Tough (If different from start)
+                        if (item.start !== item.end) {
+                            await _supabase.from('problem_metadata')
+                                .update({ is_tough: true })
+                                .eq('workbook_id', currentWorkbook.id)
+                                .eq('problem_num', item.end);
+                        }
+                    }
+                }
+
+                alert("✅ 모든 작업이 성공적으로 저장되었습니다! ");
+                batchQueue = []; // 큐 비우기
+                renderQueue(); // UI 갱신
+
+                // ★ NEW FIX: 자동 리셋 후 다음 입력 번호 세팅 ★
+                const maxEnd = batchQueue.reduce((max, item) => item.end > max ? item.end : max, 0);
+                if (maxEnd > 0) {
+                     document.getElementById('q-start').value = maxEnd + 1;
+                     document.getElementById('q-end').value = '';
+                } else {
+                     document.getElementById('q-start').value = '';
+                     document.getElementById('q-end').value = '';
+                }
+
+
+            } catch (e) {
+                alert("저장 중 오류 발생: " + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-check-double"></i> 전체 적용 실행 (Save All)';
+                btn.disabled = false;
+            }
+        }
+
+        // --- Query Modal Logic (Existing) ---
+        function openQueryModal() { 
+            if (!currentWorkbook) return alert("교재를 먼저 선택해주세요.");
+            document.getElementById('query-modal-overlay').style.display = 'flex';
+            document.getElementById('query-results-tbody').innerHTML = '';
+            const container = document.getElementById('query-range-container');
+            const rows = container.querySelectorAll('.range-row');
+            for(let i = 1; i < rows.length; i++) { rows[i].remove(); }
+            rows[0].querySelector('.range-start').value = '';
+            rows[0].querySelector('.range-end').value = '';
+        }
+        function closeQueryModal() { document.getElementById('query-modal-overlay').style.display = 'none'; }
+        function addQueryRangeInput() { 
+             const container = document.getElementById('query-range-container');
+            const div = document.createElement('div'); 
+            div.className = 'flex gap-1 items-center range-row'; 
+            div.innerHTML = `<input type="number" class="range-start w-16 p-1 text-center border rounded" placeholder="Start"><span class="text-slate-400 font-bold text-xs">~</span><input type="number" class="range-end w-16 p-1 text-center border rounded" placeholder="End"><button onclick="removeQueryRange(this)" class="text-slate-400 hover:text-red-500 px-1 text-sm"><i class="fa-solid fa-xmark"></i></button>`; 
+            container.insertBefore(div, container.querySelector('button[onclick="addQueryRangeInput()"]'));
+        }
+        function removeQueryRange(btn) { if (document.querySelectorAll('#query-range-container .range-row').length > 1) { btn.parentElement.remove(); } else { alert("최소 하나의 조회 범위는 있어야 합니다."); } }
+        async function runBatchQuery() { 
+             if (!currentWorkbook) return alert("교재를 먼저 선택해주세요.");
+            const rangeRows = document.querySelectorAll('#query-range-container .range-row');
+            let problemNums = new Set();
+            rangeRows.forEach(row => { const s = parseInt(row.querySelector('.range-start').value); const e = parseInt(row.querySelector('.range-end').value); if (!isNaN(s) && !isNaN(e) && s <= e) { for (let i = s; i <= e; i++) problemNums.add(i); } });
+            if (problemNums.size === 0) return;
+            const problemArray = Array.from(problemNums).sort((a, b) => a - b);
+            const tbody = document.getElementById('query-results-tbody');
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="loader mx-auto"></div></td></tr>`;
+            try {
+                const { data: metaData, error } = await _supabase.from('problem_metadata').select('*').eq('workbook_id', currentWorkbook.id).in('problem_num', problemArray).order('problem_num');
+                if (error) throw error;
+                tbody.innerHTML = '';
+                metaData.forEach(data => {
+                    let typeBadge, flagBadge = '';
+                    if (data.difficulty === 'high_rank') typeBadge = '<span class="badge badge-high">1등급</span>';
+                    else if (data.is_subjective) typeBadge = '<span class="badge badge-sub">서술형</span>';
+                    else typeBadge = '<span class="badge badge-norm">일반형</span>';
+                    
+                    let is_normal = (data.difficulty === 'normal' && !data.is_subjective);
+                    if (data.is_representative && is_normal) flagBadge += `<span class="badge badge-rep mr-1">대표 문제</span>`;
+                    if (data.is_tough && is_normal) flagBadge += `<span class="badge badge-tough">터프 문제</span>`;
+                    
+                    const sectionIdText = data.section_id ? `<span class="font-bold text-indigo-500">${data.section_id}</span>` : 'N/A';
+                    const chapterInfoText = (data.chapter_major_title_ko ? data.chapter_major_title_ko + ' > ' : '') + (data.chapter_title_ko || '-');
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50 transition';
+                    row.innerHTML = `<td class="px-3 py-2 text-base font-bold text-slate-800">No.${data.problem_num}</td><td class="px-3 py-2">${sectionIdText}</td><td class="px-3 py-2 flex items-center gap-2">${typeBadge} ${flagBadge}</td><td class="px-3 py-2 text-xs text-slate-600">${chapterInfoText}</td>`;
+                    tbody.appendChild(row);
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        // --- Image Upload (Same) ---
+        function displayFileCount() { const files = document.getElementById('file-upload').files; document.getElementById('file-count').innerText = `${files.length}개의 WebP 파일이 대기 중입니다.`; }
+        async function uploadImages() { /* ... Same ... */ 
+            if (!currentWorkbook) return alert("교재를 먼저 선택해주세요.");
+            const files = document.getElementById('file-upload').files;
+            if (files.length === 0) return alert("업로드할 파일을 선택해주세요.");
+            const btn = document.querySelector('button[onclick="uploadImages()"]');
+            btn.innerHTML = '<div class="loader mr-2"></div> 업로드 중...'; btn.disabled = true;
+            try {
+                let successCount = 0;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const problemNum = file.name.split('.')[0].padStart(4, '0'); 
+                    const fileName = `${currentWorkbook.id}/${problemNum}.webp`;
+                    const { error } = await _supabase.storage.from('problems').upload(fileName, file, { upsert: true });
+                    if (!error) successCount++;
+                }
+                alert(`✅ 업로드 완료! 총 ${files.length}개 중 ${successCount}개 성공.`);
+                document.getElementById('file-count').innerText = '대기 확인 파일 없음';
+            } catch (e) { alert("오류: " + e.message); } finally { btn.innerHTML = '업로드 시작'; btn.disabled = false; }
+        }
+
+    </script>
+</body>
+</html>

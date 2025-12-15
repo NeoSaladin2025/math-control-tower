@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>나의 학습 정밀 진단 (Self X-Ray)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js"></script>
+
+    <style>
+        body { background-color: #111827; color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif; overflow: hidden; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 2px; }
+
+        .tile { 
+            width: 100%; aspect-ratio: 1; border-radius: 8px; cursor: pointer; position: relative; 
+            border: 1px solid #374151; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; color: rgba(255,255,255,0.2);
+        }
+        .tile:active { transform: scale(0.95); }
+
+        /* 색상 로직 (학생 정답률 기준) */
+        .bg-master  { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border: 1px solid #818cf8; box-shadow: 0 0 10px rgba(124, 58, 237, 0.3); } 
+        .bg-good    { background: #059669; color: white; } 
+        .bg-warn    { background: #d97706; color: white; } 
+        .bg-danger  { background: #dc2626; color: white; } 
+        .bg-none    { background: #1f2937; color: rgba(255,255,255,0.1); border-color: #4b5563; } /* 신규 문제 */
+
+        .giteuk-target { 
+            border: 3px solid #fbbf24 !important; 
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5), inset 0 0 5px rgba(251, 191, 36, 0.2);
+            z-index: 5;
+            animation: pulse-gold 2s infinite;
+        }
+        .giteuk-target::after {
+            content: '👑'; position: absolute; top: -10px; right: -8px; font-size: 16px;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.8));
+            animation: bounce-crown 2s infinite;
+        }
+        @keyframes pulse-gold { 50% { border-color: #f59e0b; box-shadow: 0 0 5px rgba(251, 191, 36, 0.3); } }
+        @keyframes bounce-crown { 0%, 100% { transform: translateY(0) rotate(10deg); } 50% { transform: translateY(-3px) rotate(-10deg); } }
+
+        #top-drawer {
+            position: absolute; top: 0; left: 0; width: 100%; 
+            background: rgba(31, 41, 55, 0.98); backdrop-filter: blur(10px);
+            border-bottom: 1px solid #4b5563; z-index: 40;
+            transform: translateY(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding-top: 60px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        #top-drawer.open { transform: translateY(0); }
+
+        #bottom-sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 49; backdrop-filter: blur(2px); transition: opacity 0.3s; }
+        #bottom-sheet {
+            position: fixed; bottom: 0; left: 0; width: 100%; max-height: 85vh;
+            background: #1f2937; border-top-left-radius: 24px; border-top-right-radius: 24px;
+            z-index: 50; transform: translateY(110%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5); display: flex; flex-col;
+        }
+        #bottom-sheet.open { transform: translateY(0); }
+
+        .loader { width: 20px; height: 20px; border: 2px solid #374151; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s infinite linear; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .viewer-backdrop { background-color: rgba(0, 0, 0, 0.9) !important; }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-gray-900">
+
+    <script src="config.js"></script>
+
+    <header class="h-[60px] flex items-center justify-between px-4 bg-gray-800 border-b border-gray-700 relative z-50 shrink-0 shadow-md">
+        <div class="flex items-center gap-2 overflow-hidden">
+            <span class="text-xl">🩺</span>
+            <div class="flex flex-col">
+                <h1 id="wb-title" class="text-sm font-bold text-white truncate max-w-[200px]">로딩중...</h1>
+                <span class="text-[10px] text-gray-400">Self X-Ray Analysis</span>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="toggleTopDrawer()" class="bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-600 transition flex items-center gap-1">
+                <i class="fa-solid fa-circle-info"></i> 규칙
+            </button>
+            <button onclick="window.close()" class="bg-red-900/50 text-red-200 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-900 transition">
+                닫기
+            </button>
+        </div>
+    </header>
+
+    <div id="top-drawer">
+        <div class="p-5 space-y-6 overflow-y-auto max-h-[60vh]">
+            <div>
+                <h3 class="text-sm font-bold text-indigo-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-palette"></i> 정답률 기준 색상 (나의 상태)</h3>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex items-center gap-2 p-2 rounded bg-gray-800 border border-gray-700"><div class="w-4 h-4 rounded bg-master border border-indigo-400"></div><span>90% 이상 (최우수)</span></div>
+                    <div class="flex items-center gap-2 p-2 rounded bg-gray-800 border border-gray-700"><div class="w-4 h-4 rounded bg-good"></div><span>80% 이상 (우수)</span></div>
+                    <div class="flex items-center gap-2 p-2 rounded bg-gray-800 border border-gray-700"><div class="w-4 h-4 rounded bg-warn"></div><span>60% ~ 79% (보통)</span></div>
+                    <div class="flex items-center gap-2 p-2 rounded bg-gray-800 border border-gray-700"><div class="w-4 h-4 rounded bg-danger"></div><span>60% 미만 (취약)</span></div>
+                    <div class="flex items-center gap-2 p-2 rounded bg-gray-800 border border-gray-700"><div class="w-4 h-4 rounded bg-none"></div><span>신규 (안 푼 문제)</span></div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-crown"></i> 기특놀이 선정 기준 (선생님 설정)</h3>
+                <div id="rule-display" class="bg-gray-800 rounded-xl p-4 border border-gray-700 text-xs space-y-2 text-gray-300">로딩 중...</div>
+                <p class="text-[10px] text-gray-500 mt-2">* 위 조건 중 하나라도 해당되면 타일에 <span class="text-yellow-400">금색 테두리와 왕관</span>이 표시됩니다.</p>
+            </div>
+            <button onclick="toggleTopDrawer()" class="w-full py-3 bg-gray-700 rounded-xl text-sm font-bold text-gray-300 hover:bg-gray-600">알겠어요! (닫기)</button>
+        </div>
+    </div>
+
+    <div id="grid-container" class="flex-1 overflow-y-auto p-2 bg-gray-900 grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-15 gap-1.5 content-start custom-scroll pb-20">
+        <div class="col-span-full flex flex-col items-center justify-center py-20 text-gray-500 gap-2"><div class="loader"></div><span class="text-xs">데이터 분석 중...</span></div>
+    </div>
+
+    <div id="bottom-sheet-overlay" onclick="closeSheet()"></div>
+    <div id="bottom-sheet">
+        <div class="w-full flex justify-center pt-3 pb-1" onclick="closeSheet()"><div class="w-12 h-1.5 bg-gray-600 rounded-full"></div></div>
+        
+        <div class="p-5 flex flex-col h-full overflow-hidden">
+            <div class="flex justify-between items-start mb-4 shrink-0">
+                <div>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">
+                        No. <span id="sheet-num" class="text-indigo-400">0</span>
+                        <span id="sheet-badge" class="hidden text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-2 py-0.5 rounded-full">👑 기특놀이 대상</span>
+                        <span id="sheet-new-badge" class="hidden text-[10px] bg-gray-600 text-gray-200 border border-gray-500 px-2 py-0.5 rounded-full">New</span>
+                    </h2>
+                    <p id="sheet-reason" class="text-xs text-gray-400 mt-1">분석 결과: 양호함</p>
+                </div>
+                <div id="sheet-stats" class="text-right text-xs text-gray-400 font-mono bg-gray-800 p-2 rounded-lg border border-gray-700">
+                    <div>오답: <span class="text-red-400" id="stat-wrong">0</span></div>
+                    <div>질문: <span class="text-yellow-400" id="stat-quest">0</span></div>
+                    <div>정답률: <span class="text-green-400" id="stat-acc">0%</span></div>
+                </div>
+            </div>
+
+            <div class="flex-1 bg-white rounded-xl overflow-hidden relative border border-gray-600 mb-4 flex items-center justify-center group cursor-zoom-in" onclick="openImageViewer()">
+                <img id="sheet-img" class="max-w-full max-h-full object-contain transition-transform group-hover:scale-105 duration-300" src="" alt="문제 이미지">
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-sm font-bold pointer-events-none">
+                    <i class="fa-solid fa-magnifying-glass-plus mr-2"></i> 터치해서 확대하기
+                </div>
+            </div>
+
+            <div class="shrink-0 space-y-3">
+                <div id="challenge-ui" class="hidden">
+                    <input type="file" id="proof-file" accept="image/*" class="hidden" onchange="previewFile()">
+                    <div id="upload-area" class="w-full">
+                        <label for="proof-file" class="w-full py-3.5 bg-gradient-to-r from-yellow-600 to-amber-600 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition">
+                            <i class="fa-solid fa-camera"></i> 인증샷 찍고 포인트 받기
+                        </label>
+                    </div>
+                    <div id="preview-area" class="hidden flex gap-2">
+                        <div class="w-16 h-16 bg-gray-700 rounded-lg overflow-hidden shrink-0 border border-gray-600"><img id="preview-thumb" class="w-full h-full object-cover"></div>
+                        <button onclick="uploadChallenge()" id="btn-submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm">제출하기</button>
+                        <button onclick="resetUpload()" class="w-12 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                </div>
+                <div id="normal-ui">
+                    <button onclick="closeSheet()" class="w-full py-3 bg-gray-800 text-gray-400 rounded-xl font-bold text-sm hover:bg-gray-700">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const wbId = params.get('wbid');
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if(!wbId || !user) { alert("잘못된 접근"); window.close(); }
+
+        let config = null;
+        let currentNum = 0;
+        let viewerInstance = null;
+
+        async function init() {
+            try {
+                const [confRes, metaRes, progRes, wbRes] = await Promise.all([
+                    _supabase.from('homework_configs').select('*').eq('student_id', user.username).eq('workbook_id', wbId).single(),
+                    _supabase.from('problem_metadata').select('*').eq('workbook_id', wbId),
+                    _supabase.from('student_progress').select('*').eq('student_id', user.username).eq('workbook_id', wbId),
+                    _supabase.from('workbooks').select('title, total_problems').eq('id', wbId).single()
+                ]);
+
+                if(wbRes.data) document.getElementById('wb-title').innerText = wbRes.data.title;
+
+                config = confRes.data || { 
+                    gh_active:true, gh_wrong:1, gh_quest:1, gh_acc:100, gh_try:1,
+                    gs_active:true, gs_wrong:1, gs_quest:1, gs_acc:100, gs_try:1,
+                    gn_active:true, gn_wrong:2, gn_quest:1, gn_acc:80, gn_try:2 
+                };
+
+                displayRules();
+                const meta = metaRes.data || [];
+                const prog = progRes.data || [];
+                const total = wbRes.data.total_problems;
+                const pMap = {}; prog.forEach(p => pMap[p.problem_num] = p);
+                const mMap = {}; meta.forEach(m => mMap[m.problem_num] = m);
+
+                renderGrid(total, pMap, mMap);
+            } catch(e) { console.error(e); alert("데이터 로딩 실패"); }
+        }
+
+        function displayRules() {
+            const el = document.getElementById('rule-display');
+            let html = '';
+            const rules = [
+                { name: '1등급', act: config.gh_active, w: config.gh_wrong, q: config.gh_quest, a: config.gh_acc },
+                { name: '서술형', act: config.gs_active, w: config.gs_wrong, q: config.gs_quest, a: config.gs_acc },
+                { name: '일반형', act: config.gn_active, w: config.gn_wrong, q: config.gn_quest, a: config.gn_acc }
+            ];
+            rules.forEach(r => {
+                if(r.act) {
+                    html += `<div class="flex justify-between border-b border-gray-700 last:border-0 pb-1 last:pb-0">
+                        <span class="font-bold text-gray-200">▪ ${r.name}</span>
+                        <span class="text-right">오답 ${r.w}회↑ or 질문 ${r.q}회↑<br>or 정답률 ${r.a}%↓</span>
+                    </div>`;
+                }
+            });
+            if(html === '') html = '설정된 기특놀이 규칙이 없습니다.';
+            el.innerHTML = html;
+        }
+
+        function calcStats(p) {
+            let wrong = p ? (p.wrong_count||0) : 0;
+            const quest = p ? (p.question_count||0) : 0;
+            const correct = p ? (p.correct_count||0) : 0;
+            const isNew = (!p || (wrong === 0 && quest === 0 && correct === 0));
+
+            // 선생님 화면과 동일한 오답 보정 로직
+            if (!isNew && p.last_result === 'wrong' && wrong === 0) wrong = 1;
+
+            const totalTry = correct + wrong;
+            let acc = 0;
+            if (totalTry > 0) acc = Math.round((correct / totalTry) * 100);
+
+            return { wrong, quest, correct, acc, isNew };
+        }
+
+        function renderGrid(total, pMap, mMap) {
+            const grid = document.getElementById('grid-container');
+            grid.innerHTML = '';
+            for(let i=1; i<=total; i++) {
+                const p = pMap[i]; 
+                const m = mMap[i]; 
+                const { wrong, quest, acc, isNew } = calcStats(p);
+
+                let colorClass = 'bg-none';
+                if (!isNew) {
+                    if (acc >= 90) colorClass = 'bg-master';
+                    else if (acc >= 80) colorClass = 'bg-good';
+                    else if (acc >= 60) colorClass = 'bg-warn';
+                    else colorClass = 'bg-danger';
+                    
+                    if ((p && p.correct_count + p.wrong_count === 0) && quest > 0) colorClass = 'bg-warn';
+                }
+
+                const isTarget = checkEligibility(wrong, quest, acc, m, isNew);
+                const div = document.createElement('div');
+                div.className = `tile ${colorClass} ${isTarget ? 'giteuk-target' : ''}`;
+                div.innerText = i;
+                div.onclick = () => openSheet(i, p, isTarget, isNew);
+                grid.appendChild(div);
+            }
+        }
+
+        function checkEligibility(wrong, quest, acc, m, isNew) {
+            if (!m || isNew) return false; // 신규 문제는 제외
+            
+            let c = {}; 
+            if (m.difficulty === 'high_rank') { 
+                if (!config.gh_active) return false;
+                c = { w: config.gh_wrong, q: config.gh_quest, a: config.gh_acc, t: config.gh_try };
+            } else if (m.is_subjective) { 
+                if (!config.gs_active) return false;
+                c = { w: config.gs_wrong, q: config.gs_quest, a: config.gs_acc, t: config.gs_try };
+            } else { 
+                if (!config.gn_active) return false;
+                c = { w: config.gn_wrong, q: config.gn_quest, a: config.gn_acc, t: config.gn_try };
+            }
+            
+            if (wrong >= c.w) return true;
+            if (quest >= c.q) return true;
+            if (acc <= c.a && wrong > 0) return true;
+
+            return false;
+        }
+
+        function toggleTopDrawer() { document.getElementById('top-drawer').classList.toggle('open'); }
+
+        function openSheet(num, p, isTarget, isNew) {
+            currentNum = num;
+            const padded = num.toString().padStart(4, '0');
+            const imgUrl = `${SUPABASE_URL}/storage/v1/object/public/problems/${wbId}/${padded}.webp`;
+
+            document.getElementById('sheet-num').innerText = num;
+            const imgEl = document.getElementById('sheet-img');
+            imgEl.src = imgUrl;
+            if(viewerInstance) { viewerInstance.destroy(); viewerInstance = null; }
+
+            const { wrong, quest, acc } = calcStats(p);
+            
+            document.getElementById('stat-wrong').innerText = wrong;
+            document.getElementById('stat-quest').innerText = quest;
+            document.getElementById('stat-acc').innerText = acc + '%';
+
+            const badge = document.getElementById('sheet-badge');
+            const newBadge = document.getElementById('sheet-new-badge');
+            const challengeUi = document.getElementById('challenge-ui');
+            const normalUi = document.getElementById('normal-ui');
+            const reason = document.getElementById('sheet-reason');
+
+            badge.classList.add('hidden');
+            newBadge.classList.add('hidden');
+            challengeUi.classList.add('hidden');
+            normalUi.classList.remove('hidden');
+
+            if (isNew) {
+                newBadge.classList.remove('hidden');
+                reason.innerText = "아직 풀지 않은 신규 문제입니다.";
+            } else if (isTarget) {
+                badge.classList.remove('hidden');
+                challengeUi.classList.remove('hidden');
+                normalUi.classList.add('hidden');
+                reason.innerHTML = `<span class="text-yellow-400 font-bold">🚨 선생님이 지정한 집중 공략 문제입니다!</span>`;
+                resetUpload();
+            } else {
+                reason.innerText = "분석 결과: 학습 상태 양호함";
+            }
+
+            document.getElementById('bottom-sheet-overlay').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('bottom-sheet-overlay').style.opacity = '1';
+                document.getElementById('bottom-sheet').classList.add('open');
+            }, 10);
+        }
+
+        function openImageViewer() {
+            const imgEl = document.getElementById('sheet-img');
+            if(!imgEl.src) return;
+            if (viewerInstance) viewerInstance.destroy();
+            viewerInstance = new Viewer(imgEl, {
+                toolbar: { zoomIn:1, zoomOut:1, oneToOne:1, reset:1, rotateLeft:1, rotateRight:1, flipHorizontal:1, flipVertical:1 },
+                title: false, navbar: false,
+                hidden: function() { viewerInstance.destroy(); viewerInstance = null; }
+            });
+            viewerInstance.show();
+        }
+
+        function closeSheet() {
+            document.getElementById('bottom-sheet').classList.remove('open');
+            document.getElementById('bottom-sheet-overlay').style.opacity = '0';
+            setTimeout(() => { document.getElementById('bottom-sheet-overlay').style.display = 'none'; }, 300);
+        }
+
+        function previewFile() {
+            const f = document.getElementById('proof-file').files[0];
+            if(f) {
+                const r = new FileReader();
+                r.onload = e => {
+                    document.getElementById('preview-thumb').src = e.target.result;
+                    document.getElementById('upload-area').classList.add('hidden');
+                    document.getElementById('preview-area').classList.remove('hidden');
+                    document.getElementById('preview-area').classList.add('flex');
+                };
+                r.readAsDataURL(f);
+            }
+        }
+
+        function resetUpload() {
+            document.getElementById('proof-file').value = '';
+            document.getElementById('upload-area').classList.remove('hidden');
+            document.getElementById('preview-area').classList.add('hidden');
+            document.getElementById('preview-area').classList.remove('flex');
+            document.getElementById('btn-submit').innerText = '제출하기';
+            document.getElementById('btn-submit').disabled = false;
+        }
+
+        async function uploadChallenge() {
+            const f = document.getElementById('proof-file').files[0]; 
+            if(!f) return alert("사진이 없습니다.");
+            const btn = document.getElementById('btn-submit');
+            btn.innerText = "전송중..."; btn.disabled = true;
+
+            try {
+                const ext = f.name.split('.').pop();
+                const safeName = `sol_${wbId}_${currentNum}_${Date.now()}.${ext}`;
+                const { error: upErr } = await _supabase.storage.from('solutions').upload(safeName, f);
+                if(upErr) throw upErr;
+                const url = `${SUPABASE_URL}/storage/v1/object/public/solutions/${safeName}`;
+                const { error: dbErr } = await _supabase.rpc('submit_solution_challenge', {
+                    p_student_id: user.username, p_workbook_id: parseInt(wbId), p_problem_num: currentNum, p_image_url: url
+                });
+                if(dbErr) throw dbErr;
+                alert("🎉 인증 완료! 선생님 확인 후 포인트가 지급됩니다.");
+                closeSheet();
+            } catch(e) { 
+                alert("업로드 실패: "+e.message); btn.disabled=false; btn.innerText="제출하기"; 
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

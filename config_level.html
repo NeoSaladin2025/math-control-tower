@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 2rem; }</style>
+</head>
+<body>
+    <script src="config.js"></script>
+
+    <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+            <h2 class="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-500"></i> 레벨 성장 설계</h2>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-700">경험치 구간 설정</h3>
+                    <button onclick="addRangeRow()" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold hover:bg-indigo-100">+ 구간 추가</button>
+                </div>
+                <div id="range-container" class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
+                    </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="bg-indigo-900 text-white p-6 rounded-2xl shadow-xl mb-6">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fa-solid fa-calculator"></i> 성장 시뮬레이터</h3>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="text-sm opacity-80">월 평균 획득 XP:</span>
+                    <input type="number" id="sim-monthly-xp" value="3000" oninput="runSimulation()" class="bg-indigo-800 border border-indigo-700 rounded px-3 py-1 text-center font-bold w-24 focus:outline-none focus:border-indigo-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="bg-indigo-800/50 p-4 rounded-xl">
+                        <div class="text-xs opacity-60 mb-1">만렙(Lv.100) 도달</div>
+                        <div class="text-2xl font-black text-yellow-400"><span id="sim-months">0</span>개월</div>
+                        <div class="text-[10px] opacity-50">(약 <span id="sim-years">0</span>년)</div>
+                    </div>
+                    <div class="bg-indigo-800/50 p-4 rounded-xl">
+                        <div class="text-xs opacity-60 mb-1">필요 총 XP</div>
+                        <div class="text-xl font-bold" id="sim-total-xp">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="applyLevelRules()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl transition transform active:scale-95 text-lg">
+                <i class="fa-solid fa-check-circle"></i> 설정 저장 및 학생 레벨 재계산
+            </button>
+            <p class="text-xs text-center text-slate-400 mt-2">* 기존 학생들의 레벨이 새로운 규칙에 맞춰 자동 업데이트됩니다.</p>
+        </div>
+    </div>
+
+    <script>
+        let ranges = []; // [{min:1, max:10, xp:100}, ...]
+
+        async function init() {
+            const { data } = await _supabase.from('level_rules').select('*').order('min_level');
+            if(data && data.length > 0) ranges = data;
+            else ranges = [{min_level:1, max_level:100, xp_req:100}]; // 기본값
+            renderRanges();
+            runSimulation();
+        }
+
+        function renderRanges() {
+            const container = document.getElementById('range-container');
+            container.innerHTML = ranges.map((r, idx) => `
+                <div class="flex gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div class="flex items-center gap-1 text-sm font-bold text-slate-600">
+                        <span>Lv.</span>
+                        <input type="number" value="${r.min_level}" onchange="updateRange(${idx}, 'min_level', this.value)" class="w-12 p-1 border rounded text-center">
+                        <span>~</span>
+                        <input type="number" value="${r.max_level}" onchange="updateRange(${idx}, 'max_level', this.value)" class="w-12 p-1 border rounded text-center">
+                    </div>
+                    <div class="flex-1 flex items-center gap-2 justify-end">
+                        <span class="text-xs text-slate-400">구간당</span>
+                        <input type="number" value="${r.xp_req}" onchange="updateRange(${idx}, 'xp_req', this.value)" class="w-16 p-1 border rounded text-center font-bold text-indigo-600">
+                        <span class="text-xs text-slate-400">XP</span>
+                    </div>
+                    <button onclick="removeRange(${idx})" class="text-slate-300 hover:text-red-500 px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addRangeRow() {
+            const last = ranges[ranges.length-1];
+            const newStart = last ? last.max_level + 1 : 1;
+            ranges.push({ min_level: newStart, max_level: newStart+9, xp_req: 100 });
+            renderRanges();
+            runSimulation();
+        }
+
+        function removeRange(idx) {
+            ranges.splice(idx, 1);
+            renderRanges();
+            runSimulation();
+        }
+
+        function updateRange(idx, key, val) {
+            ranges[idx][key] = parseInt(val);
+            runSimulation();
+        }
+
+        // ★ 시뮬레이터 (계산기) ★
+        function runSimulation() {
+            let totalXP = 0;
+            // 1~100 레벨까지 루프 돌면서 XP 합산
+            // (간단하게 구현: ranges를 기반으로 100렙까지 계산)
+            for (let lv = 1; lv < 100; lv++) {
+                const rule = ranges.find(r => lv >= r.min_level && lv <= r.max_level);
+                totalXP += rule ? rule.xp_req : 100; // 룰 없으면 기본 100
+            }
+
+            const monthly = parseInt(document.getElementById('sim-monthly-xp').value) || 1;
+            const months = totalXP / monthly;
+            
+            document.getElementById('sim-total-xp').innerText = totalXP.toLocaleString();
+            document.getElementById('sim-months').innerText = months.toFixed(1);
+            document.getElementById('sim-years').innerText = (months / 12).toFixed(1);
+        }
+
+        // ★ 저장 및 재계산 (마이그레이션) ★
+        async function applyLevelRules() {
+            if(!confirm("이 설정으로 모든 학생의 레벨을 재계산하시겠습니까?\n(총 누적 경험치는 변하지 않습니다)")) return;
+
+            // 1. 규칙 저장 (기존 삭제 후 삽입)
+            await _supabase.from('level_rules').delete().neq('id', 0); // 전체 삭제
+            // id 필드 제외하고 insert
+            const insertData = ranges.map(r => ({ min_level: r.min_level, max_level: r.max_level, xp_req: r.xp_req }));
+            await _supabase.from('level_rules').insert(insertData);
+
+            // 2. 학생 재계산
+            // 학생 전체 로드
+            const { data: students } = await _supabase.from('users').select('*').eq('role', 'student');
+            
+            let updateCount = 0;
+            for (const s of students) {
+                let currentTotalXP = s.total_xp || 0;
+                let newLevel = 1;
+                let xpForNext = 0;
+
+                // 레벨 계산 로직 (1부터 올라가면서 XP 차감)
+                while (true) {
+                    const rule = ranges.find(r => newLevel >= r.min_level && newLevel <= r.max_level);
+                    const req = rule ? rule.xp_req : 100; // 룰 없으면 100으로 가정
+                    
+                    if (currentTotalXP >= req) {
+                        currentTotalXP -= req;
+                        newLevel++;
+                    } else {
+                        break; // 레벨업 불가
+                    }
+                    if(newLevel >= 100) break; // 만렙 제한
+                }
+
+                // DB 업데이트
+                if (s.level !== newLevel) {
+                    await _supabase.from('users').update({ level: newLevel }).eq('username', s.username);
+                    updateCount++;
+                }
+            }
+
+            alert(`✅ 설정 저장 완료!\n학생 ${updateCount}명의 레벨이 재조정되었습니다.`);
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>일일 생활 관리 센터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; user-select: none; -webkit-user-select: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* 버튼 스타일 */
+        .grade-btn {
+            min-width: 70px; padding: 12px 24px; border-radius: 16px; font-weight: 900; font-size: 15px; 
+            background: white; border: 2px solid #e2e8f0; color: #64748b; 
+            box-shadow: 0 4px 0 #cbd5e1; transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); 
+            white-space: nowrap; display: flex; align-items: center; justify-content: center;
+        }
+        .grade-btn:active { transform: translateY(4px); box-shadow: none; }
+        .grade-btn.active {
+            background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #3730a3; color: white; box-shadow: 0 4px 0 #312e81;
+        }
+        .grade-btn.active:active { transform: translateY(4px); box-shadow: none; }
+
+        /* 규칙 카드 스타일 */
+        .option-card { 
+            border-width: 2px; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 0 4px 0 #cbd5e1; transform: translateY(0); 
+        }
+        .option-card:active { box-shadow: 0 0 0 #cbd5e1; transform: translateY(4px); }
+        
+        .card-default { background-color: white; border-color: #e2e8f0; color: #475569; }
+        
+        /* 선택된 상태 (공통) */
+        .card-selected { 
+            background-color: #f0fdf4; /* green-50 */
+            border-color: #86efac; /* green-300 */
+            color: #15803d; /* green-700 */
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05) !important; 
+            transform: translateY(4px) !important; 
+        }
+        
+        /* 마이너스 점수일 때 빨간색 강조 */
+        .card-selected-negative {
+            background-color: #fef2f2; /* red-50 */
+            border-color: #fca5a5; /* red-300 */
+            color: #991b1b; /* red-800 */
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05) !important;
+            transform: translateY(4px) !important;
+        }
+
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 모달 애니메이션 */
+        #student-modal { transition: opacity 0.2s, visibility 0.2s; }
+        #student-modal.show { opacity: 1; visibility: visible; }
+        #student-modal.hide { opacity: 0; visibility: hidden; }
+        .modal-content { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); transform: scale(0.95); }
+        #student-modal.show .modal-content { transform: scale(1); }
+    </style>
+</head>
+<body class="p-4 md:p-6 min-h-screen flex flex-col">
+
+    <script src="config.js"></script>
+
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-2xl font-black text-slate-800 flex items-center gap-2"><span>🎮</span> 일일 생활 관리 센터</h1>
+            <p class="text-sm text-slate-500">학생들의 오늘 하루를 평가해주세요.</p>
+        </div>
+        <button onclick="location.href='teacher_main.html'" class="grade-btn px-4 py-2 text-sm bg-white hover:bg-slate-50 flex items-center gap-2 !min-w-0">
+            <i class="fa-solid fa-arrow-left"></i> 나가기
+        </button>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6 flex-1">
+        <div class="flex-1 bg-white rounded-3xl shadow-xl border border-slate-100 p-6 overflow-hidden flex flex-col">
+            <div class="flex gap-3 mb-6 overflow-x-auto pb-4 shrink-0 scrollbar-hide px-1" id="filter-container">
+                <button onclick="filterStudents('all')" class="grade-btn active" id="filter-all">✨ 전체</button>
+                <button onclick="filterStudents('중1')" class="grade-btn" id="filter-중1">중1</button>
+                <button onclick="filterStudents('중2')" class="grade-btn" id="filter-중2">중2</button>
+                <button onclick="filterStudents('중3')" class="grade-btn" id="filter-중3">중3</button>
+                <button onclick="filterStudents('고1')" class="grade-btn" id="filter-고1">고1</button>
+                <button onclick="filterStudents('고2')" class="grade-btn" id="filter-고2">고2</button>
+                <button onclick="filterStudents('고3')" class="grade-btn" id="filter-고3">고3</button>
+            </div>
+            <div id="student-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto flex-1 content-start p-1 custom-scroll">
+                <div class="text-center col-span-full py-20 text-slate-400"><div class="loader"></div></div>
+            </div>
+        </div>
+
+        <div class="hidden lg:block w-80 bg-slate-800 rounded-3xl shadow-2xl p-6 text-white overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+                <h2 class="font-bold flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> 전송 대기 <span id="pending-count" class="bg-indigo-500 text-[10px] px-2 py-0.5 rounded-full">0</span></h2>
+                <button onclick="clearPending()" class="text-xs text-slate-400 hover:text-white transition underline">비우기</button>
+            </div>
+            <div id="pending-list" class="space-y-3 text-sm">
+                <div class="text-center text-slate-500 py-10 text-xs">대기 중인 항목이 없습니다.</div>
+            </div>
+             <button onclick="submitAll()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl mt-4 shadow-lg transition active:scale-95 border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check"></i> 일괄 전송하기
+            </button>
+        </div>
+    </div>
+
+    <div id="student-modal" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm hide">
+        <div class="modal-content bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
+            <div class="bg-slate-800 p-5 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-xl" id="modal-s-name">학생 이름</h3>
+                    <p class="text-xs text-slate-300" id="modal-s-info">정보</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-2xl transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="modal-rules-list" class="p-6 bg-slate-50 space-y-3 max-h-[60vh] overflow-y-auto custom-scroll">
+                <div class="text-center py-10"><div class="loader"></div></div>
+            </div>
+
+            <div class="p-4 bg-white border-t border-slate-100 flex gap-3">
+                <button onclick="closeModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition btn-elastic">취소</button>
+                <button onclick="addToQueue()" class="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-2 btn-elastic">
+                    <i class="fa-solid fa-inbox"></i> 임시 저장
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = checkAuth();
+        if(user && user.role === 'student') { alert("교사 전용입니다."); location.href='index.html'; }
+
+        let allStudents = [];
+        let allRules = [];
+        let currentFilter = 'all';
+        let currentStudent = null;
+        let selectedRuleIds = new Set();
+        let pendingQueue = [];
+
+        function getPendingStudentIds() {
+            return new Set(pendingQueue.map(item => item.student.id));
+        }
+
+        async function init() {
+            await Promise.all([loadStudents(), loadRules()]);
+            renderList();
+            renderQueue();
+        }
+
+        async function loadStudents() {
+            const { data } = await _supabase.from('users').select('*').eq('role', 'student').order('name');
+            allStudents = data || [];
+        }
+
+        async function loadRules() {
+            const { data } = await _supabase.from('point_rules').select('*').order('id', {ascending: true});
+            allRules = data || [];
+        }
+
+        function renderList() {
+            const listDiv = document.getElementById('student-list');
+            const pendingIds = getPendingStudentIds();
+
+            let filtered = allStudents;
+            if (currentFilter !== 'all') filtered = allStudents.filter(s => s.grade === currentFilter);
+
+            filtered = filtered.filter(s => !pendingIds.has(s.username));
+
+            if (filtered.length === 0) { listDiv.innerHTML = '<div class="text-center col-span-full py-20 text-slate-400 text-sm">해당하는 학생이 없습니다.</div>'; return; }
+
+            listDiv.innerHTML = filtered.map(s => `
+                <div onclick="openModal('${s.username}', '${s.name}', '${s.grade} | ${s.tier}')" class="bg-white p-4 rounded-2xl border-2 border-slate-100 cursor-pointer hover:border-indigo-300 hover:shadow-md transition relative group option-card card-default active:scale-95">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full mb-1 inline-block">${s.grade}</span>
+                            <h3 class="font-bold text-xl text-slate-800">${s.name}</h3>
+                        </div>
+                        <span class="text-xs font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">${s.tier}</span>
+                    </div>
+                    <div class="text-xs text-slate-400 font-bold">Lv.${s.level}</div>
+                    <div class="absolute bottom-4 right-4 text-slate-300 group-hover:text-indigo-500 transition"><i class="fa-solid fa-chevron-right"></i></div>
+                </div>`).join('');
+        }
+
+        function filterStudents(grade) {
+            currentFilter = grade;
+            document.querySelectorAll('.grade-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`filter-${grade}`).classList.add('active');
+            renderList();
+        }
+
+        function openModal(sId, sName, sInfo) {
+            currentStudent = { id: sId, name: sName, info: sInfo };
+            document.getElementById('modal-s-name').innerText = sName;
+            document.getElementById('modal-s-info').innerText = sInfo;
+            selectedRuleIds.clear();
+            renderModalRules();
+            const modal = document.getElementById('student-modal');
+            modal.classList.remove('hide'); setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('student-modal');
+            modal.classList.remove('show'); setTimeout(() => modal.classList.add('hide'), 200);
+        }
+
+        function renderModalRules() {
+            const container = document.getElementById('modal-rules-list');
+            if (allRules.length === 0) {
+                container.innerHTML = '<div class="text-center text-slate-400 py-10 text-sm">설정된 규칙이 없습니다.<br>규칙 설정 메뉴에서 추가해주세요.</div>';
+                return;
+            }
+
+            container.innerHTML = allRules.map(r => {
+                const isSelected = selectedRuleIds.has(r.id);
+                const selectedClass = (r.xp_change < 0 || r.cp_change < 0) ? 'card-selected-negative' : 'card-selected';
+                const activeClass = isSelected ? selectedClass : 'card-default';
+                const xpColor = r.xp_change > 0 ? 'text-blue-600' : (r.xp_change < 0 ? 'text-red-600' : 'text-slate-400');
+                const cpColor = r.cp_change > 0 ? 'text-amber-600' : 'text-slate-400';
+
+                return `
+                <div onclick="toggleRule(${r.id})" class="option-card ${activeClass} w-full p-4 rounded-2xl cursor-pointer flex justify-between items-center group select-none btn-elastic transition-colors">
+                    <div>
+                        <h4 class="font-bold text-base mb-1 flex items-center gap-2 text-slate-700">
+                            <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">${r.category}</span> 
+                            ${r.name}
+                        </h4>
+                    </div>
+                    <div class="text-right text-xs">
+                        <div class="font-bold ${xpColor}">${r.xp_change > 0 ? '+' : ''}${r.xp_change} XP</div>
+                        <div class="font-bold ${cpColor}">${r.cp_change > 0 ? '+' : ''}${r.cp_change} CP</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleRule(rid) {
+            if (selectedRuleIds.has(rid)) selectedRuleIds.delete(rid);
+            else selectedRuleIds.add(rid);
+            renderModalRules();
+        }
+
+        function addToQueue() {
+            if (selectedRuleIds.size === 0) return alert("선택된 항목이 없습니다.");
+            const selectedRules = allRules.filter(r => selectedRuleIds.has(r.id));
+            
+            pendingQueue.push({ student: currentStudent, rules: selectedRules });
+
+            renderQueue();
+            renderList();
+            closeModal();
+        }
+
+        function renderQueue() {
+            const list = document.getElementById('pending-list');
+            document.getElementById('pending-count').innerText = pendingQueue.length;
+
+            if (pendingQueue.length === 0) {
+                list.innerHTML = '<div class="text-center text-slate-500 py-10 text-xs">대기 중인 항목이 없습니다.</div>';
+                return;
+            }
+
+            list.innerHTML = pendingQueue.map((item, idx) => `
+                <div class="bg-slate-700 p-3 rounded-xl border border-slate-600 relative group animate-[fadeIn_0.3s]">
+                    <button onclick="removeFromQueue(${idx})" class="absolute top-2 right-2 text-slate-400 hover:text-red-400 transition"><i class="fa-solid fa-xmark"></i></button>
+                    <div class="font-bold text-white text-sm mb-2 flex items-center gap-2">
+                        <span class="bg-slate-600 px-2 py-0.5 rounded text-[10px] text-slate-300">Target</span> 
+                        ${item.student.name}
+                    </div>
+                    <div class="space-y-1">
+                        ${item.rules.map(r => `
+                            <div class="flex justify-between items-center text-xs text-slate-300 bg-slate-800/50 px-2 py-1.5 rounded border border-slate-600/50">
+                                <span>${r.name}</span>
+                                <div class="flex gap-2 font-mono">
+                                    <span class="${r.xp_change < 0 ? 'text-red-400' : 'text-blue-400'}">${r.xp_change}XP</span>
+                                    <span class="${r.cp_change < 0 ? 'text-red-400' : 'text-amber-400'}">${r.cp_change}CP</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeFromQueue(idx) {
+            pendingQueue.splice(idx, 1);
+            renderQueue();
+            renderList();
+        }
+
+        function clearPending() {
+            if(pendingQueue.length === 0) return;
+            if(confirm("대기열을 모두 비우시겠습니까?")) {
+                pendingQueue = [];
+                renderQueue();
+                renderList();
+            }
+        }
+
+        // ★ [보안 패치 완료] RPC 함수 호출 방식으로 변경 ★
+        async function submitAll() {
+            if (pendingQueue.length === 0) return alert("전송할 항목이 없습니다.");
+            if (!confirm(`${pendingQueue.length}건의 데이터를 전송하시겠습니까?`)) return;
+
+            try {
+                // 비동기 요청을 한 번에 처리하기 위한 배열
+                const promises = [];
+
+                for (const item of pendingQueue) {
+                    for (const r of item.rules) {
+                        // DB의 'give_points' 보안 함수를 호출 (대리인에게 시킴)
+                        promises.push(
+                            _supabase.rpc('give_points', {
+                                p_student_id: item.student.id,
+                                p_xp: r.xp_change,
+                                p_cp: r.cp_change,
+                                p_rule_name: r.name
+                            })
+                        );
+                    }
+                }
+
+                // 모든 요청 병렬 처리 (속도 UP, 보안 UP)
+                await Promise.all(promises);
+
+                alert("✅ 전송 완료되었습니다!");
+                pendingQueue = [];
+                renderQueue();
+                renderList(); 
+                loadStudents(); // 학생 최신 정보(레벨, XP) 갱신
+
+            } catch (e) {
+                alert("전송 실패: " + e.message);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

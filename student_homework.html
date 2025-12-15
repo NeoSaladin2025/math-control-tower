@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>과제 제출 센터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ★ 드래그 방지 및 기본 설정 ★ */
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f3f4f6; user-select: none; -webkit-user-select: none; }
+        
+        /* ★ OMR 버튼 스타일 (입체감 & 터치감) ★ */
+        .omr-btn { 
+            width: 44px; height: 44px; 
+            border-radius: 12px; 
+            font-weight: 800; font-size: 14px; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+            border: 2px solid #e2e8f0; background: white; color: #9ca3af; /* 기본: 안품 (회색조) */
+            box-shadow: 0 2px 0 #cbd5e1; 
+        }
+        .omr-btn:active { transform: translateY(2px); box-shadow: none; }
+        
+        /* 상태별 스타일 (4단계) */
+        .status-correct { background-color: #10b981; border-color: #059669; color: white; box-shadow: 0 2px 0 #047857; }
+        .status-wrong   { background-color: #ef4444; border-color: #dc2626; color: white; box-shadow: 0 2px 0 #b91c1c; }
+        .status-question { background-color: #f59e0b; border-color: #d97706; color: white; box-shadow: 0 2px 0 #b45309; animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: 0.8; } }
+        
+        /* 범례용 도트 스타일 */
+        .legend-dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+        /* 스페셜 숙제 효과 (기존 유지) */
+        .blink-red { animation: blink 1s infinite; color: #ef4444; text-shadow: 0 0 5px rgba(239, 68, 68, 0.5); }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* OMR 패널 애니메이션 */
+        #omr-panel { transition: opacity 0.2s, transform 0.2s; }
+        #omr-panel.show { opacity: 1; transform: scale(1); pointer-events: auto; }
+        #omr-panel.hide { opacity: 0; transform: scale(0.95); pointer-events: none; }
+    </style>
+</head>
+<body class="p-4 md:p-6 pb-20 min-h-screen flex flex-col items-center">
+
+    <script src="config.js"></script>
+
+    <div class="w-full max-w-2xl space-y-6 flex-1 flex flex-col">
+        <div class="bg-white rounded-2xl shadow-sm p-5 flex justify-between items-center border border-gray-100 shrink-0">
+            <div>
+                <h1 class="text-xl font-black text-slate-800 flex items-center gap-2"><span>📝</span> 정규 과제</h1>
+                <p class="text-xs text-slate-500 font-medium">선생님이 출제하신 과제들입니다.</p>
+            </div>
+            <button onclick="location.href='student_main.html'" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-200 transition">🏠 홈</button>
+        </div>
+
+        <div id="assign-list-area" class="flex-1">
+            <div id="assign-list" class="space-y-4">
+                <div class="text-center py-10"><div class="loader"></div></div>
+            </div>
+        </div>
+
+        <div id="omr-overlay" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div id="omr-panel" class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-indigo-100 overflow-hidden flex flex-col max-h-[85vh] hide transform transition-all duration-300">
+                
+                <div class="bg-indigo-600 p-5 text-white flex justify-between items-start shrink-0">
+                    <div class="w-full">
+                        <h3 class="font-bold text-lg leading-tight truncate" id="omr-title">-</h3>
+                        
+                        <div class="mt-3 bg-indigo-700/50 rounded-lg p-2 text-center">
+                            <div class="flex justify-center gap-3 text-[11px] font-bold text-indigo-100 mb-1">
+                                <span class="flex items-center"><div class="legend-dot bg-white border border-indigo-300/30"></div>안품</span>
+                                <span class="flex items-center"><div class="legend-dot bg-emerald-400"></div>정답</span>
+                                <span class="flex items-center"><div class="legend-dot bg-red-400"></div>오답</span>
+                                <span class="flex items-center"><div class="legend-dot bg-amber-400"></div>질문</span>
+                            </div>
+                            <div class="text-[10px] text-red-300 font-bold border-t border-indigo-500/30 pt-1">
+                                ※ 질문도 <span class="underline text-red-200">오답 처리</span>됩니다. (신중하게!)
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closeOmr()" class="text-white/70 hover:text-white text-2xl transition bg-indigo-700/30 w-8 h-8 rounded-full flex items-center justify-center hover:bg-indigo-700 ml-3">✕</button>
+                </div>
+                
+                <div class="p-6 flex-1 overflow-y-auto bg-slate-50">
+                    <div id="omr-grid" class="flex flex-wrap gap-3 justify-center mb-8 pt-2"></div>
+                </div>
+
+                <div class="p-4 bg-white border-t border-slate-100 shrink-0">
+                    <button onclick="submitNormalHomework()" id="btn-omr-submit" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-xl transition transform active:scale-[0.98] flex items-center justify-center gap-2">
+                        🚀 결과 제출하기 <span class="text-sm font-normal opacity-80" id="submit-count-badge">(0개)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="special-modal" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-900 w-full max-w-md rounded-xl p-6 relative border-2 border-red-500 shadow-2xl animate-[fadeIn_0.2s]">
+            <button onclick="closeSpecial()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl">✕</button>
+            <div class="text-center mb-6">
+                <div class="text-4xl mb-2">💀</div>
+                <h2 class="text-2xl font-bold text-white mb-1">스페셜 미션 제출</h2>
+                <p class="text-xs text-slate-400">오직 완벽한 인증만이 당신을 구원합니다.</p>
+            </div>
+            <div id="modal-timer" class="text-center text-2xl font-mono bg-black text-red-500 p-3 rounded-lg border border-red-900 mb-6 shadow-[0_0_15px_rgba(220,38,38,0.5)]">계산 중...</div>
+            <div class="space-y-4">
+                <label class="block w-full border-2 border-dashed border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-red-500 hover:bg-slate-800 transition group">
+                    <input type="file" id="sp-files" multiple accept="image/*" class="hidden" onchange="previewImages()">
+                    <div class="text-3xl mb-2 group-hover:scale-110 transition">📸</div>
+                    <div class="text-sm text-slate-300 font-bold">풀이 과정 촬영</div>
+                </label>
+                <div id="sp-preview" class="flex gap-2 overflow-x-auto h-20 p-1"></div>
+            </div>
+            <button onclick="submitSpecialHomework()" id="btn-sp-submit" class="mt-6 w-full bg-gradient-to-r from-red-600 to-pink-700 text-white py-4 rounded-xl font-bold shadow-lg text-lg hover:scale-[1.02] transition active:scale-95">🩸 피의 서약 제출하기</button>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || user.role !== 'student') { alert("잘못된 접근"); location.href = 'index.html'; }
+
+        let currentAssignId = null;
+        let currentProblemList = [];
+        let answers = {}; // { 1: 'correct', 2: 'wrong', ... } 안 푼 건 키 없음
+        let intervals = {};
+
+        async function init() {
+            // 정규 과제만 필터링 (기존 로직 유지)
+            const { data } = await _supabase.from('assignments')
+                .select('*, workbooks(title)')
+                .eq('student_id', user.username)
+                .eq('status', 'assigned')
+                .eq('is_request', false) 
+                .order('created_at', {ascending: false});
+            
+            const list = document.getElementById('assign-list');
+            if(!data || data.length === 0) {
+                list.innerHTML = '<div class="text-center py-20 text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">제출할 정규 과제가 없습니다.<br>오늘도 파이팅! 💪</div>';
+                return;
+            }
+
+            list.innerHTML = data.map(a => {
+                if (a.is_special) {
+                    const timerId = `timer-${a.id}`;
+                    setTimeout(() => startTimer(a.id, a.deadline, timerId), 0);
+                    const rColor = a.reward_type === 'xp' ? 'text-yellow-400' : 'text-pink-400';
+                    const pColor = a.penalty_type === 'xp' ? 'text-yellow-400' : 'text-pink-400';
+                    return `<div id="card-${a.id}" onclick="openSpecial(${a.id}, '${a.deadline}')" class="bg-slate-800 p-5 rounded-xl border-2 border-red-500 shadow-lg cursor-pointer relative overflow-hidden group hover:scale-[1.01] transition"><div class="absolute -right-6 -top-6 bg-red-600 w-20 h-20 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition"></div><div class="flex justify-between items-start mb-2"><div><div class="text-red-400 text-[10px] font-bold tracking-widest mb-1 animate-pulse">💀 SPECIAL MISSION</div><div class="font-bold text-white text-lg leading-tight">${a.title}</div></div><div class="text-3xl animate-bounce">💣</div></div><div id="${timerId}" class="text-2xl font-mono text-white font-bold my-3 bg-black/30 p-2 rounded text-center border border-white/10">계산 중...</div><div class="flex justify-between items-center text-xs bg-slate-900/50 p-2 rounded border border-slate-700"><div class="flex items-center gap-1"><span class="text-emerald-500">성공</span> <span class="${rColor} font-bold">+${a.reward_points}</span></div><div class="w-px h-3 bg-slate-600"></div><div class="flex items-center gap-1"><span class="text-red-500">실패</span> <span class="${pColor} font-bold">-${a.penalty_points}</span></div></div></div>`;
+                } else {
+                    return `<div onclick="openOmr(${a.id}, '${a.title}', [${a.problem_list}])" class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition relative overflow-hidden group"><div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div><div class="flex justify-between items-center"><div><div class="text-xs text-slate-400 mb-1 font-bold">${new Date(a.created_at).toLocaleDateString()}</div><div class="font-black text-slate-800 text-lg group-hover:text-indigo-600 transition">${a.title}</div><div class="text-xs text-indigo-500 mt-1 font-bold bg-indigo-50 inline-block px-2 py-0.5 rounded">${a.workbooks.title} · ${a.problem_list.length}문항</div></div><div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition"><i class="fa-solid fa-pen"></i></div></div></div>`;
+                }
+            }).join('');
+        }
+
+        // --- ★ [수정됨] OMR 로직 (4단계 빙글빙글) ★ ---
+        function openOmr(aid, title, pList) {
+            currentAssignId = aid; 
+            currentProblemList = pList;
+            
+            // [중요] 초기화 시 모두 '안품' 상태 (answers 비우기)
+            answers = {}; 
+
+            document.getElementById('omr-title').innerText = title;
+            const grid = document.getElementById('omr-grid');
+            grid.innerHTML = '';
+
+            pList.forEach(num => {
+                const btn = document.createElement('div');
+                btn.className = 'omr-btn'; // 기본: 안품(회색/흰색)
+                btn.innerText = num;
+                btn.id = `btn-${num}`;
+                btn.onclick = () => toggleStatus(num);
+                grid.appendChild(btn);
+            });
+            
+            updateSubmitCount(); // 개수 초기화 (0개)
+
+            // 애니메이션 오픈
+            const overlay = document.getElementById('omr-overlay');
+            const panel = document.getElementById('omr-panel');
+            overlay.classList.remove('hidden');
+            setTimeout(() => { panel.classList.remove('hide'); panel.classList.add('show'); }, 10);
+        }
+
+        function closeOmr() {
+            const overlay = document.getElementById('omr-overlay');
+            const panel = document.getElementById('omr-panel');
+            panel.classList.remove('show'); panel.classList.add('hide');
+            setTimeout(() => { overlay.classList.add('hidden'); }, 200);
+        }
+
+        // [4단계 상태 토글 로직]
+        function toggleStatus(num) {
+            const btn = document.getElementById(`btn-${num}`);
+            const current = answers[num];
+            
+            // 순서: 안품(null) -> 정답(correct) -> 오답(wrong) -> 질문(question) -> 안품(delete)
+            if (!current) { 
+                answers[num] = 'correct'; 
+                btn.className = 'omr-btn status-correct'; 
+            } else if (current === 'correct') { 
+                answers[num] = 'wrong'; 
+                btn.className = 'omr-btn status-wrong'; 
+            } else if (current === 'wrong') { 
+                answers[num] = 'question'; 
+                btn.className = 'omr-btn status-question'; 
+            } else { 
+                delete answers[num]; // 데이터 삭제 (안품)
+                btn.className = 'omr-btn'; // 기본 스타일
+            }
+            
+            updateSubmitCount();
+        }
+
+        function updateSubmitCount() {
+            const count = Object.keys(answers).length;
+            document.getElementById('submit-count-badge').innerText = `(${count}개)`;
+        }
+
+        // [제출 로직 수정]
+        async function submitNormalHomework() {
+            const solvedKeys = Object.keys(answers); // 푼 문제만 추출
+            const count = solvedKeys.length;
+            const total = currentProblemList.length;
+            const notSolved = total - count;
+
+            if (count === 0) return alert("하나라도 풀고 제출해야지? 😘");
+            
+            let msg = `총 ${count}문항을 제출하시겠습니까?`;
+            if(notSolved > 0) msg += `\n(안 푼 문제 ${notSolved}개는 제외됩니다.)`;
+
+            if(!confirm(msg)) return;
+
+            const btn = document.getElementById('btn-omr-submit');
+            btn.innerText = "전송 중..."; btn.disabled = true;
+
+            try {
+                // 1. 과제 상태 업데이트
+                await _supabase.from('assignments').update({ status: 'submitted', submitted_at: new Date() }).eq('id', currentAssignId);
+                
+                // 2. Workbook ID 가져오기
+                const wbId = (await _supabase.from('assignments').select('workbook_id').eq('id', currentAssignId).single()).data.workbook_id;
+                
+                // 3. 개별 문항 전송 (푼 것만!)
+                const promises = solvedKeys.map(numStr => {
+                    const num = parseInt(numStr);
+                    const result = answers[num];
+                    return _supabase.rpc('submit_progress', { 
+                        p_student_id: user.username, 
+                        p_workbook_id: wbId, 
+                        p_problem_num: num, 
+                        p_result: result 
+                    });
+                });
+                
+                await Promise.all(promises);
+                alert("✅ 제출되었습니다! 수고하셨습니다."); location.reload();
+            } catch (e) {
+                alert("오류: " + e.message); btn.innerText = "🚀 결과 제출하기"; btn.disabled = false;
+            }
+        }
+
+        // --- 스페셜 숙제 로직 (기존 유지) ---
+        function startTimer(id, deadline, elemId) {
+            const end = new Date(deadline).getTime(); const lockTime = end + (1000*60*60*24*2);
+            function update() {
+                const now = new Date().getTime(); const diff = end - now; const el = document.getElementById(elemId); const card = document.getElementById(`card-${id}`);
+                if (!el) return;
+                if (now > lockTime) { el.innerHTML = "🔒 만료됨"; el.className = "text-xl font-bold text-gray-500"; card.className = "bg-gray-200 p-5 rounded-xl border border-gray-300 grayscale opacity-70 cursor-not-allowed"; card.onclick = () => alert("만료된 과제입니다."); clearInterval(intervals[id]); }
+                else if (diff < 0) { const lateDiff = now - end; const h = Math.floor(lateDiff/(1000*60*60)); const m = Math.floor((lateDiff%(1000*60*60))/(1000*60)); el.innerHTML = `⚠️ 지각: ${h}시간 ${m}분`; el.className = "text-lg font-bold text-red-500 blink-red bg-black p-2 rounded text-center border border-red-500"; }
+                else { const h = Math.floor(diff/(1000*60*60)); const m = Math.floor((diff%(1000*60*60))/(1000*60)); const s = Math.floor((diff%(1000*60))/1000); el.innerHTML = `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
+            }
+            update(); intervals[id] = setInterval(update, 1000);
+        }
+        function openSpecial(aid, deadline) { currentAssignId = aid; document.getElementById('special-modal').classList.remove('hidden'); const mainTimer = document.getElementById(`timer-${aid}`); if(mainTimer) document.getElementById('modal-timer').innerHTML = mainTimer.innerHTML; }
+        function closeSpecial() { document.getElementById('special-modal').classList.add('hidden'); }
+        function previewImages() { const files = document.getElementById('sp-files').files; const container = document.getElementById('sp-preview'); container.innerHTML = ''; Array.from(files).forEach(file => { const reader = new FileReader(); reader.onload = e => { const img = document.createElement('img'); img.src = e.target.result; img.className = 'h-full w-auto rounded border border-slate-600'; container.appendChild(img); }; reader.readAsDataURL(file); }); }
+        async function submitSpecialHomework() { const files = document.getElementById('sp-files').files; if(files.length === 0) return alert("인증샷 필수!"); const btn = document.getElementById('btn-sp-submit'); btn.innerText = "전송 중..."; btn.disabled = true; try { const imgUrls = []; for (let i=0; i<files.length; i++) { const ext = files[i].name.split('.').pop(); const fname = `sp_${user.username}_${currentAssignId}_${i}_${Date.now()}.${ext}`; const { error: upErr } = await _supabase.storage.from('solutions').upload(fname, files[i]); if(upErr) throw upErr; imgUrls.push(`${SUPABASE_URL}/storage/v1/object/public/solutions/${fname}`); } await _supabase.from('assignments').update({ status: 'submitted', submitted_at: new Date(), submission_images: imgUrls }).eq('id', currentAssignId); alert("✅ 제출 완료!"); location.reload(); } catch(e) { alert("실패: " + e.message); btn.innerText = "🩸 피의 서약 제출하기"; btn.disabled = false; } }
+
+        init();
+    </script>
+</body>
+</html>

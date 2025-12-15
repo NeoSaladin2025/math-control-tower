@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Control Tower - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f3f4f6; }
+        .shake { animation: shake 0.5s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <script src="config.js"></script>
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold text-indigo-600 mb-2">Math Tower</h1>
+            <p class="text-gray-400 text-sm">학습 관리 시스템 v16.0</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-600 mb-1 ml-1">아이디</label>
+                <input type="text" id="username" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" placeholder="ID를 입력하세요">
+            </div>
+            
+            <div class="relative">
+                <label class="block text-xs font-bold text-gray-600 mb-1 ml-1">비밀번호</label>
+                <input type="password" id="password" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" placeholder="Password">
+                <div id="caps-warning" class="hidden absolute top-full left-0 mt-1 text-xs text-red-500 font-bold flex items-center gap-1">
+                   ⚠️ Caps Lock이 켜져 있습니다.
+                </div>
+            </div>
+
+            <button onclick="login()" id="login-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95 mt-6">
+                로그인
+            </button>
+        </div>
+
+        <div class="mt-6 text-center text-xs text-gray-400">
+            문의사항은 관리자에게 연락주세요.
+        </div>
+    </div>
+
+    <script>
+        // CapsLock 감지 로직
+        const pwInput = document.getElementById('password');
+        const capsWarning = document.getElementById('caps-warning');
+
+        pwInput.addEventListener('keyup', function(event) {
+            if (event.getModifierState("CapsLock")) {
+                capsWarning.classList.remove('hidden');
+            } else {
+                capsWarning.classList.add('hidden');
+            }
+        });
+
+        // 엔터키 로그인
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+
+        async function login() {
+            const id = document.getElementById('username').value.trim();
+            const pw = document.getElementById('password').value.trim();
+            const btn = document.getElementById('login-btn');
+
+            if (!id || !pw) return alert("아이디와 비밀번호를 입력해주세요.");
+
+            btn.disabled = true;
+            btn.innerText = "접속 중...";
+
+            try {
+                const { data, error } = await _supabase
+                    .from('users')
+                    .select('*')
+                    .eq('username', id)
+                    .single();
+
+                if (error || !data || data.password !== pw) {
+                    throw new Error("아이디 또는 비밀번호가 잘못되었습니다.");
+                }
+
+                // 로그인 성공 처리
+                sessionStorage.setItem('currentUser', JSON.stringify(data));
+                
+                if (data.role === 'student') {
+                    location.href = 'student_main.html';
+                } else {
+                    location.href = 'teacher_main.html';
+                }
+
+            } catch (e) {
+                alert("로그인 실패: " + e.message);
+                const container = document.querySelector('.bg-white');
+                container.classList.add('shake');
+                setTimeout(() => container.classList.remove('shake'), 500);
+                btn.disabled = false;
+                btn.innerText = "로그인";
+            }
+        }
+    </script>
+</body>
+</html>

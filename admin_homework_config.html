@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>학습 자동화 설정</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background: #f8fafc; color: #334155; }
+        
+        /* 슬라이더 (정숙한 블루) */
+        .slider { -webkit-appearance: none; width: 100%; height: 6px; background: #cbd5e1; border-radius: 5px; outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #4f46e5; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .slider::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+        /* 패널 스타일 (깔끔한 카드) */
+        .panel { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        
+        /* 입력칸 */
+        .inp-num { background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; text-align: center; border-radius: 4px; padding: 2px; width: 50px; font-weight: bold; font-size: 12px; }
+        .inp-num:focus { border-color: #4f46e5; outline: none; bg: white; }
+
+        /* 스크롤바 */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="p-6 h-screen flex flex-col overflow-hidden">
+
+    <script src="config.js"></script>
+
+    <div class="flex justify-between items-end border-b border-slate-200 pb-4 shrink-0 mb-4">
+        <div>
+            <div class="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-1">Configuration</div>
+            <h1 class="text-2xl font-bold text-slate-800">⚙️ 학습 자동화 및 출제 옵션</h1>
+            <p class="text-slate-500 text-xs mt-1"><span id="target-info" class="font-bold text-indigo-700">학생</span> 맞춤형 학습 로직 설정</p>
+        </div>
+        <button onclick="window.close()" class="text-slate-400 hover:text-slate-600 text-sm font-medium">닫기</button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden">
+        
+        <div class="flex flex-col h-full overflow-y-auto custom-scroll pr-2">
+            <h2 class="text-sm font-bold text-slate-700 border-b border-slate-200 pb-2 mb-3 sticky top-0 bg-[#f8fafc] z-10 flex items-center gap-2">
+                <span>📂</span> 자동 출제 문항 수 및 비율
+            </h2>
+            
+            <div class="panel border-l-4 border-indigo-500">
+                <div class="flex justify-between mb-2"><span class="font-bold text-indigo-700 text-sm">🏆 1등급 (High Rank)</span><div class="text-xs text-slate-500">문항 수 <input type="number" id="cnt-high" class="inp-num" value="3" oninput="calcAll()"></div></div>
+                <input type="range" id="ratio-high" class="slider" min="0" max="100" value="50" oninput="calcAll()">
+                <div class="text-center text-[11px] mt-2 text-slate-500 flex justify-between">
+                    <span>🔄 복습 <b id="res-high-rev" class="text-indigo-600">0</b></span>
+                    <span id="lbl-ratio-high" class="font-bold text-slate-400">50%</span>
+                    <span>🆕 신규 <b id="res-high-new" class="text-blue-500">0</b></span>
+                </div>
+            </div>
+            <div class="panel border-l-4 border-emerald-500">
+                <div class="flex justify-between mb-2"><span class="font-bold text-emerald-700 text-sm">✍️ 서술형 (Subjective)</span><div class="text-xs text-slate-500">문항 수 <input type="number" id="cnt-sub" class="inp-num" value="2" oninput="calcAll()"></div></div>
+                <input type="range" id="ratio-sub" class="slider" min="0" max="100" value="50" oninput="calcAll()">
+                <div class="text-center text-[11px] mt-2 text-slate-500 flex justify-between">
+                    <span>🔄 복습 <b id="res-sub-rev" class="text-emerald-600">0</b></span>
+                    <span id="lbl-ratio-sub" class="font-bold text-slate-400">50%</span>
+                    <span>🆕 신규 <b id="res-sub-new" class="text-blue-500">0</b></span>
+                </div>
+            </div>
+            <div class="panel border-l-4 border-slate-500">
+                <div class="flex justify-between mb-2"><span class="font-bold text-slate-700 text-sm">🧩 일반형 (Normal)</span><div class="text-xs text-slate-500">문항 수 <input type="number" id="cnt-norm" class="inp-num" value="15" oninput="calcAll()"></div></div>
+                <input type="range" id="ratio-norm" class="slider" min="0" max="100" value="50" oninput="calcAll()">
+                <div class="text-center text-[11px] mt-2 text-slate-500 flex justify-between">
+                    <span>🔄 복습 <b id="res-norm-rev" class="text-slate-600">0</b></span>
+                    <span id="lbl-ratio-norm" class="font-bold text-slate-400">50%</span>
+                    <span>🆕 신규 <b id="res-norm-new" class="text-blue-500">0</b></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col h-full overflow-y-auto custom-scroll pr-2">
+            <h2 class="text-sm font-bold text-amber-600 border-b border-slate-200 pb-2 mb-3 sticky top-0 bg-[#f8fafc] z-10 flex items-center gap-2">
+                <span>🎁</span> 오답 인증(기특놀이) 자격 기준
+            </h2>
+            <p class="text-[10px] text-slate-400 mb-2 pl-1">* 각 유형별로 <strong>하나 이상의 조건(OR)</strong>을 충족해야 인증 가능합니다.</p>
+
+            <div class="panel border-l-4 border-indigo-500">
+                <div class="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+                    <input type="checkbox" id="gh-active" class="w-4 h-4 accent-indigo-600" checked>
+                    <span class="font-bold text-indigo-700 text-sm">🏆 1등급 조건</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs text-slate-600 items-center"><span>🤬 누적 오답 횟수</span><div><input type="number" id="gh-wrong" class="inp-num" value="1"> 회 이상</div></div>
+                    <div class="flex justify-between text-xs text-slate-600 items-center"><span>🙋‍♂️ 누적 질문 횟수</span><div><input type="number" id="gh-quest" class="inp-num" value="1"> 회 이상</div></div>
+                    <div class="flex justify-between text-xs text-slate-600 items-center">
+                        <span>📉 정답률 하한</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-slate-400">(시도 <input type="number" id="gh-try" class="inp-num w-6 h-5 text-[9px] bg-white" value="1">↑)</span>
+                            <input type="number" id="gh-acc" class="inp-num" value="100"> % 이하
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel border-l-4 border-emerald-500">
+                <div class="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+                    <input type="checkbox" id="gs-active" class="w-4 h-4 accent-emerald-600" checked>
+                    <span class="font-bold text-emerald-700 text-sm">✍️ 서술형 조건</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs text-slate-600 items-center"><span>🤬 누적 오답 횟수</span><div><input type="number" id="gs-wrong" class="inp-num" value="1"> 회 이상</div></div>
+                    <div class="flex justify-between text-xs text-slate-600 items-center"><span>🙋‍♂️ 누적 질문 횟수</span><div><input type="number" id="gs-quest" class="inp-num" value="1"> 회 이상</div></div>
+                    <div class="flex justify-between text-xs text-slate-600 items-center">
+                        <span>📉 정답률 하한</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-slate-400">(시도 <input type="number" id="gs-try" class="inp-num w-6 h-5 text-[9px] bg-white" value="1">↑)</span>
+                            <input type="number" id="gs-acc" class="inp-num" value="100"> % 이하
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel border-l-4 border-slate-500">
+                <div class="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+                    <input type="checkbox" id="gn-active" class="w-4 h-4 accent-slate-600" checked>
+                    <span class="font-bold text-slate-700 text-sm">🧩 일반형 조건 (엄격)</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs text-slate-600 items-center"><span>🤬 누적 오답 횟수</span><div><input type="number" id="gn-wrong" class="inp-num" value="2"> 회 이상</div></div>
+                    <div class="flex justify-between text-xs text-slate-600 items-center"><span>🙋‍♂️ 누적 질문 횟수</span><div><input type="number" id="gn-quest" class="inp-num" value="1"> 회 이상</div></div>
+                    <div class="flex justify-between text-xs text-slate-600 items-center">
+                        <span>📉 정답률 하한</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[9px] text-slate-400">(시도 <input type="number" id="gn-try" class="inp-num w-6 h-5 text-[9px] bg-white" value="2">↑)</span>
+                            <input type="number" id="gn-acc" class="inp-num" value="80"> % 이하
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <button onclick="saveConfig()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-lg text-sm shadow-lg transition transform active:scale-[0.98] mt-4 shrink-0 flex justify-center items-center gap-2">
+        <span>💾</span> 설정 저장 및 적용 (Apply)
+    </button>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const sId = params.get('sid');
+        const wbId = params.get('wbid');
+        const wbTitle = decodeURIComponent(params.get('title') || '문제집');
+        const sName = decodeURIComponent(params.get('name') || '학생');
+
+        if(!sId || !wbId) { alert("잘못된 접근"); window.close(); }
+        document.getElementById('target-info').innerText = `${sName} - [${wbTitle}]`;
+
+        async function load() {
+            const { data } = await _supabase.from('homework_configs').select('*').eq('student_id', sId).eq('workbook_id', wbId).single();
+            if(data) {
+                document.getElementById('cnt-high').value = data.cnt_high; document.getElementById('ratio-high').value = data.ratio_high;
+                document.getElementById('cnt-sub').value = data.cnt_sub; document.getElementById('ratio-sub').value = data.ratio_sub;
+                document.getElementById('cnt-norm').value = data.cnt_norm; document.getElementById('ratio-norm').value = data.ratio_norm;
+                
+                document.getElementById('gh-active').checked = data.gh_active; document.getElementById('gh-wrong').value = data.gh_wrong; document.getElementById('gh-quest').value = data.gh_quest; document.getElementById('gh-acc').value = data.gh_acc; document.getElementById('gh-try').value = data.gh_try;
+                document.getElementById('gs-active').checked = data.gs_active; document.getElementById('gs-wrong').value = data.gs_wrong; document.getElementById('gs-quest').value = data.gs_quest; document.getElementById('gs-acc').value = data.gs_acc; document.getElementById('gs-try').value = data.gs_try;
+                document.getElementById('gn-active').checked = data.gn_active; document.getElementById('gn-wrong').value = data.gn_wrong; document.getElementById('gn-quest').value = data.gn_quest; document.getElementById('gn-acc').value = data.gn_acc; document.getElementById('gn-try').value = data.gn_try;
+            }
+            calcAll();
+        }
+
+        function calcAll() { calc('high'); calc('sub'); calc('norm'); }
+        function calc(type) {
+            const cnt = parseInt(document.getElementById(`cnt-${type}`).value) || 0;
+            const ratio = parseInt(document.getElementById(`ratio-${type}`).value);
+            const rev = Math.round(cnt * (ratio / 100)); const fresh = cnt - rev;
+            document.getElementById(`lbl-ratio-${type}`).innerText = `${ratio}%`;
+            document.getElementById(`res-${type}-rev`).innerText = rev; document.getElementById(`res-${type}-new`).innerText = fresh;
+        }
+
+        async function saveConfig() {
+            const payload = {
+                student_id: sId, workbook_id: parseInt(wbId),
+                cnt_high: parseInt(document.getElementById('cnt-high').value), ratio_high: parseInt(document.getElementById('ratio-high').value),
+                cnt_sub: parseInt(document.getElementById('cnt-sub').value), ratio_sub: parseInt(document.getElementById('ratio-sub').value),
+                cnt_norm: parseInt(document.getElementById('cnt-norm').value), ratio_norm: parseInt(document.getElementById('ratio-norm').value),
+                gh_active: document.getElementById('gh-active').checked, gh_wrong: parseInt(document.getElementById('gh-wrong').value), gh_quest: parseInt(document.getElementById('gh-quest').value), gh_acc: parseInt(document.getElementById('gh-acc').value), gh_try: parseInt(document.getElementById('gh-try').value),
+                gs_active: document.getElementById('gs-active').checked, gs_wrong: parseInt(document.getElementById('gs-wrong').value), gs_quest: parseInt(document.getElementById('gs-quest').value), gs_acc: parseInt(document.getElementById('gs-acc').value), gs_try: parseInt(document.getElementById('gs-try').value),
+                gn_active: document.getElementById('gn-active').checked, gn_wrong: parseInt(document.getElementById('gn-wrong').value), gn_quest: parseInt(document.getElementById('gn-quest').value), gn_acc: parseInt(document.getElementById('gn-acc').value), gn_try: parseInt(document.getElementById('gn-try').value),
+                updated_at: new Date()
+            };
+            const { error } = await _supabase.from('homework_configs').upsert(payload, { onConflict: 'student_id, workbook_id' });
+            if(error) alert("저장 실패: " + error.message); else { alert("✅ 설정이 성공적으로 저장되었습니다."); window.close(); }
+        }
+        load();
+    </script>
+</body>
+</html>

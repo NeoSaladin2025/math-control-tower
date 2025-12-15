@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>스페셜 숙제 심판</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-900 p-6 text-white min-h-screen">
+    <script src="config.js"></script>
+    <h1 class="text-2xl font-bold text-red-500 mb-6">⚖️ 최후의 심판 (Special Check)</h1>
+    <div id="list" class="space-y-6"></div>
+
+    <script>
+        async function load() {
+            // 제출되었지만 아직 채점 안 된(final_score is null) 스페셜 숙제
+            const { data } = await _supabase.from('assignments')
+                .select('*')
+                .eq('is_special', true)
+                .eq('status', 'submitted')
+                .is('final_score', null); // 아직 판결 안 남
+
+            const list = document.getElementById('list');
+            if(!data || !data.length) { list.innerHTML = '<div class="text-gray-500">심판할 대상이 없습니다.</div>'; return; }
+
+            list.innerHTML = data.map(a => {
+                // 지각 체크
+                const deadline = new Date(a.deadline);
+                const submitted = new Date(a.submitted_at);
+                let timeMsg = `<span class="text-green-400">✅ 정상 제출</span>`;
+                let isLate = false;
+
+                if (submitted > deadline) {
+                    isLate = true;
+                    const diff = submitted - deadline;
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    timeMsg = `<span class="text-red-500 font-bold">⚠️ [${hours}시간 ${mins}분] 지각!</span>`;
+                }
+
+                // 이미지 갤러리
+                const imgs = a.submission_images || [];
+                const imgHtml = imgs.map(url => `<a href="${url}" target="_blank"><img src="${url}" class="w-24 h-24 object-cover rounded border border-gray-600 hover:border-white"></a>`).join('');
+
+                return `
+                <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+                    <div class="flex justify-between mb-4">
+                        <div>
+                            <div class="font-bold text-xl">${a.student_id} - ${a.title}</div>
+                            <div class="text-sm mt-1">${timeMsg}</div>
+                        </div>
+                        <div class="text-right text-xs text-gray-400">
+                            약속된 보상: +${a.reward_points} / 처벌: -${a.penalty_points}
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mb-4 overflow-x-auto p-2 bg-black/30 rounded">${imgHtml}</div>
+
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <div class="flex items-center gap-4 mb-2">
+                            <label>최종 포인트 판결:</label>
+                            <input type="number" id="score-${a.id}" class="bg-gray-900 border border-gray-500 text-white p-2 rounded w-20 text-center font-bold" 
+                                value="${isLate ? -a.penalty_points : a.reward_points}">
+                            <span class="text-xs text-gray-400">(양수:상 / 음수:벌)</span>
+                        </div>
+                        <textarea id="feed-${a.id}" class="w-full bg-gray-900 border border-gray-500 text-white p-2 rounded h-20 text-sm" placeholder="판결 이유 및 피드백..."></textarea>
+                    </div>
+
+                    <button onclick="judge(${a.id}, '${a.student_id}')" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold shadow-lg">
+                        🔨 판결 집행 (승인)
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        async function judge(aid, sid) {
+            const score = parseInt(document.getElementById(`score-${aid}`).value);
+            const feedback = document.getElementById(`feed-${aid}`).value;
+
+            // 1. 과제 업데이트
+            await _supabase.from('assignments').update({ final_score: score, teacher_feedback: feedback }).eq('id', aid);
+
+            // 2. 유저 포인트 반영
+            const { data: u } = await _supabase.from('users').select('points').eq('username', sid).single();
+            const newPoint = (u.points || 0) + score;
+            await _supabase.from('users').update({ points: newPoint }).eq('username', sid);
+
+            alert(`판결 완료! (학생 포인트 ${score > 0 ? '+' : ''}${score} 반영됨)`);
+            load();
+        }
+        load();
+    </script>
+</body>
+</html>

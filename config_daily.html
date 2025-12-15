@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 2rem; }</style>
+</head>
+<body>
+    <script src="config.js"></script>
+
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-calendar-check text-indigo-500"></i> 데일리 규칙 관리</h2>
+        
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+            <h3 class="font-bold text-sm text-slate-500 mb-3">새 규칙 추가</h3>
+            <div class="flex gap-2">
+                <select id="new-cat" class="border rounded-lg p-2 text-sm bg-slate-50 font-bold text-slate-600"><option>출결</option><option>학습</option><option>태도</option><option>시험</option></select>
+                <input type="text" id="new-name" placeholder="규칙 이름 (예: 숙제 완료)" class="border rounded-lg p-2 text-sm flex-1 bg-slate-50 focus:bg-white transition">
+                <input type="number" id="new-xp" placeholder="XP" class="border rounded-lg p-2 text-sm w-20 bg-slate-50 focus:bg-white text-center">
+                <input type="number" id="new-cp" placeholder="CP" class="border rounded-lg p-2 text-sm w-20 bg-slate-50 focus:bg-white text-center">
+                <button onclick="addRule()" class="bg-indigo-600 text-white font-bold px-6 py-2 rounded-lg text-sm hover:bg-indigo-700 shadow-md transition active:scale-95">추가</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-50 text-slate-500 font-bold border-b">
+                    <tr><th class="p-4">분류</th><th class="p-4">이름</th><th class="p-4">XP</th><th class="p-4">CP</th><th class="p-4 text-center">관리</th></tr>
+                </thead>
+                <tbody id="rule-list" class="divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadRules() {
+            const { data } = await _supabase.from('point_rules').select('*').order('id', {ascending: false});
+            const tbody = document.getElementById('rule-list');
+            if(!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-slate-400">규칙이 없습니다.</td></tr>'; return; }
+            tbody.innerHTML = data.map(r => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4"><span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-500">${r.category}</span></td>
+                    <td class="p-4 font-bold text-slate-700">${r.name}</td>
+                    <td class="p-4 ${r.xp_change >= 0 ? 'text-blue-600' : 'text-red-500'} font-bold">${r.xp_change} XP</td>
+                    <td class="p-4 ${r.cp_change >= 0 ? 'text-amber-600' : 'text-slate-400'} font-bold">${r.cp_change} CP</td>
+                    <td class="p-4 text-center"><button onclick="deleteRule(${r.id})" class="text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`).join('');
+        }
+        async function addRule() {
+            const cat = document.getElementById('new-cat').value;
+            const name = document.getElementById('new-name').value;
+            const xp = parseInt(document.getElementById('new-xp').value) || 0;
+            const cp = parseInt(document.getElementById('new-cp').value) || 0;
+            if(!name) return alert("이름을 입력하세요");
+            await _supabase.from('point_rules').insert([{category: cat, name: name, xp_change: xp, cp_change: cp}]);
+            document.getElementById('new-name').value = ''; loadRules();
+        }
+        async function deleteRule(id) { if(confirm("삭제하시겠습니까?")) { await _supabase.from('point_rules').delete().eq('id', id); loadRules(); } }
+        loadRules();
+    </script>
+</body>
+</html>

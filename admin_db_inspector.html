@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB & Storage 정밀 비교 (God's Twin Eye)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #0f0f0f; color: #e5e5e5; }
+        .god-mode { border: 1px solid #ffd700; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        .scroll-hide::-webkit-scrollbar { width: 8px; }
+        .scroll-hide::-webkit-scrollbar-track { background: #1f1f1f; }
+        .scroll-hide::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .missing { background-color: #450a0a; color: #fca5a5; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-4 overflow-hidden">
+
+    <script src="config.js"></script>
+
+    <div class="flex justify-between items-center mb-4 bg-gray-900 p-4 rounded-lg god-mode shrink-0">
+        <div class="flex items-center gap-4">
+            <div class="text-3xl">👁️</div>
+            <div>
+                <h1 class="text-xl font-bold text-yellow-500">통합 정밀 검사소 (Dual View)</h1>
+                <p class="text-xs text-gray-400">"왼쪽은 보지(DB), 오른쪽은 가슴(이미지)... 다 보여드릴게요. ❤️"</p>
+            </div>
+        </div>
+        <div class="flex gap-4 items-center">
+            <select id="wb-select" class="bg-gray-800 text-white border border-gray-600 p-2 rounded text-sm w-64 focus:border-yellow-500 outline-none">
+                <option value="">문제집 선택...</option>
+            </select>
+            <button onclick="startInspection()" id="btn-scan" class="bg-yellow-600 hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded shadow-lg transition text-sm">
+                🔍 양쪽 다 검사하기
+            </button>
+            <button onclick="location.href='teacher_main.html'" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm font-bold">
+                나가기
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 grid grid-cols-2 gap-4 min-h-0">
+        
+        <div class="bg-gray-800 rounded-lg flex flex-col border border-purple-500/50 shadow-lg overflow-hidden">
+            <div class="bg-gray-900 p-3 border-b border-purple-500 flex justify-between items-center">
+                <h2 class="font-bold text-purple-400 flex items-center gap-2">💾 DB 데이터 (Problem Metadata)</h2>
+                <span class="text-xs bg-purple-900 text-purple-200 px-2 py-1 rounded" id="cnt-db">0개</span>
+            </div>
+            <div class="flex-1 overflow-y-auto scroll-hide p-2">
+                <table class="w-full text-xs text-left text-gray-400">
+                    <thead class="text-gray-500 bg-gray-900 sticky top-0 uppercase">
+                        <tr><th class="p-2">번호</th><th class="p-2">유형</th><th class="p-2">난이도</th><th class="p-2">상태</th></tr>
+                    </thead>
+                    <tbody id="list-db" class="divide-y divide-gray-700">
+                        <tr><td colspan="4" class="p-4 text-center">대기 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-lg flex flex-col border border-pink-500/50 shadow-lg overflow-hidden">
+            <div class="bg-gray-900 p-3 border-b border-pink-500 flex justify-between items-center">
+                <h2 class="font-bold text-pink-400 flex items-center gap-2">🖼️ 스토리지 이미지 (Storage Files)</h2>
+                <span class="text-xs bg-pink-900 text-pink-200 px-2 py-1 rounded" id="cnt-img">0개</span>
+            </div>
+            <div class="flex-1 overflow-y-auto scroll-hide p-2">
+                <table class="w-full text-xs text-left text-gray-400">
+                    <thead class="text-gray-500 bg-gray-900 sticky top-0 uppercase">
+                        <tr><th class="p-2">번호</th><th class="p-2">파일명</th><th class="p-2">미리보기</th><th class="p-2">상태</th></tr>
+                    </thead>
+                    <tbody id="list-img" class="divide-y divide-gray-700">
+                        <tr><td colspan="4" class="p-4 text-center">대기 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="final-report" class="mt-4 bg-gray-900 p-4 rounded-lg border border-gray-700 text-center hidden">
+        <h3 class="text-lg font-bold text-white mb-2">📊 이브의 최종 진단</h3>
+        <p id="report-text" class="text-sm text-gray-300"></p>
+        <div class="mt-4 p-2 bg-black rounded text-xs text-red-400 font-mono hidden" id="missing-log"></div>
+    </div>
+
+    <script>
+        // 권한 체크
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || (user.username !== '곽명용' && user.role !== 'admin')) {
+            alert("주인님(곽명용)만 들어올 수 있어요! 퉤!");
+            location.href = 'index.html';
+        }
+
+        async function init() {
+            const { data } = await _supabase.from('workbooks').select('*').order('created_at', {ascending:false});
+            const sel = document.getElementById('wb-select');
+            if(data) data.forEach(w => sel.innerHTML += `<option value="${w.id}">${w.title} (총 ${w.total_problems}문)</option>`);
+        }
+        init();
+
+        async function startInspection() {
+            const wbId = document.getElementById('wb-select').value;
+            if(!wbId) return alert("문제집을 골라주세요, 주인님!");
+
+            const btn = document.getElementById('btn-scan');
+            btn.innerText = "양쪽 다 벌려보는 중...💋"; btn.disabled = true;
+
+            try {
+                // 1. DB 데이터 가져오기 (limit 3000)
+                const { data: dbData, error: dbErr } = await _supabase
+                    .from('problem_metadata')
+                    .select('*')
+                    .eq('workbook_id', wbId)
+                    .order('problem_num', {ascending: true})
+                    .limit(3000); // ★ 3000개까지 뚫어버림
+                
+                if(dbErr) throw dbErr;
+
+                // 2. Storage 파일 가져오기 (limit 3000)
+                const { data: fileData, error: fileErr } = await _supabase.storage
+                    .from('problems')
+                    .list(`${wbId}/`, { limit: 3000 }); // ★ 여기도 3000개 제한 해제 (기본 100개임)
+
+                if(fileErr) throw fileErr;
+
+                // 3. 분석 시작
+                // 파일 리스트를 번호 Set으로 변환 (0001.webp -> 1)
+                const fileSet = new Set();
+                const fileNameMap = {};
+                fileData.forEach(f => {
+                    const match = f.name.match(/\d+/);
+                    if(match) {
+                        const num = parseInt(match[0], 10);
+                        fileSet.add(num);
+                        fileNameMap[num] = f.name;
+                    }
+                });
+
+                // DB 리스트를 번호 Set으로 변환
+                const dbSet = new Set();
+                const dbInfoMap = {};
+                dbData.forEach(d => {
+                    dbSet.add(d.problem_num);
+                    dbInfoMap[d.problem_num] = d;
+                });
+
+                // 최대 번호 찾기 (둘 중 큰 거)
+                const maxNum = Math.max(
+                    dbData.length > 0 ? dbData[dbData.length-1].problem_num : 0,
+                    fileSet.size > 0 ? Math.max(...fileSet) : 0,
+                    1883 // 기본값
+                );
+
+                // 4. 렌더링
+                const dbList = document.getElementById('list-db');
+                const imgList = document.getElementById('list-img');
+                dbList.innerHTML = ''; imgList.innerHTML = '';
+
+                let missingInDB = [];
+                let missingInImg = [];
+
+                // 1번부터 끝까지 순회하며 비교
+                for(let i=1; i<=maxNum; i++) {
+                    // [DB 렌더링]
+                    if(dbSet.has(i)) {
+                        const d = dbInfoMap[i];
+                        let diff = d.difficulty === 'high_rank' ? '🏆 1등급' : (d.difficulty==='tough'?'🔥 터프':'일반');
+                        let sub = d.is_subjective ? '(서술)' : '';
+                        dbList.innerHTML += `<tr class="hover:bg-gray-700"><td class="p-2 font-mono">${i}</td><td class="p-2">${d.type_group_id||'-'}</td><td class="p-2 text-purple-300">${diff} ${sub}</td><td class="p-2 text-green-500">OK</td></tr>`;
+                    } else {
+                        // DB에 없음 (빨간불!)
+                        missingInDB.push(i);
+                        dbList.innerHTML += `<tr class="missing"><td class="p-2 font-mono font-bold">${i}</td><td colspan="2" class="p-2">데이터 없음 (비었음)</td><td class="p-2">❌ MISSING</td></tr>`;
+                    }
+
+                    // [이미지 렌더링]
+                    if(fileSet.has(i)) {
+                        const fname = fileNameMap[i];
+                        const url = `${SUPABASE_URL}/storage/v1/object/public/problems/${wbId}/${fname}`;
+                        imgList.innerHTML += `<tr class="hover:bg-gray-700"><td class="p-2 font-mono">${i}</td><td class="p-2 text-xs text-gray-500">${fname}</td><td class="p-2"><a href="${url}" target="_blank" class="text-pink-400 hover:underline">보기</a></td><td class="p-2 text-green-500">OK</td></tr>`;
+                    } else {
+                        // 이미지 없음
+                        missingInImg.push(i);
+                        // 이미지는 너무 많으면 생략 (DB가 중요하니까)
+                        if(missingInImg.length < 50) imgList.innerHTML += `<tr class="missing"><td class="p-2 font-mono font-bold">${i}</td><td colspan="2" class="p-2">파일 없음</td><td class="p-2">❌ MISSING</td></tr>`;
+                    }
+                }
+
+                // 5. 카운트 업데이트
+                document.getElementById('cnt-db').innerText = dbSet.size + "개";
+                document.getElementById('cnt-img').innerText = fileSet.size + "개";
+
+                // 6. 리포트 작성
+                const reportBox = document.getElementById('final-report');
+                const reportText = document.getElementById('report-text');
+                const missingLog = document.getElementById('missing-log');
+                
+                reportBox.classList.remove('hidden');
+                
+                let msg = "";
+                if(missingInDB.length > 0) {
+                    msg += `⚠️ <b class="text-red-500">DB 데이터가 ${missingInDB.length}개 비어있습니다!</b><br>주인님, <b>[문제집 등록]</b> 메뉴 가서 ${missingInDB[0]}번부터 다시 저장해주세요!<br>`;
+                    missingLog.innerText = "누락 번호: " + missingInDB.join(', ');
+                    missingLog.classList.remove('hidden');
+                } else {
+                    msg += `✅ <b class="text-green-500">DB는 완벽하게 꽉 차 있습니다!</b><br>`;
+                }
+
+                if(missingInImg.length > 0) {
+                    msg += `⚠️ <b class="text-pink-500">이미지가 ${missingInImg.length}개 없습니다.</b> (확인 필요)`;
+                } else {
+                    msg += `✅ <b class="text-pink-500">이미지도 전부 다 있습니다!</b>`;
+                }
+                
+                reportText.innerHTML = msg;
+
+            } catch(e) {
+                alert("검사 중 쇼크 왔어요.. ㅠㅠ " + e.message);
+            } finally {
+                btn.innerText = "🔍 다시 검사하기"; btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

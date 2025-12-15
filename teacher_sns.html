@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SNS 관리 센터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        #lightbox { backdrop-filter: blur(10px); }
+        .student-item.active { background-color: #eff6ff; border-left: 4px solid #4f46e5; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        .heart-pop { animation: pop 0.3s; }
+        @keyframes pop { 50% { transform: scale(1.3); } }
+    </style>
+</head>
+<body class="p-6 max-w-7xl mx-auto h-screen flex flex-col">
+
+    <script src="config.js"></script>
+
+    <div id="lightbox" class="hidden fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center">
+        <button onclick="closeZoom()" class="absolute top-6 right-6 text-white text-3xl z-50 p-4"><i class="fa-solid fa-xmark"></i></button>
+        <div class="w-full h-full flex items-center justify-center overflow-hidden p-2"><img id="zoom-img" class="max-w-full max-h-full object-contain" src="" alt="Full View"></div>
+        <div class="absolute bottom-10 bg-black/50 text-white text-xs px-4 py-2 rounded-full pointer-events-none">휠로 확대 / 드래그로 이동</div>
+    </div>
+
+    <div class="flex justify-between items-center mb-6 shrink-0">
+        <h1 class="text-2xl font-black text-slate-800 flex items-center gap-2"><span class="text-indigo-600"><i class="fa-brands fa-instagram"></i></span> SNS Control Tower</h1>
+        <div class="flex gap-2"><span class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg text-xs font-bold flex items-center"><i class="fa-solid fa-user-tie mr-1"></i> <span id="admin-name">관리자</span></span><button onclick="window.close()" class="bg-white border text-slate-500 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-50 shadow-sm">창 닫기</button></div>
+    </div>
+
+    <div class="flex-1 flex gap-6 overflow-hidden">
+        <div class="w-1/3 min-w-[300px] bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+            <div class="p-4 border-b bg-slate-50 rounded-t-2xl flex flex-col gap-2">
+                <div class="flex justify-between items-center"><span class="font-bold text-slate-700 text-sm">학생 목록</span><span class="text-xs text-slate-400" id="total-cnt">0명</span></div>
+                <select id="grade-filter" onchange="loadStudentList()" class="w-full p-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-600">
+                    <option value="all">🎓 전체 보기</option><option value="중1">중1</option><option value="중2">중2</option><option value="중3">중3</option><option value="고1">고1</option><option value="고2">고2</option><option value="고3">고3</option>
+                </select>
+            </div>
+            <div id="student-list" class="flex-1 overflow-y-auto p-2 space-y-1 bg-white rounded-b-2xl custom-scroll"><div class="text-center py-10 text-slate-300"><div class="loader inline-block"></div> 로딩 중...</div></div>
+        </div>
+        <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden">
+            <div class="p-4 border-b bg-white z-10 flex justify-between items-center shadow-sm" id="feed-header"><span class="font-bold text-slate-400">좌측에서 학생을 선택하세요.</span></div>
+            <div id="feed-view" class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50 custom-scroll relative"><div class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 opacity-50 pointer-events-none"><i class="fa-regular fa-comments text-6xl mb-4"></i><span class="text-sm">학생과 소통을 시작해보세요</span></div></div>
+            <div class="p-4 border-t bg-white relative z-20">
+                <div class="flex gap-2 mb-2"><textarea id="admin-msg" class="flex-1 bg-slate-50 border-0 rounded-xl p-3 text-sm h-14 resize-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400" placeholder="피드에 공지나 칭찬을 남겨보세요!"></textarea><button onclick="postAdminMsg()" class="bg-indigo-600 text-white px-5 rounded-xl font-bold hover:bg-indigo-700 shadow-md transition transform active:scale-95 h-14 shrink-0"><i class="fa-solid fa-paper-plane"></i></button></div>
+                <div class="flex items-center gap-3 text-xs bg-amber-50 p-2 rounded-lg border border-amber-100 text-amber-800"><span class="font-bold">🎁 보상:</span><label class="cursor-pointer hover:text-amber-600"><input type="radio" name="gift" value="none" checked> 없음</label><label class="cursor-pointer hover:text-amber-600"><input type="radio" name="gift" value="xp"> XP</label><label class="cursor-pointer hover:text-amber-600"><input type="radio" name="gift" value="cp"> CP</label><input type="number" id="gift-amount" class="w-16 border border-amber-200 rounded px-2 py-0.5 text-center bg-white focus:outline-none" placeholder="0"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (currentUser) { document.getElementById('admin-name').innerText = currentUser.name; } else { alert("로그인 필요"); window.close(); }
+        let currentStudentId=null, currentStudentName=null, zoomInstance=null, allStudents=[];
+
+        function openZoom(url) { const m=document.getElementById('lightbox'), i=document.getElementById('zoom-img'); i.src=url; m.classList.remove('hidden'); if(zoomInstance) zoomInstance.dispose(); zoomInstance=Panzoom(i,{maxScale:5,minScale:0.5,contain:false}); i.parentElement.addEventListener('wheel',zoomInstance.zoomWithWheel); }
+        function closeZoom() { document.getElementById('lightbox').classList.add('hidden'); if(zoomInstance) zoomInstance.reset(); }
+
+        async function loadStudentList() {
+            const listDiv = document.getElementById('student-list'); listDiv.innerHTML = '<div class="text-center py-10 text-slate-400 text-sm"><i class="fas fa-circle-notch fa-spin"></i> 불러오는 중...</div>';
+            const { data: users } = await _supabase.from('users').select('username, name, grade').eq('role', 'student');
+            const { data: feeds } = await _supabase.from('guestbook').select('sender_id, created_at').order('created_at', {ascending: false});
+            const lastActiveMap = {}; if(feeds) feeds.forEach(f => { if (!lastActiveMap[f.sender_id]) lastActiveMap[f.sender_id] = new Date(f.created_at); });
+            allStudents = users.map(u => ({ ...u, lastActive: lastActiveMap[u.username] || new Date(0) }));
+            renderList();
+        }
+
+        function renderList() {
+            const filterGrade = document.getElementById('grade-filter').value; const listDiv = document.getElementById('student-list');
+            let filtered = allStudents; if (filterGrade !== 'all') filtered = allStudents.filter(s => s.grade === filterGrade);
+            filtered.sort((a, b) => b.lastActive - a.lastActive);
+            document.getElementById('total-cnt').innerText = `${filtered.length}명`;
+            if (filtered.length === 0) { listDiv.innerHTML = '<div class="text-center py-20 text-slate-300 text-xs">해당하는 학생이 없습니다.</div>'; return; }
+            listDiv.innerHTML = filtered.map(s => {
+                const timeAgo = s.lastActive.getTime() === 0 ? '' : getTimeAgo(s.lastActive);
+                const activeClass = currentStudentId === s.username ? 'active' : '';
+                const badge = timeAgo ? `<span class="text-[10px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded font-bold">${timeAgo}</span>` : '';
+                return `<div onclick="loadStudentFeed('${s.username}', '${s.name}')" class="student-item ${activeClass} p-3 mx-1 rounded-lg hover:bg-slate-50 cursor-pointer flex justify-between items-center group transition border-l-4 border-transparent"><div class="flex flex-col"><span class="font-bold text-slate-700 text-sm flex items-center gap-2">${s.name} ${badge}</span><span class="text-[10px] text-slate-400 group-hover:text-indigo-500 transition">${s.grade} | ${s.username}</span></div><i class="fa-solid fa-chevron-right text-slate-200 text-xs group-hover:text-indigo-400"></i></div>`;
+            }).join('');
+        }
+
+        async function loadStudentFeed(id, name) {
+            currentStudentId = id; currentStudentName = name; renderList();
+            document.getElementById('feed-header').innerHTML = `<div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">${name[0]}</div><div><div class="font-bold text-slate-800 text-sm">${name}</div><div class="text-[10px] text-slate-400">User ID: ${id}</div></div></div><button onclick="loadStudentFeed('${id}','${name}')" class="text-xs text-slate-400 hover:text-indigo-600"><i class="fas fa-rotate"></i></button>`;
+            const view = document.getElementById('feed-view'); view.innerHTML = '<div class="text-center py-20"><i class="fas fa-circle-notch fa-spin text-indigo-300 text-2xl"></i></div>';
+
+            const [postRes, comRes, likeRes] = await Promise.all([
+                _supabase.from('guestbook').select('*').or(`receiver_id.eq.${id},sender_id.eq.${id}`).order('created_at', {ascending:false}),
+                _supabase.from('guestbook_comments').select('*').order('created_at', {ascending:true}),
+                _supabase.from('guestbook_likes').select('*')
+            ]);
+
+            const posts = postRes.data; 
+            if(!posts || !posts.length) { view.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-300 gap-2"><i class="fa-regular fa-comment-dots text-4xl"></i><span class="text-xs">게시물이 없습니다.</span></div>'; return; }
+
+            const comMap = {};
+            if(comRes.data) comRes.data.forEach(c => { if(!comMap[c.post_id]) comMap[c.post_id] = {roots:[], replies:{}}; if(c.parent_id) { if(!comMap[c.post_id].replies[c.parent_id]) comMap[c.post_id].replies[c.parent_id]=[]; comMap[c.post_id].replies[c.parent_id].push(c); } else comMap[c.post_id].roots.push(c); });
+
+            const likeMap = {};
+            if(likeRes.data) likeRes.data.forEach(l => { if(!likeMap[l.post_id]) likeMap[l.post_id] = []; likeMap[l.post_id].push(l.user_id); });
+
+            view.innerHTML = posts.map(p => {
+                const isMe = p.sender_id === id;
+                const statusClass = p.status === 'blind' ? 'bg-red-50 border-red-200 opacity-75' : 'bg-white border-slate-200';
+                
+                let mediaHtml = '';
+                if (p.image_url) { mediaHtml = `<div class="mt-3 mb-1 rounded-xl overflow-hidden shadow-sm bg-slate-100 relative group cursor-zoom-in h-72 flex justify-center items-center" onclick="openZoom('${p.image_url}')"><img src="${p.image_url}" class="w-full h-full object-contain hover:scale-105 transition-transform duration-500" loading="lazy"><div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs pointer-events-none"><i class="fa-solid fa-magnifying-glass-plus mr-1"></i> 크게 보기</div></div>`; }
+
+                const postComs = comMap[p.id] || { roots: [], replies: {} };
+                const commentsHtml = postComs.roots.map(root => {
+                    const replies = postComs.replies[root.id] || [];
+                    const replyHtml = replies.map(rep => `<div class="flex gap-2 text-xs py-1 pl-4 border-l-2 border-slate-200 ml-1 mt-1 bg-slate-50/50 rounded-r items-baseline"><span class="font-bold ${rep.writer_id==='선생님'?'text-indigo-600':'text-slate-600'}">↳ ${rep.writer_id}</span><span class="text-slate-600 break-all">${rep.content}</span><span class="text-[10px] text-slate-400 ml-auto whitespace-nowrap">${getTimeAgo(new Date(rep.created_at))}</span></div>`).join('');
+                    return `<div class="mb-2"><div class="flex justify-between items-baseline group"><div class="flex gap-2 text-xs py-1.5 items-baseline flex-1"><span class="font-bold ${root.writer_id==='선생님'?'text-indigo-600':'text-slate-800'}">${root.writer_id}</span><span class="text-slate-600 break-all">${root.content}</span><span class="text-[10px] text-slate-400 ml-auto whitespace-nowrap">${getTimeAgo(new Date(root.created_at))}</span></div><button onclick="toggleReplyBox(${root.id})" class="ml-2 text-[10px] text-slate-300 hover:text-brand-500 opacity-0 group-hover:opacity-100 transition whitespace-nowrap">답글</button></div>${replyHtml}<div id="reply-box-${root.id}" class="hidden mt-1 pl-4 flex gap-1"><input type="text" id="reply-input-${root.id}" class="w-full bg-slate-100 border-0 rounded px-2 py-1 text-[10px]" placeholder="답글..." onkeyup="if(event.key==='Enter') addComm(${p.id},${root.id})"><button onclick="addComm(${p.id},${root.id})" class="bg-brand-100 text-brand-600 px-2 py-0.5 rounded text-[10px] font-bold shrink-0">등록</button></div></div>`;
+                }).join('');
+
+                const likers = likeMap[p.id] || [];
+                const isLiked = likers.includes(currentUser.username);
+                const likeIcon = isLiked ? '<i class="fa-solid fa-heart text-red-500 heart-pop"></i>' : '<i class="fa-regular fa-heart"></i>';
+                const likeText = likers.length > 0 ? `<div class="text-xs font-bold text-slate-800 cursor-pointer hover:underline" onclick="alert('${likers.join(', ')} 님이 좋아합니다!')">좋아요 ${likers.length}개</div>` : '';
+
+                return `<div class="p-5 rounded-2xl border ${statusClass} shadow-sm transition hover:shadow-md bg-white"><div class="flex justify-between mb-3"><div class="flex items-center gap-2"><span class="font-bold text-sm ${isMe ? 'text-slate-800' : 'text-indigo-600'}">${p.sender_id}</span><span class="text-[10px] text-slate-400">${getTimeAgo(new Date(p.created_at))}</span></div><div class="flex gap-1">${p.status !== 'blind' ? `<button onclick="moderatePost(${p.id}, 'warn')" class="w-6 h-6 rounded-full hover:bg-yellow-100 text-yellow-500 text-xs transition" title="경고"><i class="fa-solid fa-triangle-exclamation"></i></button>` : ''}${p.status !== 'blind' ? `<button onclick="moderatePost(${p.id}, 'blind')" class="w-6 h-6 rounded-full hover:bg-red-100 text-red-500 text-xs transition" title="블라인드"><i class="fa-solid fa-eye-slash"></i></button>` : '<span class="text-[10px] text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded">BLIND</span>'}<button onclick="moderatePost(${p.id}, 'delete')" class="w-6 h-6 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-600 text-xs transition" title="삭제"><i class="fa-solid fa-trash"></i></button></div></div><div class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">${p.content}</div>${mediaHtml}${p.gift_type ? `<div class="mt-3 text-xs bg-amber-50 text-amber-700 p-2 rounded border border-amber-100 font-bold flex items-center gap-2"><i class="fa-solid fa-gift"></i> 선물 지급: ${p.gift_amount} ${p.gift_type.toUpperCase()}</div>` : ''}<div class="px-0 py-2 flex items-center gap-2"><button onclick="toggleLike(${p.id}, ${isLiked})" class="text-xl hover:scale-110 transition-transform">${likeIcon}</button>${likeText}</div><div class="mt-2 pt-3 border-t border-slate-100"><div class="space-y-1 mb-3">${commentsHtml}</div><div class="flex gap-2 relative"><input type="text" id="comment-input-${p.id}" class="w-full bg-slate-50 border-0 rounded-full pl-4 pr-12 py-2 text-xs focus:ring-1 focus:ring-indigo-500 transition" placeholder="댓글 달기..." onkeyup="if(event.key==='Enter') addComment(${p.id})"><button onclick="addComment(${p.id})" class="absolute right-1 top-1 bottom-1 text-indigo-600 font-bold text-xs px-3 hover:bg-indigo-50 rounded-full transition">게시</button></div></div></div>`;
+            }).join('');
+        }
+
+        function toggleReplyBox(cid) { document.getElementById(`reply-box-${cid}`).classList.toggle('hidden'); }
+        function getTimeAgo(date) { const s=Math.floor((new Date()-date)/1000); if(s<60)return"방금"; const m=Math.floor(s/60); if(m<60)return`${m}분 전`; const h=Math.floor(m/60); if(h<24)return`${h}시간 전`; return`${Math.floor(h/24)}일 전`; }
+
+        async function postAdminMsg() {
+            if(!currentStudentId) return alert("학생을 선택하세요.");
+            const content = document.getElementById('admin-msg').value.trim();
+            const giftType = document.querySelector('input[name="gift"]:checked').value;
+            const giftAmount = parseInt(document.getElementById('gift-amount').value) || 0;
+            if(!content) return alert("내용을 입력하세요.");
+            const payload = { sender_id: currentUser.username, receiver_id: currentStudentId, content: content };
+            if(giftType !== 'none' && giftAmount > 0) { payload.gift_type = giftType; payload.gift_amount = giftAmount; }
+            await _supabase.from('guestbook').insert([payload]);
+            document.getElementById('admin-msg').value = '';
+            loadStudentFeed(currentStudentId, currentStudentName);
+        }
+
+        async function toggleLike(pid, isLiked) {
+            if (isLiked) await _supabase.from('guestbook_likes').delete().match({post_id: pid, user_id: currentUser.username});
+            else await _supabase.from('guestbook_likes').insert([{post_id: pid, user_id: currentUser.username}]);
+            loadStudentFeed(currentStudentId, currentStudentName);
+        }
+
+        async function addComment(pid, parId=null) {
+            const id = parId ? `reply-input-${parId}` : `comment-input-${pid}`;
+            const input = document.getElementById(id);
+            const content = input.value.trim();
+            if(!content) return;
+            const payload = { post_id: pid, writer_id: currentUser.username, content: content };
+            if(parId) payload.parent_id = parId;
+            await _supabase.from('guestbook_comments').insert([payload]);
+            loadStudentFeed(currentStudentId, currentStudentName);
+        }
+
+        async function moderatePost(pid, action) {
+            if(!confirm("처리하시겠습니까?")) return;
+            if (action === 'delete') await _supabase.from('guestbook').delete().eq('id', pid);
+            else if (action === 'blind') await _supabase.from('guestbook').update({ status: 'blind', content: '🚫 관리자에 의해 규제된 게시물입니다.' }).eq('id', pid);
+            else if (action === 'warn') await _supabase.from('guestbook').update({ status: 'warned' }).eq('id', pid);
+            loadStudentFeed(currentStudentId, currentStudentName);
+        }
+
+        loadStudentList(); 
+    </script>
+</body>
+</html>

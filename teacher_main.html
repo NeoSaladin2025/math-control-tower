@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>선생님 통합 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; }
+        .menu-card { transition: all 0.2s; cursor: pointer; }
+        .menu-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* 알림 펄스 효과 */
+        .inbox-pulse-red { animation: pulse-red 2s infinite; border-color: #fca5a5; background-color: #fff1f2; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.2); } 70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); } 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); } }
+        
+        .inbox-pulse-yellow { animation: pulse-yellow 2s infinite; border-color: #fcd34d; background-color: #fffbeb; }
+        @keyframes pulse-yellow { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.2); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+
+        /* 모달 */
+        #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 80vh; display: flex; flex-direction: column; }
+        
+        /* Q-Center Modal (Larger) */
+        #q-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 150; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+        .q-modal-content { background: white; width: 100%; max-width: 1000px; height: 85vh; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+
+        /* 쫀득한 입체 버튼 (Grade Tabs) */
+        .grade-btn {
+            min-width: 60px; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 13px; 
+            background: white; border: 2px solid #e2e8f0; color: #64748b; 
+            box-shadow: 0 4px 0 #cbd5e1; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+            white-space: nowrap; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .grade-btn:active { transform: translateY(4px); box-shadow: none; }
+        .grade-btn.active {
+            background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #3730a3; color: white; box-shadow: 0 4px 0 #312e81;
+        }
+        .grade-btn.active:active { transform: translateY(4px); box-shadow: none; }
+
+        /* 질문 리스트용 쫀득 버튼 (Q-Item) */
+        .q-click-btn {
+            width: 100%; padding: 12px 16px; border-radius: 12px; 
+            background: white; border: 2px solid #e2e8f0; color: #334155;
+            box-shadow: 0 4px 0 #cbd5e1; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer; text-align: left; position: relative;
+            display: flex; justify-content: space-between; items-center;
+        }
+        .q-click-btn:active { transform: translateY(4px); box-shadow: none; }
+        .q-click-btn:hover { border-color: #6366f1; color: #4338ca; }
+        .q-click-btn.selected {
+            background: #eef2ff; border-color: #6366f1; color: #4338ca;
+            box-shadow: 0 2px 0 #818cf8; transform: translateY(2px);
+        }
+
+        /* Type Badges */
+        .badge-high { background: #7e22ce; color: white; border: 1px solid #581c87; }
+        .badge-sub { background: #059669; color: white; border: 1px solid #065f46; }
+        .badge-norm { background: #3b82f6; color: white; border: 1px solid #1e40af; }
+        
+        /* 라운드별 학생 카드 스타일 */
+        .card-round-0 { background: white; border: 1px solid #e2e8f0; } /* 기본 */
+        .card-round-1 { background: #f0fdf4; border: 1px solid #86efac; } /* 1회차 완료 (초록) */
+        .card-round-2 { background: #eff6ff; border: 1px solid #93c5fd; } /* 2회차 완료 (파랑) */
+        .card-round-3 { background: #f1f5f9; border: 1px solid #cbd5e1; opacity: 0.8; } /* 3회차 이상 (회색) */
+
+        /* 스크롤바 */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <script src="config.js"></script>
+
+    <nav class="bg-white border-b shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2 font-bold text-xl text-indigo-700">
+                <span>🏫</span> Math Control Tower
+            </div>
+            <div class="flex items-center gap-2 text-sm">
+                <span><b id="t-name" class="text-slate-800">선생님</b>님</span>
+                <button onclick="openManual()" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded border border-slate-200 hover:bg-slate-200 font-bold transition flex items-center gap-1"><span>📘</span> 가이드</button>
+                <button onclick="openPwModal()" class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded border border-indigo-200 hover:bg-indigo-100 font-bold transition">🔒 비번변경</button>
+                <button onclick="logout()" class="bg-slate-100 px-3 py-1.5 rounded hover:bg-slate-200 text-slate-600 font-bold transition">로그아웃</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        
+        <h2 class="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm"><span>📨</span> 도착한 메시지</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div onclick="openSpecialInbox()" id="box-special" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-red-300 transition relative overflow-hidden group flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-xl group-hover:scale-110 transition">🎁</div>
+                    <div>
+                        <div class="text-slate-800 font-bold">스페셜 수신함</div>
+                        <div class="text-xs text-slate-500">과제 제출 및 심판</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="cnt-special" class="text-2xl font-black text-slate-800">0</span>
+                    <span id="badge-special" class="hidden bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1 align-top">N</span>
+                </div>
+            </div>
+
+            <div onclick="openGiteukInbox()" id="box-giteuk" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-amber-300 transition relative overflow-hidden group flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-xl group-hover:scale-110 transition">🐥</div>
+                    <div>
+                        <div class="text-slate-800 font-bold">기특한 수신함</div>
+                        <div class="text-xs text-slate-500">자율 학습 인증</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span id="cnt-giteuk" class="text-2xl font-black text-slate-800">0</span>
+                    <span id="badge-giteuk" class="hidden bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1 align-top">N</span>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="font-bold text-slate-700 mb-3 text-sm">🚀 관리 메뉴</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div onclick="location.href='teacher_daily.html'" class="menu-card bg-white p-4 rounded-xl border-l-4 border-green-500 shadow-sm">
+                <div class="text-xl mb-1">🎮</div><div class="font-bold text-slate-800 text-sm">일일 관리</div><div class="text-[10px] text-slate-500">XP/CP 지급 & 체크</div>
+            </div>
+            <div onclick="location.href='manager_student.html'" class="menu-card bg-white p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+                <div class="text-xl mb-1">👑</div><div class="font-bold text-slate-800 text-sm">학생 관리</div><div class="text-[10px] text-slate-500">학생 등록 & 배정</div>
+            </div>
+            <div onclick="location.href='manager_workbook.html'" class="menu-card bg-white p-4 rounded-xl border-l-4 border-pink-500 shadow-sm">
+                <div class="text-xl mb-1">📚</div><div class="font-bold text-slate-800 text-sm">문제집 등록</div><div class="text-[10px] text-slate-500">교재 관리</div>
+            </div>
+            <div onclick="location.href='teacher_assign_integrated.html'" class="menu-card bg-white p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
+                <div class="text-xl mb-1">🩺</div><div class="font-bold text-slate-800 text-sm">정밀 과제 출제</div><div class="text-[10px] text-slate-500">진단과 처방을 동시에</div>
+            </div>
+            <div onclick="location.href='teacher_test.html'" class="menu-card bg-white p-4 rounded-xl border-l-4 border-slate-500 shadow-sm hover:opacity-100">
+                <div class="text-xl mb-1">💯</div><div class="font-bold text-slate-800 text-sm">진단평가</div><div class="text-[10px] text-slate-500">시험지 생성</div>
+            </div>
+            <div onclick="openGodMode()" class="menu-card bg-slate-800 p-4 rounded-xl border-l-4 border-red-500 shadow-lg hover:bg-slate-900 cursor-pointer transition transform hover:scale-105">
+                <div class="text-xl mb-1">📊</div><div class="font-bold text-red-400 text-sm">학습 정밀 진단</div><div class="text-[10px] text-slate-400">관리자용 통계 (VIP)</div>
+            </div>
+            <div onclick="window.open('teacher_sns.html', '_blank', 'width=1200,height=900')" class="menu-card bg-white p-4 rounded-xl border-l-4 border-teal-500 shadow-sm">
+                <div class="text-xl mb-1">👮</div><div class="font-bold text-slate-800 text-sm">SNS 보안관</div><div class="text-[10px] text-slate-500">피드 순찰 & 포상</div>
+            </div>
+            <div onclick="location.href='teacher_integrated_config.html'" class="menu-card bg-white p-4 rounded-xl border-l-4 border-orange-400 shadow-sm">
+                <div class="text-xl mb-1">⚙️</div><div class="font-bold text-slate-800 text-sm">통합 관리 센터</div><div class="text-[10px] text-slate-500">규칙 & 보상 & 성장 설계</div>
+            </div>
+            <div id="god-menu" onclick="location.href='admin_db_inspector.html'" class="menu-card bg-black p-4 rounded-xl border-l-4 border-yellow-400 shadow-lg hidden cursor-pointer transition transform hover:scale-105">
+                <div class="text-xl mb-1">👁️</div><div class="font-bold text-yellow-400 text-sm">DB 정밀 검사</div><div class="text-[10px] text-slate-400">데이터 누락 확인</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col h-[500px]">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <span>🙋‍♂️</span> 실시간 질문 센터 (Q-Center)
+                    </h2>
+                    <button onclick="fetchQuestions()" class="text-[10px] bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 font-bold text-slate-600 transition">🔄 새로고침</button>
+                </div>
+                
+                <div class="flex gap-2 overflow-x-auto pb-4 mb-2 shrink-0 scrollbar-hide px-1" id="q-grade-tabs">
+                    <button onclick="filterQ('all')" id="q-tab-all" class="grade-btn active">✨ 전체</button>
+                    <button onclick="filterQ('중1')" id="q-tab-중1" class="grade-btn">중1</button>
+                    <button onclick="filterQ('중2')" id="q-tab-중2" class="grade-btn">중2</button>
+                    <button onclick="filterQ('중3')" id="q-tab-중3" class="grade-btn">중3</button>
+                    <button onclick="filterQ('고1')" id="q-tab-고1" class="grade-btn">고1</button>
+                    <button onclick="filterQ('고2')" id="q-tab-고2" class="grade-btn">고2</button>
+                    <button onclick="filterQ('고3')" id="q-tab-고3" class="grade-btn">고3</button>
+                </div>
+
+                <div id="q-student-grid" class="flex-1 overflow-y-auto custom-scroll grid grid-cols-2 md:grid-cols-3 gap-3 content-start p-1">
+                    <div class="col-span-full text-center py-20 text-slate-400 text-xs">질문 로딩 중...</div>
+                </div>
+            </div>
+
+            <iframe src="teacher_dashboard_status.html" class="w-full h-[500px] rounded-xl shadow-lg border-0" scrolling="no"></iframe>
+        </div>
+    </div>
+
+    <div id="pw-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">🔒 비밀번호 변경</h3>
+            <div class="space-y-3 mb-6">
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">현재 비밀번호</label><input type="password" id="cur-pw" class="w-full border rounded p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">새 비밀번호</label><input type="password" id="new-pw" class="w-full border rounded p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold text-gray-500 mb-1">새 비밀번호 확인</label><input type="password" id="confirm-pw" class="w-full border rounded p-2 text-sm"></div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="closePwModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded font-bold text-sm hover:bg-gray-300">취소</button>
+                <button onclick="changePassword()" class="flex-1 bg-indigo-600 text-white py-2 rounded font-bold text-sm hover:bg-indigo-700">변경하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-header" class="p-4 text-white flex justify-between items-center shrink-0 shadow-sm">
+                <h3 class="font-bold text-base" id="modal-title">목록</h3>
+                <button onclick="closeModal()" class="text-white/80 hover:text-white text-xl transition">×</button>
+            </div>
+            <div id="modal-body" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50"></div>
+        </div>
+    </div>
+
+    <div id="q-modal-overlay">
+        <div class="q-modal-content">
+            <div class="bg-slate-800 p-4 text-white flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-lg" id="qm-avatar">?</div>
+                    <div>
+                        <h3 class="font-bold text-lg" id="qm-name">학생 이름</h3>
+                        <p class="text-xs text-slate-400" id="qm-info">학년 | 티어</p>
+                    </div>
+                </div>
+                <button onclick="closeQModal()" class="text-slate-400 hover:text-white text-2xl transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="flex-1 flex overflow-hidden bg-slate-50">
+                <div class="w-1/3 min-w-[240px] border-r border-slate-200 bg-white flex flex-col">
+                    <div class="p-3 border-b bg-slate-50 text-xs font-bold text-slate-500 flex justify-between">
+                        <span>질문 목록 (<span id="qm-cnt">0</span>)</span>
+                    </div>
+                    <div id="qm-list" class="flex-1 overflow-y-auto p-3 space-y-2 custom-scroll"></div>
+                    
+                    <div class="p-3 border-t border-slate-200 bg-white space-y-2">
+                        <button onclick="completeRound()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow-md flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-flag-checkered"></i> 1회 클리닉 완료 (순환)
+                        </button>
+                        <button onclick="closeQModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold py-2 rounded-xl transition text-xs">
+                            메인으로 복귀
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col relative bg-slate-100">
+                    <div id="qm-viewer" class="flex-1 overflow-auto flex items-center justify-center p-4">
+                        <span class="text-slate-400 text-sm font-bold opacity-60">좌측에서 질문을 딸깍! 선택하세요. 👆</span>
+                    </div>
+                    
+                    <div id="qm-actions" class="p-4 bg-white border-t border-slate-200 shrink-0 hidden shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-10">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-transparent hover:bg-green-50 transition select-none">
+                                    <input type="radio" name="q-action" value="resolve" class="w-5 h-5 accent-green-600" checked>
+                                    <div><div class="font-bold text-sm text-green-700">✅ 해결 완료</div><div class="text-[10px] text-green-600">숙제 포함 & 질문 제거</div></div>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-transparent hover:bg-yellow-50 transition select-none">
+                                    <input type="radio" name="q-action" value="hold" class="w-5 h-5 accent-yellow-500">
+                                    <div><div class="font-bold text-sm text-yellow-700">⏳ 보류 (Keep)</div><div class="text-[10px] text-yellow-600">나중에 처리 (유지)</div></div>
+                                </label>
+                            </div>
+                            <button onclick="confirmQAction()" class="bg-slate-800 text-white px-8 py-3 rounded-xl font-bold hover:bg-black shadow-lg transition transform active:scale-95 flex items-center gap-2">
+                                <i class="fa-solid fa-check"></i> 확인
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || (user.role !== 'teacher' && user.role !== 'admin')) { 
+            alert("로그인이 필요합니다."); location.href = 'index.html'; 
+        } else {
+            document.getElementById('t-name').innerText = user.name;
+            if (user.username === '곽명용이브' || user.role === 'admin') document.getElementById('god-menu').classList.remove('hidden');
+        }
+
+        function logout() { sessionStorage.clear(); location.href = 'index.html'; }
+
+        // --- Q-Center Data ---
+        let qDataAll = []; 
+        let currentQFilter = 'all';
+        let currentTargetQStudent = null;
+        let selectedQItem = null;
+        let clinicRounds = JSON.parse(sessionStorage.getItem('clinicRounds')) || {}; 
+
+        async function loadData() {
+            fetchQuestions(); checkInboxes();
+        }
+
+        async function fetchQuestions() {
+            const grid = document.getElementById('q-student-grid');
+            
+            const { data, error } = await _supabase
+                .from('student_progress')
+                .select('*, users!inner(name, grade, tier)')
+                .eq('is_question_active', true)
+                .order('updated_at', {ascending: true});
+
+            if (error) { console.error(error); return; }
+            
+            const map = {};
+            data.forEach(item => {
+                const sid = item.student_id;
+                if (!map[sid]) {
+                    map[sid] = {
+                        id: sid,
+                        name: item.users.name,
+                        grade: item.users.grade,
+                        tier: item.users.tier || 'Bronze',
+                        questions: [],
+                        round: clinicRounds[sid] || 0
+                    };
+                }
+                map[sid].questions.push(item);
+            });
+
+            qDataAll = Object.values(map);
+            
+            qDataAll.sort((a, b) => {
+                if (a.round !== b.round) return a.round - b.round;
+                return b.questions.length - a.questions.length;
+            });
+
+            renderQStudents();
+            loadStats(); // 질문 개수 통계 업데이트
+        }
+
+        function filterQ(grade) {
+            currentQFilter = grade;
+            document.querySelectorAll('.grade-btn').forEach(b => {
+                b.classList.remove('active');
+                if (b.id === `q-tab-${grade}`) b.classList.add('active');
+            });
+            renderQStudents();
+        }
+
+        function renderQStudents() {
+            const grid = document.getElementById('q-student-grid');
+            let list = qDataAll;
+            if (currentQFilter !== 'all') list = qDataAll.filter(s => s.grade === currentQFilter);
+
+            if (list.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400 text-xs">질문이 없습니다. (깨끗!) 🎉</div>`;
+                return;
+            }
+
+            grid.innerHTML = list.map(s => {
+                const r = s.round;
+                let cardClass = 'card-round-0';
+                let badgeText = 'New';
+                let badgeColor = 'bg-indigo-50 text-indigo-600';
+                
+                if (r === 1) { cardClass = 'card-round-1'; badgeText = '1회 완료'; badgeColor = 'bg-green-100 text-green-700'; }
+                else if (r === 2) { cardClass = 'card-round-2'; badgeText = '2회 완료'; badgeColor = 'bg-blue-100 text-blue-700'; }
+                else if (r >= 3) { cardClass = 'card-round-3'; badgeText = `${r}회 완료`; badgeColor = 'bg-slate-200 text-slate-600'; }
+
+                return `
+                <div onclick="openQModal('${s.id}')" class="${cardClass} rounded-xl p-3 shadow-sm hover:shadow-md cursor-pointer transition group relative overflow-hidden border border-slate-200">
+                    <div class="absolute right-0 top-0 ${badgeColor} text-[10px] font-bold px-2 py-1 rounded-bl-lg">${badgeText}</div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-500 text-sm shadow-sm group-hover:scale-105 transition">${s.name[0]}</div>
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">${s.name}</div>
+                            <div class="text-[10px] text-slate-400">${s.grade}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-500">질문 개수</span>
+                        <span class="bg-red-500 text-white px-2 py-0.5 rounded-lg text-xs font-black shadow-sm">${s.questions.length}</span>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        async function openQModal(sid) {
+            const s = qDataAll.find(x => x.id === sid);
+            if(!s) return;
+            currentTargetQStudent = s;
+
+            document.getElementById('qm-name').innerText = s.name;
+            document.getElementById('qm-info').innerText = `${s.grade} | ${s.tier} (현재 ${s.round}회차 완료)`;
+            document.getElementById('qm-avatar').innerText = s.name[0];
+            document.getElementById('qm-cnt').innerText = s.questions.length;
+            
+            const listEl = document.getElementById('qm-list');
+            listEl.innerHTML = '<div class="text-center py-4"><div class="loader"></div></div>';
+
+            // ★ [NEW] Metadata Fetch: 문제 유형을 가져오기 위한 메타데이터 로드
+            const requests = s.questions.map(q => 
+                _supabase.from('problem_metadata')
+                .select('workbook_id, problem_num, difficulty, is_subjective')
+                .match({workbook_id: q.workbook_id, problem_num: q.problem_num})
+                .single()
+            );
+            const results = await Promise.all(requests);
+            let metaMap = {};
+            results.forEach(res => {
+                if(res.data) {
+                    const k = `${res.data.workbook_id}-${res.data.problem_num}`;
+                    metaMap[k] = res.data;
+                }
+            });
+
+            listEl.innerHTML = s.questions.map((q, idx) => {
+                const k = `${q.workbook_id}-${q.problem_num}`;
+                const meta = metaMap[k];
+                let typeBadge = '<span class="badge-norm text-[9px] px-1 rounded">일반</span>';
+                if (meta) {
+                    if (meta.difficulty === 'high_rank') typeBadge = '<span class="badge-high text-[9px] px-1 rounded">1등급</span>';
+                    else if (meta.is_subjective) typeBadge = '<span class="badge-sub text-[9px] px-1 rounded">서술형</span>';
+                }
+
+                return `
+                <div onclick="viewQDetail(${q.workbook_id}, ${q.problem_num}, this)" class="q-click-btn group" data-wb-id="${q.workbook_id}" data-p-num="${q.problem_num}">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-sm font-black group-hover:text-indigo-600">No. ${q.problem_num}</span>
+                            ${typeBadge}
+                        </div>
+                        <div class="text-[10px] text-slate-400 font-medium">${q.workbooks?.title || '문제집 정보 없음'}</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-indigo-400"></i>
+                </div>
+                `;
+            }).join('');
+
+            document.getElementById('qm-viewer').innerHTML = '<span class="text-slate-400 text-sm font-bold opacity-60">좌측에서 질문을 딸깍! 선택하세요. 👆</span>';
+            document.getElementById('qm-actions').classList.add('hidden');
+            selectedQItem = null;
+
+            document.getElementById('q-modal-overlay').style.display = 'flex';
+        }
+
+        function closeQModal() {
+            document.getElementById('q-modal-overlay').style.display = 'none';
+            fetchQuestions(); // 질문 목록 갱신
+        }
+
+        function viewQDetail(wbId, pNum, el) {
+            document.querySelectorAll('.q-click-btn').forEach(d => d.classList.remove('selected'));
+            el.classList.add('selected');
+
+            selectedQItem = { wbId, pNum, el };
+
+            const padded = pNum.toString().padStart(4, '0');
+            const url = `${SUPABASE_URL}/storage/v1/object/public/problems/${wbId}/${padded}.webp`;
+            
+            document.getElementById('qm-viewer').innerHTML = `
+                <div class="text-center w-full h-full flex flex-col items-center justify-center animate-[fadeIn_0.2s]">
+                    <div class="mb-3 text-xs font-bold text-slate-400 bg-white px-3 py-1 rounded-full shadow-sm border">Question Viewer</div>
+                    <img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg bg-white border border-slate-200" onerror="this.src='https://placehold.co/400x300?text=No+Image'">
+                </div>`;
+            
+            document.getElementById('qm-actions').classList.remove('hidden');
+            document.querySelector('input[name="q-action"][value="resolve"]').checked = true;
+        }
+
+        async function confirmQAction() {
+            if (!selectedQItem || !currentTargetQStudent) return;
+            const action = document.querySelector('input[name="q-action"]:checked').value;
+            const btn = document.querySelector('#qm-actions button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...';
+            btn.disabled = true;
+
+            if (action === 'resolve') {
+                try {
+                    // ★ 핵심 로직: mark_clinic_resolved 호출 (스탬프 찍고 last_result='wrong'으로 변경)
+                    const { error } = await _supabase.rpc('mark_clinic_resolved', {
+                        p_student_id: currentTargetQStudent.id,
+                        p_wb_id: selectedQItem.wbId,
+                        p_prob_num: selectedQItem.pNum
+                    });
+
+                    if (error) throw error;
+                    
+                    alert(`✅ [No.${selectedQItem.pNum}] 해결 처리 및 숙제 자동 등록 완료!`);
+                    
+                    // UI에서 해당 문제 제거
+                    const qEl = selectedQItem.el;
+                    qEl.style.transition = 'all 0.3s';
+                    qEl.style.opacity = '0';
+                    qEl.style.transform = 'translateX(-50px)';
+                    setTimeout(() => {
+                        qEl.remove();
+                        // 데이터 모델에서도 제거
+                        const idx = currentTargetQStudent.questions.findIndex(q => q.workbook_id === selectedQItem.wbId && q.problem_num === selectedQItem.pNum);
+                        if (idx > -1) currentTargetQStudent.questions.splice(idx, 1);
+                        
+                        // 모달 상태 갱신
+                        if (currentTargetQStudent.questions.length === 0) {
+                            closeQModal();
+                        } else {
+                            openQModal(currentTargetQStudent.id); // 목록 갱신
+                        }
+                    }, 300);
+
+
+                } catch(e) {
+                    alert("처리 실패: DB 오류 발생. " + e.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+
+            } else {
+                alert("⏳ 보류되었습니다. (리스트에 유지됨)");
+                document.querySelectorAll('.q-click-btn').forEach(d => d.classList.remove('selected'));
+                document.getElementById('qm-viewer').innerHTML = '<span class="text-slate-400 text-sm font-bold opacity-60">보류됨. 다음 질문 선택.</span>';
+                document.getElementById('qm-actions').classList.add('hidden');
+                selectedQItem = null;
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function completeRound() {
+            if(!currentTargetQStudent) return;
+            const sid = currentTargetQStudent.id;
+            clinicRounds[sid] = (clinicRounds[sid] || 0) + 1;
+            sessionStorage.setItem('clinicRounds', JSON.stringify(clinicRounds));
+            alert(`[${currentTargetQStudent.name}] 학생의 ${clinicRounds[sid]}회차 클리닉이 완료되었습니다.`);
+            closeQModal();
+        }
+        // --- End Q-Center Logic ---
+
+        // --- Inbox Logic (기존 유지) ---
+        async function checkInboxes() {
+            const { count: spCount } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('is_special', true).eq('status', 'submitted').is('final_score', null);
+            document.getElementById('cnt-special').innerText = spCount || 0;
+            if (spCount > 0) { document.getElementById('box-special').classList.add('inbox-pulse-red'); document.getElementById('badge-special').classList.remove('hidden'); }
+            else { document.getElementById('box-special').classList.remove('inbox-pulse-red'); document.getElementById('badge-special').classList.add('hidden'); }
+
+            const { count: gtCount } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+            document.getElementById('cnt-giteuk').innerText = gtCount || 0;
+            if (gtCount > 0) { document.getElementById('box-giteuk').classList.add('inbox-pulse-yellow'); document.getElementById('badge-giteuk').classList.remove('hidden'); }
+            else { document.getElementById('box-giteuk').classList.remove('inbox-pulse-yellow'); document.getElementById('badge-giteuk').classList.add('hidden'); }
+        }
+
+        async function openSpecialInbox() {
+            openModal('🎁 스페셜 수신함', 'bg-red-600');
+            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader"></div>';
+            const { data } = await _supabase.from('assignments').select('*').eq('is_special', true).eq('status', 'submitted').is('final_score', null).order('submitted_at', { ascending: true });
+            if (!data || !data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">대기 중인 건이 없습니다.</div>'; return; }
+            body.innerHTML = data.map(a => `<div onclick="openDetail('special')" class="bg-white p-3 rounded-lg border border-red-100 shadow-sm cursor-pointer hover:bg-red-50 transition"><div class="flex justify-between mb-1"><div class="font-bold text-slate-800 text-sm">${a.student_id} <span class="text-xs text-slate-400 font-normal">| ${a.title}</span></div></div><div class="text-[10px] text-slate-400">${new Date(a.submitted_at).toLocaleString()}</div></div>`).join('');
+        }
+        async function openGiteukInbox() {
+            openModal('🐥 기특한 수신함', 'bg-amber-500');
+            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader"></div>';
+            const { data } = await _supabase.from('student_solutions').select('*').eq('status', 'pending').order('created_at', { ascending: true });
+            if (!data || !data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">대기 중인 건이 없습니다.</div>'; return; }
+            body.innerHTML = data.map(s => `<div onclick="openDetail('giteuk')" class="bg-white p-3 rounded-lg border border-amber-100 shadow-sm cursor-pointer hover:bg-amber-50 transition"><div class="flex justify-between mb-1"><div class="font-bold text-slate-800 text-sm">${s.student_id}</div><span class="text-xs font-bold text-indigo-600">No. ${s.problem_num}</span></div><div class="text-[10px] text-slate-400 text-right">${new Date(s.created_at).toLocaleString()}</div></div>`).join('');
+        }
+        function openDetail(type) {
+            const w = 1000, h = 900; const left = (screen.width - w) / 2; const top = (screen.height - h) / 2;
+            const url = type === 'special' ? 'manager_check_special.html' : 'manager_challenge.html';
+            window.open(url, '_blank', `width=${w},height=${h},top=${top},left=${left}`);
+            closeModal(); 
+        }
+        function openModal(title, headerClass) { document.getElementById('modal-overlay').style.display = 'flex'; document.getElementById('modal-title').innerText = title; document.getElementById('modal-header').className = `p-4 text-white flex justify-between items-center shrink-0 shadow-sm ${headerClass}`; }
+        function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; loadData(); }
+        
+        function openGodMode() { window.open('admin_god_stats.html', '_blank', 'width=1250,height=950'); }
+        function openManual() { window.open('teacher_manual.html', '_blank', 'width=900,height=800'); }
+        function openPwModal() { document.getElementById('pw-modal').classList.remove('hidden'); }
+        function closePwModal() { document.getElementById('pw-modal').classList.add('hidden'); }
+        
+        async function changePassword() {
+            const curPw = document.getElementById('cur-pw').value; const newPw = document.getElementById('new-pw').value; const confirmPw = document.getElementById('confirm-pw').value;
+            if (!curPw || !newPw || !confirmPw) return alert("모든 항목을 입력해주세요.");
+            if (newPw !== confirmPw) return alert("새 비밀번호와 확인이 일치하지 않습니다.");
+            const { data: userData, error: fetchError } = await _supabase.from('users').select('password').eq('username', user.username).single();
+            if (fetchError || !userData) { return alert("회원 정보를 확인할 수 없습니다. (DB 오류)"); }
+            if (userData.password !== curPw) { return alert("현재 비밀번호가 틀렸습니다."); }
+            const { error: rpcError } = await _supabase.rpc('change_password', { p_username: user.username, p_new_password: newPw });
+            if (rpcError) { return alert("변경 실패: " + rpcError.message); }
+            alert("✅ 비밀번호가 성공적으로 변경되었습니다."); closePwModal();
+            document.getElementById('cur-pw').value = ''; document.getElementById('new-pw').value = ''; document.getElementById('confirm-pw').value = '';
+        }
+
+        // Helper: Time Ago
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return "방금 전";
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}분 전`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}시간 전`;
+            return `${Math.floor(hours / 24)}일 전`;
+        }
+        
+        loadData();
+    </script>
+</body>
+</html>

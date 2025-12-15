@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>과제 출제 및 관리 (Assignment Manager)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #2563eb; cursor: pointer; margin-top: -6px; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .pulse-btn { animation: pulse-blue 2s infinite; }
+        @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+    <script src="config.js"></script>
+
+    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-md p-8 border border-gray-200">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <span>📝</span> 과제 출제 및 관리 (Assignment Manager)
+        </h1>
+        
+        <div class="flex gap-4 mb-8 border-b pb-2">
+            <button onclick="location.href='teacher_main.html'" class="text-sm text-gray-500 hover:text-blue-600 font-medium">🏠 대시보드 홈</button>
+            <span class="text-gray-300">|</span>
+            <span class="text-sm font-bold text-blue-600 border-b-2 border-blue-600 pb-2">과제 생성</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+            
+            <div class="md:col-span-4 flex flex-col gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 flex-1">
+                    <h2 class="text-sm font-bold mb-3 text-gray-700">Step 1. 대상 학생 선택</h2>
+                    <div class="mb-3">
+                        <select id="grade-filter" onchange="loadStudents()" class="w-full text-xs border border-gray-300 rounded p-2 bg-white">
+                            <option value="all">전체 학년</option>
+                            <option value="고1">고1</option><option value="고2">고2</option><option value="고3">고3</option>
+                            <option value="중1">중1</option><option value="중2">중2</option><option value="중3">중3</option>
+                        </select>
+                    </div>
+                    <div id="student-list" class="bg-white border border-gray-300 rounded h-48 overflow-y-auto p-2 text-sm">
+                        <div class="text-center py-4"><div class="loader"></div></div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 flex-1">
+                    <h2 class="text-sm font-bold mb-3 text-gray-700">Step 2. 교재 선택</h2>
+                    <div id="workbook-list" class="bg-white border border-gray-300 rounded h-48 overflow-y-auto p-2 text-sm">
+                        <div class="text-center py-4"><div class="loader"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-8 bg-white border border-gray-300 rounded-lg p-6 relative">
+                <h2 class="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Step 3. 과제 범위 및 유형 설정</h2>
+
+                <div class="mb-5">
+                    <label class="block text-xs font-bold text-gray-500 mb-1">과제 제목</label>
+                    <input type="text" id="assign-title" placeholder="예: 12월 10일 정기 과제" class="w-full p-2.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+
+                <div id="resolved-question-area" class="hidden mb-5 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 class="font-bold text-blue-800 text-xs mb-2 flex items-center gap-2">
+                        <span>📌 금일 지도 완료된 문항 (체크 시 복습 과제에 포함)</span>
+                    </h3>
+                    <div id="active-q-list" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1"></div>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded border border-gray-200 mb-5">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="text-xs font-bold text-gray-600">🎯 진도 범위 설정</label>
+                        <button onclick="addRangeInput()" class="text-xs bg-gray-600 text-white px-3 py-1.5 rounded hover:bg-gray-700 transition">+ 구간 추가</button>
+                    </div>
+                    <div id="range-container" class="space-y-2 max-h-32 overflow-y-auto pr-2">
+                        <div class="flex gap-2 items-center range-row">
+                            <input type="number" class="range-start w-1/2 p-2 border border-gray-300 rounded text-center text-sm" placeholder="시작 번호" oninput="resetAnalysisState()">
+                            <span class="text-gray-400">~</span>
+                            <input type="number" class="range-end w-1/2 p-2 border border-gray-300 rounded text-center text-sm" placeholder="끝 번호" oninput="resetAnalysisState()">
+                            <button onclick="removeRange(this)" class="text-gray-400 hover:text-red-500 font-bold px-2">×</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="analyze-btn" onclick="analyzeData()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg mb-4 text-sm font-bold hover:bg-blue-700 shadow-sm transition pulse-btn">
+                    🔍 구간 데이터 분석 실행
+                </button>
+
+                <div id="mixing-panel" class="hidden opacity-50 pointer-events-none transition-all duration-300">
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="border border-purple-100 bg-purple-50 rounded p-3">
+                            <div class="text-xs font-bold text-purple-700 mb-2">🏆 1등급 / C단계</div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-gray-600">오답 복습 (가용:<span id="cnt-rev-high">0</span>)</span>
+                                <input type="number" id="in-rev-high" class="w-16 text-center border rounded text-xs p-1 bg-white" placeholder="0">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-600">신규 (가용:<span id="cnt-new-high">0</span>)</span>
+                                <input type="number" id="in-new-high" class="w-16 text-center border rounded text-xs p-1 bg-white" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="border border-green-100 bg-green-50 rounded p-3">
+                            <div class="text-xs font-bold text-green-700 mb-2">✍️ 서술형</div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-gray-600">오답 복습 (가용:<span id="cnt-rev-sub">0</span>)</span>
+                                <input type="number" id="in-rev-sub" class="w-16 text-center border rounded text-xs p-1 bg-white" placeholder="0">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-600">신규 (가용:<span id="cnt-new-sub">0</span>)</span>
+                                <input type="number" id="in-new-sub" class="w-16 text-center border rounded text-xs p-1 bg-white" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border border-blue-100 bg-blue-50 rounded p-3 mb-6">
+                        <div class="flex justify-between mb-3">
+                            <div class="text-xs font-bold text-blue-900">🧩 일반 유형 (대표/터프/일반)</div>
+                            <div class="text-xs text-gray-500">
+                                가용 자원: <span class="text-red-600 font-bold" id="cnt-rev-norm">0</span>(오답) / <span class="text-blue-600 font-bold" id="cnt-new-norm">0</span>(신규)
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 mb-2">
+                            <span class="text-xs font-bold text-gray-700">출제 문항 수:</span>
+                            <input type="number" id="total-norm" value="20" class="w-20 p-1 border rounded text-center text-sm font-bold" oninput="updateSliderUI()">
+                        </div>
+                        <div class="relative pt-4 pb-1">
+                            <input type="range" id="norm-slider" min="0" max="100" value="50" oninput="updateSliderUI()">
+                            <div class="flex justify-between text-[10px] font-bold mt-1 text-gray-600">
+                                <span>오답 비율 <span id="lbl-rev-norm">50%</span></span>
+                                <span>진도 비율 <span id="lbl-new-norm">50%</span></span>
+                            </div>
+                            <div class="text-center text-xs text-gray-500 mt-2 font-medium" id="lbl-norm-detail">(-문 + -문)</div>
+                        </div>
+                    </div>
+
+                    <button onclick="previewAssignment()" class="w-full bg-gray-800 text-white py-3 rounded-lg font-bold text-sm shadow hover:bg-gray-900 transition">
+                        📑 출제 내역 확인 (Preview)
+                    </button>
+                    
+                    <div id="final-confirm-area" class="hidden mt-6 bg-white border-2 border-blue-500 p-5 rounded-lg shadow-lg">
+                        <h3 class="text-base font-bold text-center mb-4 border-b pb-2 text-gray-800">🧾 과제 출제 요약서</h3>
+                        
+                        <div id="selected-q-info" class="mb-4 bg-yellow-50 p-2 rounded text-xs text-yellow-800 hidden border border-yellow-200">
+                            ✓ 필수 포함 질문: <span id="sel-q-nums" class="font-bold">-</span>
+                        </div>
+
+                        <div class="text-sm space-y-2 mb-6 text-gray-700">
+                            <div class="flex justify-between"><span>• 1등급/C단계:</span> <span id="rpt-high" class="font-bold">0문</span></div>
+                            <div class="flex justify-between"><span>• 서술형:</span> <span id="rpt-sub" class="font-bold">0문</span></div>
+                            <div class="flex justify-between"><span>• 일반 유형:</span> <span id="rpt-norm" class="font-bold">0문</span></div>
+                            <div class="border-t border-gray-200 my-2"></div>
+                            <div class="flex justify-between text-base font-bold text-blue-700"><span>총 문항 수:</span> <span id="rpt-total">0문</span></div>
+                            <div class="text-xs text-gray-500 text-right" id="rpt-detail">(복습 0 + 신규 0)</div>
+                            <div class="text-center mt-3 text-xs text-gray-400 bg-gray-100 p-2 rounded">
+                                ※ 복습 문제(필수 질문 + 오답)는 출력 목록에 자동 분류되어 저장됩니다.
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="cancelConfirm()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded font-bold text-sm hover:bg-gray-300">취소</button>
+                            <button onclick="finalSend()" class="flex-[2] bg-blue-600 text-white py-3 rounded font-bold text-sm hover:bg-blue-700 transition shadow">
+                                🚀 과제 전송 확정
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pools = { norm: { rev: [], new: [] }, high: { rev: [], new: [] }, sub:  { rev: [], new: [] } };
+        let mandatoryQuestions = []; 
+        let finalPayloadCache = null;
+
+        // ★ 현재 사용자 확인 (필수)
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!currentUser) {
+            alert("로그인이 필요합니다.");
+            location.href = 'index.html';
+        }
+
+        async function init() { loadStudents(); loadWorkbooks(); }
+        init();
+
+        function addRangeInput() {
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 items-center range-row mt-2';
+            div.innerHTML = `<input type="number" class="range-start w-1/2 p-2 border border-gray-300 rounded text-center text-sm" placeholder="시작" oninput="resetAnalysisState()"><span class="text-gray-400">~</span><input type="number" class="range-end w-1/2 p-2 border border-gray-300 rounded text-center text-sm" placeholder="끝" oninput="resetAnalysisState()"><button onclick="removeRange(this)" class="text-gray-400 hover:text-red-500 font-bold px-2">×</button>`;
+            document.getElementById('range-container').appendChild(div);
+            resetAnalysisState();
+        }
+        function removeRange(btn) { btn.parentElement.remove(); resetAnalysisState(); }
+        function resetAnalysisState() {
+            document.getElementById('mixing-panel').classList.add('hidden', 'opacity-50', 'pointer-events-none');
+            document.getElementById('final-confirm-area').classList.add('hidden');
+            const btn = document.getElementById('analyze-btn');
+            btn.innerText = "🔍 변경 감지! 재분석 필요";
+            btn.classList.remove('bg-green-600'); btn.classList.add('bg-blue-600', 'pulse-btn');
+        }
+
+        async function loadStudents() {
+            const filter = document.getElementById('grade-filter').value;
+            let query = _supabase.from('users').select('*').eq('role', 'student');
+            if(filter !== 'all') query = query.eq('grade', filter);
+            const { data } = await query;
+            const container = document.getElementById('student-list');
+            if(!data || data.length === 0) { container.innerHTML = '<p class="text-gray-400 text-center py-4">학생 데이터 없음</p>'; return; }
+            container.innerHTML = data.map(s => `<label class="flex items-center gap-2 p-2 hover:bg-gray-50 border-b cursor-pointer"><input type="checkbox" name="target-student" value="${s.username}" class="accent-blue-600" onchange="checkResolvedQuestions()"><div class="text-xs font-bold text-gray-700">${s.name} <span class="text-gray-400 font-normal">(${s.grade})</span></div></label>`).join('');
+        }
+
+        async function loadWorkbooks() {
+            const { data } = await _supabase.from('workbooks').select('*').order('created_at', {ascending: false});
+            const container = document.getElementById('workbook-list');
+            if(!data || data.length === 0) { container.innerHTML = '<p class="text-gray-400 text-center py-4">등록된 교재 없음</p>'; return; }
+            container.innerHTML = data.map(wb => `<label class="flex items-center gap-2 p-2 hover:bg-gray-50 border-b cursor-pointer"><input type="radio" name="target-workbook" value="${wb.id}" class="accent-purple-600" onchange="checkResolvedQuestions()"><div class="text-xs font-bold text-gray-700">${wb.title}</div></label>`).join('');
+        }
+
+        async function checkResolvedQuestions() {
+            const studentIds = Array.from(document.querySelectorAll('input[name="target-student"]:checked')).map(cb => cb.value);
+            const wbRadio = document.querySelector('input[name="target-workbook"]:checked');
+            const area = document.getElementById('resolved-question-area');
+            const list = document.getElementById('active-q-list');
+
+            if(studentIds.length === 0 || !wbRadio) { area.classList.add('hidden'); return; }
+            const wbId = wbRadio.value;
+            const today = new Date().toISOString().split('T')[0];
+
+            const { data } = await _supabase
+                .from('student_progress')
+                .select('problem_num')
+                .in('student_id', studentIds)
+                .eq('workbook_id', wbId)
+                .gte('resolved_at', today + ' 00:00:00'); 
+
+            if(!data || data.length === 0) { area.classList.add('hidden'); return; }
+
+            const qNums = [...new Set(data.map(d => d.problem_num))].sort((a,b)=>a-b);
+            list.innerHTML = qNums.map(n => `<label class="flex items-center gap-1 bg-white border border-blue-300 px-2 py-1 rounded cursor-pointer hover:bg-blue-50 shadow-sm"><input type="checkbox" name="active-q" value="${n}" class="accent-blue-600"><span class="text-xs font-bold text-gray-800">${n}번</span></label>`).join('');
+            area.classList.remove('hidden');
+        }
+
+        async function analyzeData() {
+            const studentIds = Array.from(document.querySelectorAll('input[name="target-student"]:checked')).map(cb => cb.value);
+            const wbRadio = document.querySelector('input[name="target-workbook"]:checked');
+            if(studentIds.length === 0 || !wbRadio) return alert("학생과 교재를 선택해주세요.");
+            const wbId = wbRadio.value;
+            
+            let ranges = [];
+            document.querySelectorAll('.range-row').forEach(row => {
+                const s = parseInt(row.querySelector('.range-start').value);
+                const e = parseInt(row.querySelector('.range-end').value);
+                if(!isNaN(s) && !isNaN(e) && s <= e) ranges.push({start:s, end:e});
+            });
+            if(ranges.length === 0) return alert("출제 범위를 입력해주세요.");
+
+            mandatoryQuestions = Array.from(document.querySelectorAll('input[name="active-q"]:checked')).map(cb => parseInt(cb.value));
+
+            const btn = document.getElementById('analyze-btn');
+            btn.innerText = "데이터 분석 중..."; btn.disabled = true;
+
+            try {
+                const minStart = Math.min(...ranges.map(r=>r.start));
+                const maxEnd = Math.max(...ranges.map(r=>r.end));
+
+                const { data: metaData } = await _supabase.from('problem_metadata').select('problem_num, difficulty, is_subjective').eq('workbook_id', wbId).gte('problem_num', minStart).lte('problem_num', maxEnd);
+                let metaMap = {};
+                if(metaData) metaData.forEach(m => metaMap[m.problem_num] = m);
+
+                const targetStudent = studentIds[0];
+                const { data: progressData } = await _supabase.from('student_progress').select('problem_num, last_result').eq('student_id', targetStudent).eq('workbook_id', wbId).gte('problem_num', minStart).lte('problem_num', maxEnd);
+
+                let wrongMap = {}; 
+                if(progressData) progressData.forEach(p => { 
+                    if(p.last_result === 'wrong') wrongMap[p.problem_num] = true;
+                });
+
+                pools = { norm: { rev: [], new: [] }, high: { rev: [], new: [] }, sub: { rev: [], new: [] } };
+
+                ranges.forEach(range => {
+                    for(let i=range.start; i<=range.end; i++) {
+                        const meta = metaMap[i];
+                        if(!meta) continue; 
+
+                        if (mandatoryQuestions.includes(i)) continue;
+
+                        let status = null;
+                        if (wrongMap[i]) status = 'rev'; // 오답이면 복습 풀
+                        else if (!progressData.find(p => p.problem_num === i)) status = 'new'; // 기록 없으면 신규 풀
+
+                        if (status) {
+                            if(meta.difficulty === 'high_rank') pools.high[status].push(i);
+                            else if (meta.is_subjective) pools.sub[status].push(i);
+                            else pools.norm[status].push(i);
+                        }
+                    }
+                });
+
+                document.getElementById('cnt-rev-high').innerText = pools.high.rev.length;
+                document.getElementById('cnt-new-high').innerText = pools.high.new.length;
+                document.getElementById('cnt-rev-sub').innerText = pools.sub.rev.length;
+                document.getElementById('cnt-new-sub').innerText = pools.sub.new.length;
+                document.getElementById('cnt-rev-norm').innerText = pools.norm.rev.length;
+                document.getElementById('cnt-new-norm').innerText = pools.norm.new.length;
+
+                document.getElementById('mixing-panel').classList.remove('hidden', 'opacity-50', 'pointer-events-none');
+                updateSliderUI();
+                
+                btn.innerText = "✅ 분석 완료 (설정 변경 시 재분석 필요)";
+                btn.classList.remove('bg-blue-600', 'pulse-btn'); btn.classList.add('bg-green-600');
+                btn.disabled = false;
+
+            } catch(e) { alert("분석 오류: " + e.message); btn.innerText = "🔍 재시도"; btn.disabled = false; }
+        }
+
+        function updateSliderUI() {
+            const total = parseInt(document.getElementById('total-norm').value) || 0;
+            const ratio = parseInt(document.getElementById('norm-slider').value);
+            const cntNew = Math.round(total * (ratio / 100));
+            const cntRev = total - cntNew;
+            document.getElementById('lbl-rev-norm').innerText = (100-ratio) + "%";
+            document.getElementById('lbl-new-norm').innerText = ratio + "%";
+            document.getElementById('lbl-norm-detail').innerHTML = `복습 <b class="text-red-600">${cntRev}</b> + 신규 <b class="text-blue-600">${cntNew}</b>`;
+        }
+
+        function previewAssignment() {
+            const reqHighRev = parseInt(document.getElementById('in-rev-high').value) || 0;
+            const reqHighNew = parseInt(document.getElementById('in-new-high').value) || 0;
+            const reqSubRev = parseInt(document.getElementById('in-rev-sub').value) || 0;
+            const reqSubNew = parseInt(document.getElementById('in-new-sub').value) || 0;
+            const totalNorm = parseInt(document.getElementById('total-norm').value) || 0;
+            const ratio = parseInt(document.getElementById('norm-slider').value);
+            const reqNormNew = Math.round(totalNorm * (ratio / 100));
+            const reqNormRev = totalNorm - reqNormNew;
+
+            let mandNorm = [], mandHigh = [], mandSub = [];
+            mandatoryQuestions.forEach(q => {
+                if(pools.high.rev.includes(q) || pools.high.new.includes(q)) mandHigh.push(q);
+                else if(pools.sub.rev.includes(q) || pools.sub.new.includes(q)) mandSub.push(q);
+                else mandNorm.push(q);
+            });
+
+            function pickWithMandatory(pool, mandatory, count) {
+                let available = pool.filter(n => !mandatory.includes(n));
+                for (let i = available.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [available[i], available[j]] = [available[j], available[i]]; }
+                const needMore = Math.max(0, count - mandatory.length);
+                return [...mandatory, ...available.slice(0, needMore)];
+            }
+            function pickSimple(pool, count) { return pool.slice(0, count); }
+
+            let reviewList = [];
+            reviewList.push(...pickWithMandatory(pools.high.rev, mandHigh, reqHighRev));
+            reviewList.push(...pickWithMandatory(pools.sub.rev, mandSub, reqSubRev));
+            reviewList.push(...pickWithMandatory(pools.norm.rev, mandNorm, reqNormRev));
+            
+            let newList = [];
+            newList.push(...pickSimple(pools.high.new, reqHighNew));
+            newList.push(...pickSimple(pools.sub.new, reqSubNew));
+            newList.push(...pickSimple(pools.norm.new, reqNormNew));
+
+            let fullList = [...reviewList, ...newList].sort((a,b) => a-b);
+            reviewList.sort((a,b) => a-b);
+
+            const totalQ = fullList.length;
+            if(totalQ === 0) return alert("출제할 문항이 없습니다.");
+
+            document.getElementById('rpt-high').innerText = `${reqHighRev + reqHighNew}문`;
+            document.getElementById('rpt-sub').innerText = `${reqSubRev + reqSubNew}문`;
+            document.getElementById('rpt-norm').innerText = `${reqNormRev + reqNormNew}문`;
+            document.getElementById('rpt-total').innerText = `${totalQ}문항`;
+            document.getElementById('rpt-detail').innerText = `(복습 ${reviewList.length} + 신규 ${newList.length})`;
+            
+            const qInfo = document.getElementById('selected-q-info');
+            const qNums = document.getElementById('sel-q-nums');
+            if(mandatoryQuestions.length > 0) {
+                qInfo.classList.remove('hidden');
+                qNums.innerText = mandatoryQuestions.join(', ') + "번";
+            } else { qInfo.classList.add('hidden'); }
+
+            const studentIds = Array.from(document.querySelectorAll('input[name="target-student"]:checked')).map(cb => cb.value);
+            const wbId = document.querySelector('input[name="target-workbook"]:checked').value;
+            const title = document.getElementById('assign-title').value;
+
+            // ★ [보안 패치] teacher_id 불필요 (함수 내부에서 처리하거나 세션 사용)
+            finalPayloadCache = studentIds.map(sId => ({
+                student_id: sId, 
+                workbook_id: parseInt(wbId), 
+                title: title, 
+                problem_list: fullList, 
+                // review_list: reviewList, // 테이블 구조상 review_list 컬럼이 있는지 확인 필요 (없으면 제거)
+                // 나머지는 RPC에서 처리
+            }));
+
+            document.getElementById('final-confirm-area').classList.remove('hidden');
+            document.getElementById('final-confirm-area').scrollIntoView({behavior: 'smooth'});
+        }
+
+        function cancelConfirm() { document.getElementById('final-confirm-area').classList.add('hidden'); }
+
+        // ★ [보안 패치 완료] RPC 함수 호출로 변경 ★
+        async function finalSend() {
+            if(!finalPayloadCache) return alert("데이터 오류");
+            const btn = document.querySelector('button[onclick="finalSend()"]');
+            btn.innerText = "전송 중..."; btn.disabled = true;
+            
+            try {
+                // 여러 건의 숙제 전송을 병렬로 처리
+                const promises = finalPayloadCache.map(payload => 
+                    _supabase.rpc('create_assignment_teacher', {
+                        p_student_id: payload.student_id,
+                        p_workbook_id: payload.workbook_id,
+                        p_title: payload.title,
+                        p_problem_list: payload.problem_list,
+                        p_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 후
+                        p_is_special: false, // 기본값 false
+                        p_reward_points: 20 // 기본 보상 포인트 (필요시 UI 추가)
+                    })
+                );
+
+                const results = await Promise.all(promises);
+                
+                // 에러 체크
+                results.forEach(res => { if(res.error) throw res.error; });
+
+                // 완료 화면
+                const confirmArea = document.getElementById('final-confirm-area');
+                confirmArea.innerHTML = `
+                    <div class="text-center py-6">
+                        <div class="text-4xl mb-2">🎉</div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">숙제 전송 완료!</h3>
+                        <p class="text-sm text-gray-500 mb-6">학생들에게 알림이 갔어요. 복습 프린트를 뽑으시겠어요?</p>
+                        
+                        <div class="flex gap-2 justify-center">
+                            <button onclick="location.reload()" class="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-bold hover:bg-gray-300">
+                                처음으로
+                            </button>
+                            <button onclick="alert('숙제 목록 페이지에서 인쇄해주세요.')" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 shadow-lg flex items-center gap-2">
+                                <span>🖨️</span> 확인
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } catch(e) { 
+                alert("전송 실패: " + e.message); 
+                btn.innerText = "🚀 과제 전송 확정"; btn.disabled = false; 
+            }
+        }
+    </script>
+</body>
+</html>

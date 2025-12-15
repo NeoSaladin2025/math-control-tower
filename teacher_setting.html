@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>게임 설정 (Game Config)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #fff7ed; }</style>
+</head>
+<body class="p-6 max-w-4xl mx-auto">
+
+    <script src="config.js"></script>
+
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold text-orange-800 flex items-center gap-2"><span>⚙️</span> 규칙 & 보상 설정</h1>
+        <button onclick="window.location.href='teacher_main.html'" class="bg-white border text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50">나가기</button>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 mb-8">
+        <h2 class="font-bold text-lg text-gray-800 mb-4">➕ 새 규칙 추가</h2>
+        <div class="flex gap-2 mb-2">
+            <select id="new-cat" class="border rounded p-2 text-sm w-32"><option>출결</option><option>학습</option><option>태도</option><option>시험</option><option>기타</option></select>
+            <input type="text" id="new-name" placeholder="규칙 이름 (예: 지각)" class="border rounded p-2 text-sm flex-1">
+        </div>
+        <div class="flex gap-2">
+            <input type="number" id="new-xp" placeholder="XP 변동 (예: -3)" class="border rounded p-2 text-sm w-32">
+            <input type="number" id="new-cp" placeholder="CP 변동 (예: 10)" class="border rounded p-2 text-sm w-32">
+            <button onclick="addRule()" class="bg-orange-500 text-white font-bold px-6 py-2 rounded-lg text-sm hover:bg-orange-600">추가</button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 font-bold border-b">
+                <tr><th class="p-4">분류</th><th class="p-4">이름</th><th class="p-4">XP</th><th class="p-4">CP</th><th class="p-4 text-center">관리</th></tr>
+            </thead>
+            <tbody id="rule-list" class="divide-y"></tbody>
+        </table>
+    </div>
+
+    <script>
+        async function loadRules() {
+            const { data } = await _supabase.from('point_rules').select('*').order('id', {ascending: false});
+            const tbody = document.getElementById('rule-list');
+            if(!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-400">규칙이 없습니다.</td></tr>'; return; }
+            
+            tbody.innerHTML = data.map(r => `
+                <tr class="hover:bg-orange-50">
+                    <td class="p-4 text-gray-500">${r.category}</td>
+                    <td class="p-4 font-bold text-gray-800">${r.name}</td>
+                    <td class="p-4 ${r.xp_change >= 0 ? 'text-blue-600' : 'text-red-500'} font-bold">${r.xp_change}</td>
+                    <td class="p-4 ${r.cp_change >= 0 ? 'text-yellow-600' : 'text-gray-400'} font-bold">${r.cp_change}</td>
+                    <td class="p-4 text-center"><button onclick="deleteRule(${r.id})" class="text-red-400 hover:text-red-600">삭제</button></td>
+                </tr>`).join('');
+        }
+
+        async function addRule() {
+            const cat = document.getElementById('new-cat').value;
+            const name = document.getElementById('new-name').value;
+            const xp = parseInt(document.getElementById('new-xp').value) || 0;
+            const cp = parseInt(document.getElementById('new-cp').value) || 0;
+            if(!name) return alert("이름을 입력하세요");
+
+            await _supabase.from('point_rules').insert([{category: cat, name: name, xp_change: xp, cp_change: cp}]);
+            alert("추가되었습니다.");
+            document.getElementById('new-name').value = '';
+            loadRules();
+        }
+
+        async function deleteRule(id) {
+            if(confirm("정말 삭제하시겠습니까?")) {
+                await _supabase.from('point_rules').delete().eq('id', id);
+                loadRules();
+            }
+        }
+
+        loadRules();
+    </script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>학생 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .detail-row { display: none; }
+        .detail-row.open { display: table-row; animation: slideDown 0.3s ease-out forwards; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .loader { display:inline-block; border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tab-btn { border-bottom: 3px solid transparent; color: #9ca3af; transition: all 0.2s; }
+        .tab-btn.active { border-bottom: 3px solid #4f46e5; color: #4f46e5; font-weight: bold; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .filter-btn { @apply px-3 py-1 text-xs rounded-full border transition; }
+        .filter-btn.active { @apply bg-indigo-600 text-white border-indigo-600 font-bold; }
+        .filter-btn.inactive { @apply bg-white text-gray-500 border-gray-300 hover:bg-gray-50; }
+        .res-item { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; cursor: pointer; transition: transform 0.1s; }
+        .res-item:hover { transform: scale(1.2); z-index: 10; }
+        .res-correct { background-color: #10b981; } .res-wrong { background-color: #ef4444; } .res-question { background-color: #f59e0b; } .res-none { background-color: #e5e7eb; color: #9ca3af; }
+        #hw-tooltip { display: none; position: fixed; z-index: 99999; background: white; border: 3px solid #ef4444; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); padding: 8px; max-width: 600px; min-width: 300px; pointer-events: none; }
+        #hw-tooltip img { width: 100%; display: block; border-radius: 4px; }
+        #hw-tooltip-header { text-align: center; font-weight: bold; color: #ef4444; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #fee2e2; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -6px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e2e8f0; border-radius: 2px; }
+        input[type=range]:focus { outline: none; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-6 pb-20">
+
+    <script src="config.js"></script>
+
+    <div id="hw-tooltip"><div id="hw-tooltip-header">No. 0000</div><img id="hw-tooltip-img" src="" alt="Preview"></div>
+    <div id="hw-detail-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 relative">
+            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center"><h3 class="font-bold text-lg">📝 숙제 상세 리포트</h3><button onclick="closeHwDetail()" class="text-white hover:text-gray-200">✕</button></div>
+            <div class="p-6">
+                <div class="text-center mb-6"><div class="text-sm text-gray-500 mb-1" id="hw-modal-title">과제명</div><div class="text-5xl font-black text-indigo-600 mb-2" id="hw-modal-score">--점</div><div class="flex justify-center gap-4 text-xs font-bold"><span class="text-green-600">O 정답: <span id="cnt-correct">0</span></span><span class="text-red-500">X 오답: <span id="cnt-wrong">0</span></span><span class="text-yellow-600">? 질문: <span id="cnt-question">0</span></span></div></div>
+                <div class="mb-4"><div class="text-xs text-gray-400 mb-2 border-b pb-1 flex justify-between"><span>문항별 상세 결과</span><span class="text-[10px] text-red-400">* 번호에 마우스를 올리면 원본 문제가 뜹니다.</span></div><div id="hw-modal-grid" class="flex flex-wrap gap-2 justify-center max-h-60 overflow-y-auto custom-scroll p-1"></div></div>
+                <div class="flex gap-2"><button id="btn-print-current" class="flex-1 bg-gray-800 text-white py-3 rounded-lg font-bold text-sm shadow hover:bg-black transition">🖨️ 오답 노트 인쇄</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <div class="bg-white rounded-xl shadow-sm p-5 flex flex-col md:flex-row justify-between items-center gap-4 border border-gray-200">
+            <div class="text-center md:text-left">
+                <h1 class="text-xl md:text-2xl font-bold text-gray-800">👥 구성원 관리 & 설정</h1>
+                <p class="text-xs text-gray-500 mt-1">학생들의 학습 상태와 능력치를 관리합니다.</p>
+            </div>
+            <div class="flex gap-2 items-center">
+                <div class="text-right mr-2 hidden md:block"><div class="text-[10px] text-gray-400">접속 계정</div><div class="font-bold text-indigo-700 text-sm" id="current-user-name">-</div></div>
+                <button onclick="location.href='teacher_main.html'" class="bg-white border text-gray-600 hover:text-blue-600 font-bold px-4 py-2 rounded-lg shadow-sm text-sm transition">🏠 홈으로</button>
+            </div>
+        </div>
+
+        <div id="challenge-alert" class="hidden bg-yellow-50 border border-yellow-200 p-4 rounded-xl flex justify-between items-center shadow-sm">
+            <div class="flex items-center gap-3"><span class="text-2xl">🎁</span><div><h3 class="font-bold text-yellow-800 text-sm">기특놀이 인증 대기</h3><p class="text-xs text-yellow-600"><span id="challenge-cnt">0</span>건의 확인 대기 항목</p></div></div>
+            <button onclick="openChallengeManager()" class="bg-yellow-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow hover:bg-yellow-600 transition">확인하러 가기</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">👶 신규 학생 등록</h2>
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="new-s-name" placeholder="이름 (실명)" class="w-[40%] p-2 border rounded text-sm bg-gray-50 focus:border-blue-500 outline-none transition">
+                        <input type="text" id="new-s-id" placeholder="아이디 (영문)" class="w-[60%] p-2 border rounded text-sm bg-gray-50 focus:border-blue-500 outline-none transition">
+                    </div>
+                    <div class="flex gap-2">
+                        <select id="new-s-grade" class="w-full p-2 border rounded text-sm bg-white cursor-pointer"><option value="고1">고1</option><option value="고2">고2</option><option value="고3">고3</option><option value="중1">중1</option><option value="중2">중2</option><option value="중3">중3</option></select>
+                        <button onclick="registerUser('student')" class="w-1/3 bg-blue-600 text-white font-bold rounded text-sm hover:bg-blue-700 shadow-md transition transform active:scale-95">등록</button>
+                    </div>
+                </div>
+            </div>
+            <div id="teacher-register-panel" class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-500 hidden">
+                <h2 class="font-bold text-gray-800 mb-4 flex items-center gap-2">👨‍🏫 교사 등록 (God)</h2>
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="new-t-name" placeholder="이름" class="w-[40%] p-2 border rounded text-sm bg-gray-50">
+                        <input type="text" id="new-t-id" placeholder="아이디" class="w-[60%] p-2 border rounded text-sm bg-gray-50">
+                    </div>
+                    <button onclick="registerUser('teacher')" class="w-full bg-purple-600 text-white py-2 font-bold rounded text-sm hover:bg-purple-700 shadow-md transition transform active:scale-95">등록</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                <h2 class="text-base font-bold text-gray-700 flex items-center gap-2"><span>📜</span> 구성원 명단</h2>
+                <div class="flex gap-2">
+                    <select id="grade-filter" onchange="loadStudents()" class="border border-gray-300 rounded-lg p-2 text-xs md:text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-500"><option value="all">전체 보기</option><option value="고1">고1</option><option value="고2">고2</option><option value="고3">고3</option><option value="중1">중1</option><option value="중2">중2</option><option value="중3">중3</option><option value="Teacher">교사 리스트</option></select>
+                    <button onclick="loadStudents()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold shadow hover:bg-indigo-700 transition">🔄</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-600">
+                    <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b"><tr><th class="px-6 py-3">이름 (ID)</th><th class="px-6 py-3 text-center">상태</th><th class="px-6 py-3 text-center">관리</th></tr></thead>
+                    <tbody id="list-body" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user) { alert("로그인이 필요합니다."); location.href='index.html'; }
+        document.getElementById('current-user-name').innerText = user.name;
+        const isGod = (user.username === '곽명용이브' || user.role === 'admin');
+        if(isGod) document.getElementById('teacher-register-panel').classList.remove('hidden');
+        
+        let currentHwFilter = 'all';
+
+        async function init() { loadStudents(); checkChallenges(); } 
+        init();
+
+        // ★ [보안 패치] 학생 등록 함수 (RPC 사용) ★
+        async function registerUser(role) {
+            let id, name, grade;
+            if (role === 'student') {
+                id = document.getElementById('new-s-id').value.trim();
+                name = document.getElementById('new-s-name').value.trim();
+                grade = document.getElementById('new-s-grade').value;
+            } else {
+                id = document.getElementById('new-t-id').value.trim();
+                name = document.getElementById('new-t-name').value.trim();
+                grade = 'Teacher';
+            }
+
+            if (!id || !name) return alert('빈칸을 모두 채워주세요.');
+
+            // 직접 INSERT 대신 RPC 호출
+            const { error } = await _supabase.rpc('manage_student', {
+                p_type: 'create',
+                p_username: id,
+                p_password: '1234', // 초기 비번
+                p_name: name,
+                p_grade: grade,
+                p_phone: '', // 필요시 추가
+                p_role: role
+            });
+
+            if (error) { alert('실패: ' + error.message); } 
+            else {
+                alert('등록 완료! 환영합니다.');
+                if (role === 'student') { document.getElementById('new-s-id').value = ''; document.getElementById('new-s-name').value = ''; } 
+                else { document.getElementById('new-t-id').value = ''; document.getElementById('new-t-name').value = ''; }
+                loadStudents();
+            }
+        }
+
+        async function loadStudents() {
+            const filter = document.getElementById('grade-filter').value;
+            let query = _supabase.from('users').select('*').in('role',['student','teacher','admin']).order('grade');
+            if(filter === 'Teacher') query = query.in('role', ['teacher','admin']); else if(filter !== 'all') query = query.eq('grade', filter);
+            const { data } = await query;
+            const tbody = document.getElementById('list-body');
+            if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-400">없음</td></tr>'; return; }
+
+            const visibleData = data.filter(u => u.username !== '곽명용이브');
+
+            tbody.innerHTML = visibleData.map(u => {
+                const isT = u.role !== 'student';
+                const rowClass = isT ? "hover:bg-purple-50" : "hover:bg-indigo-50 cursor-pointer";
+                let actionContent = "";
+                if (isT) {
+                    if (isGod && u.username !== user.username) actionContent = `<button onclick="deleteUser('${u.username}')" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold hover:bg-red-200 border border-red-200 transition">🗑️ 해고</button>`;
+                    else actionContent = `<span class="text-xs text-gray-400">-</span>`;
+                } else {
+                    actionContent = `<span id="arrow-${u.username}" class="transition-transform duration-200 inline-block text-gray-400">▼</span>`;
+                }
+                const clickAttr = !isT ? `onclick="toggleDetail('${u.username}')"` : "";
+                
+                return `
+                <tr class="transition ${rowClass} h-14" ${clickAttr}>
+                    <td class="px-6 font-bold text-gray-700"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 border">${u.name[0]}</div><div>${u.name} <span class="text-[10px] text-gray-400 font-normal ml-1">(${u.username})</span></div></div></td>
+                    <td class="text-center text-xs">${isT ? '<span class="bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">교사</span>' : `<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-bold">Lv.${u.level} ${u.tier||'Bronze'}</span>`}</td>
+                    <td class="text-center">${actionContent}</td>
+                </tr>
+                ${!isT ? `<tr id="detail-${u.username}" class="detail-row bg-gray-50 border-b border-gray-200"><td colspan="3" class="p-4 md:p-6">
+                        <div class="flex border-b border-gray-300 mb-4 gap-4 overflow-x-auto">
+                            <button onclick="switchTab('${u.username}', 'history')" id="tab-btn-${u.username}-history" class="tab-btn active pb-2 text-sm flex-1 font-bold whitespace-nowrap">📝 숙제 이력</button>
+                            <button onclick="switchTab('${u.username}', 'books')" id="tab-btn-${u.username}-books" class="tab-btn pb-2 text-sm flex-1 font-bold whitespace-nowrap">📚 교재 설정</button>
+                            <button onclick="switchTab('${u.username}', 'stats')" id="tab-btn-${u.username}-stats" class="tab-btn pb-2 text-sm flex-1 font-bold whitespace-nowrap">📊 능력치</button>
+                            <button onclick="switchTab('${u.username}', 'points')" id="tab-btn-${u.username}-points" class="tab-btn pb-2 text-sm flex-1 font-bold whitespace-nowrap">💰 포인트 관리</button>
+                        </div>
+                        <div id="content-${u.username}-history" class="block space-y-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex gap-1"><button onclick="setHwFilter('${u.username}', 'all')" id="f-btn-${u.username}-all" class="filter-btn active">전체</button><button onclick="setHwFilter('${u.username}', 'submitted')" id="f-btn-${u.username}-submitted" class="filter-btn inactive">제출됨</button><button onclick="setHwFilter('${u.username}', 'assigned')" id="f-btn-${u.username}-assigned" class="filter-btn inactive">미제출</button></div>
+                                <div class="flex gap-2"><button onclick="openAnalysis('${u.username}')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow hover:bg-indigo-700 transition">📊 정밀 분석 (VIP)</button>${isGod || (user.role==='teacher') ? `<button onclick="deleteUser('${u.username}')" class="bg-white border border-red-200 text-red-400 px-3 py-1.5 rounded-lg text-xs hover:bg-red-50 transition">삭제</button>` : ''}</div>
+                            </div>
+                            <div id="hw-list-${u.username}" class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scroll p-1"><div class="col-span-full text-center py-4"><div class="loader"></div></div></div>
+                        </div>
+                        <div id="content-${u.username}-books" class="hidden">
+                            <div class="bg-white p-4 rounded-lg border shadow-sm">
+                                <h4 class="text-sm font-bold text-gray-700 mb-3">📘 배정된 교재 및 자동 숙제 레시피</h4>
+                                <div id="book-list-${u.username}" class="space-y-3 text-xs"><div class="loader"></div></div>
+                                <div class="border-t pt-3 flex gap-2"><select id="new-book-sel-${u.username}" class="border rounded p-2 text-xs flex-1"></select><button onclick="assignBook('${u.username}')" class="bg-green-600 text-white px-3 py-2 rounded font-bold text-xs hover:bg-green-700">추가</button></div>
+                            </div>
+                        </div>
+                        <div id="content-${u.username}-stats" class="hidden">
+                            <div class="bg-white p-5 rounded-lg border shadow-sm">
+                                <h4 class="text-sm font-bold text-gray-700 mb-4 flex justify-between items-center"><span>📈 8각형 스탯 조정</span><span class="text-[10px] text-gray-400">0~10점 사이로 조정하세요.</span></h4>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                                    ${renderStatSlider(u.username, 'calc', 'CALC (연산력)', u.stats?.calc)} ${renderStatSlider(u.username, 'read', 'READ (독해력)', u.stats?.read)} ${renderStatSlider(u.username, 'logic', 'LOGIC (추론력)', u.stats?.logic)} ${renderStatSlider(u.username, 'pat', 'PAT (패턴력)', u.stats?.pat)}
+                                    ${renderStatSlider(u.username, 'tmp', 'TMP (속도)', u.stats?.tmp)} ${renderStatSlider(u.username, 'stb', 'STB (안정성)', u.stats?.stb)} ${renderStatSlider(u.username, 'exec', 'EXEC (실행력)', u.stats?.exec)} ${renderStatSlider(u.username, 'att', 'ATT (태도)', u.stats?.att)}
+                                </div>
+                            </div>
+                        </div>
+                        <div id="content-${u.username}-points" class="hidden">
+                            <div class="bg-white p-5 rounded-lg border shadow-sm">
+                                <h4 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2"><span>💳</span> 포인트 및 경험치 수동 조정</h4>
+                                <div class="grid grid-cols-2 gap-4 mb-4 text-center">
+                                    <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100"><div class="text-xs text-indigo-500 font-bold mb-1">현재 XP (Season)</div><div class="text-2xl font-black text-indigo-700" id="disp-xp-${u.username}">${u.season_xp || 0}</div></div>
+                                    <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100"><div class="text-xs text-yellow-600 font-bold mb-1">현재 CP</div><div class="text-2xl font-black text-yellow-700" id="disp-cp-${u.username}">${u.cp || 0}</div></div>
+                                </div>
+                                <div class="space-y-3 bg-slate-50 p-4 rounded-lg">
+                                    <div><label class="block text-xs font-bold text-gray-500 mb-1">조정 사유 (필수)</label><input type="text" id="adj-reason-${u.username}" class="w-full border rounded p-2 text-sm bg-white focus:border-indigo-500 outline-none" placeholder="예: 오입력 수정, 주말 특강 보너스 등"></div>
+                                    <div class="flex gap-3"><div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">XP 변동 (+/-)</label><input type="number" id="adj-xp-${u.username}" class="w-full border rounded p-2 text-sm text-center font-mono bg-white focus:border-indigo-500 outline-none" placeholder="0"></div><div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">CP 변동 (+/-)</label><input type="number" id="adj-cp-${u.username}" class="w-full border rounded p-2 text-sm text-center font-mono bg-white focus:border-indigo-500 outline-none" placeholder="0"></div></div>
+                                    <button onclick="manualAdjust('${u.username}')" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg shadow hover:bg-black transition mt-2">수동 반영하기</button>
+                                </div>
+                            </div>
+                        </div>
+                    </td></tr>` : ''}`;
+            }).join('');
+        }
+
+        function renderStatSlider(sid, key, label, val = 5) { return `<div class="bg-slate-50 p-3 rounded-lg border border-slate-100"><div class="flex justify-between items-center mb-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">${label}</label><span class="text-sm font-black text-indigo-600" id="val-${sid}-${key}">${val}</span></div><input type="range" min="0" max="10" value="${val}" class="w-full accent-indigo-600" oninput="document.getElementById('val-${sid}-${key}').innerText = this.value" onchange="updateStat('${sid}', '${key}', this.value)"></div>`; }
+        
+        // ★ [보안 패치] 스탯 업데이트는 RPC 안 만들었음 (일단 둠 - 필요시 RPC화 가능) ★
+        async function updateStat(sid, key, val) { const { data } = await _supabase.from('users').select('stats').eq('username', sid).single(); const newStats = data.stats || {}; newStats[key] = parseInt(val); const { error } = await _supabase.from('users').update({ stats: newStats }).eq('username', sid); if(error) alert("저장 실패: " + error.message); }
+        
+        // ★ [보안 패치] 포인트 수동 조정은 give_points 함수 사용 ★
+        async function manualAdjust(sid) { 
+            const reason = document.getElementById(`adj-reason-${sid}`).value; 
+            const xpDelta = parseInt(document.getElementById(`adj-xp-${sid}`).value) || 0; 
+            const cpDelta = parseInt(document.getElementById(`adj-cp-${sid}`).value) || 0; 
+            if (!reason) return alert("조정 사유를 입력해주세요."); 
+            if (xpDelta === 0 && cpDelta === 0) return alert("조정할 값이 없습니다."); 
+            if (!confirm(`[${sid}] 님에게\nXP: ${xpDelta}\nCP: ${cpDelta}\n\n반영하시겠습니까?`)) return; 
+            
+            // 보안 RPC 호출
+            const { error } = await _supabase.rpc('give_points', {
+                p_student_id: sid,
+                p_xp: xpDelta,
+                p_cp: cpDelta,
+                p_rule_name: `[수동] ${reason}`
+            });
+
+            if(error) alert("실패: " + error.message);
+            else {
+                alert("처리되었습니다.");
+                // 화면 갱신을 위해 user 다시 로드
+                const { data: u } = await _supabase.from('users').select('*').eq('username', sid).single();
+                document.getElementById(`disp-xp-${sid}`).innerText = u.season_xp; 
+                document.getElementById(`disp-cp-${sid}`).innerText = u.cp; 
+                document.getElementById(`adj-reason-${sid}`).value = ''; 
+                document.getElementById(`adj-xp-${sid}`).value = ''; 
+                document.getElementById(`adj-cp-${sid}`).value = ''; 
+            }
+        }
+
+        function toggleDetail(id) { const row=document.getElementById(`detail-${id}`); const arrow=document.getElementById(`arrow-${id}`); if(row.classList.contains('open')){row.classList.remove('open');if(arrow)arrow.style.transform='rotate(0deg)';}else{row.classList.add('open');if(arrow)arrow.style.transform='rotate(180deg)';loadStudentHomework(id);loadStudentBooks(id);} }
+        function switchTab(u, tab) { ['history','books','stats','points'].forEach(t=>{document.getElementById(`content-${u}-${t}`).classList.add('hidden');document.getElementById(`tab-btn-${u}-${t}`).classList.remove('active');}); document.getElementById(`content-${u}-${tab}`).classList.remove('hidden'); document.getElementById(`tab-btn-${u}-${tab}`).classList.add('active'); }
+        function setHwFilter(u, type) { currentHwFilter=type; ['all','submitted','assigned'].forEach(t=>{const btn=document.getElementById(`f-btn-${u}-${t}`); if(t===type){btn.classList.add('active');btn.classList.remove('inactive');}else{btn.classList.add('inactive');btn.classList.remove('active');}}); loadStudentHomework(u); }
+        async function loadStudentHomework(sid) { const c = document.getElementById(`hw-list-${sid}`); let query = _supabase.from('assignments').select('*').eq('student_id', sid).order('created_at', {ascending: false}); if(currentHwFilter !== 'all') query = query.eq('status', currentHwFilter); query = query.limit(15); const { data } = await query; if (!data || !data.length) { c.innerHTML = '<div class="col-span-full text-center py-4 text-gray-400 text-xs">기록 없음</div>'; return; } c.innerHTML = data.map(h => { const isSub = h.status === 'submitted'; const statusBadge = isSub ? '<span class="text-green-600">제출됨</span>' : '<span class="text-red-400">미제출</span>'; const detailBtn = isSub ? `<button onclick="viewHomeworkDetail('${h.id}', '${h.title}')" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 font-bold border border-indigo-200">🔍 상세</button>` : `<span class="text-[10px] text-gray-400">대기</span>`; return `<div class="bg-white border rounded p-3 flex justify-between items-center shadow-sm hover:border-indigo-300 transition"><div class="overflow-hidden mr-2"><div class="truncate text-xs font-bold text-gray-700" title="${h.title}">${h.title}</div><div class="text-[10px] text-gray-500 mt-1 flex gap-2"><span>${new Date(h.created_at).toLocaleDateString()}</span>${statusBadge}</div></div><div class="flex gap-1 shrink-0">${detailBtn}<button onclick="window.open('print_paper.html?id=${h.id}', '_blank')" class="text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded hover:bg-gray-100 border font-bold">🖨️</button></div></div>`; }).join(''); }
+        async function viewHomeworkDetail(aid, title) { const modal = document.getElementById('hw-detail-modal'); const gridEl = document.getElementById('hw-modal-grid'); document.getElementById('hw-modal-title').innerText = title; document.getElementById('hw-modal-score').innerText = "계산중..."; gridEl.innerHTML = '<div class="loader"></div>'; modal.classList.remove('hidden'); const { data: assign } = await _supabase.from('assignments').select('*').eq('id', aid).single(); if(!assign) return; const pList = assign.problem_list || []; const { data: progress } = await _supabase.from('student_progress').select('problem_num, last_result, is_question_active').eq('student_id', assign.student_id).eq('workbook_id', assign.workbook_id).in('problem_num', pList); const resMap = {}; if(progress) progress.forEach(p => resMap[p.problem_num] = p); let correct=0, wrong=0, question=0; gridEl.innerHTML = ''; pList.forEach(num => { const p = resMap[num]; let cls = 'res-none'; if(p) { if(p.is_question_active || p.last_result==='question') { cls='res-question'; question++; } else if(p.last_result==='correct') { cls='res-correct'; correct++; } else if(p.last_result==='wrong') { cls='res-wrong'; wrong++; } } const padded = num.toString().padStart(4, '0'); const img1 = `${SUPABASE_URL}/storage/v1/object/public/problems/${assign.workbook_id}/${padded}.webp`; const img2 = `${SUPABASE_URL}/storage/v1/object/public/problems/${assign.workbook_id}/${num}.webp`; gridEl.innerHTML += `<div class="res-item ${cls}" onmouseenter="showHugePreview(this, '${num}', '${img1}', '${img2}')" onmouseleave="hideHugePreview()">${num}</div>`; }); const score = pList.length > 0 ? Math.round((correct/pList.length)*100) : 0; const sEl = document.getElementById('hw-modal-score'); sEl.innerText = `${score}점`; sEl.className = `text-5xl font-black mb-2 ${score>=90?'text-green-600':(score>=70?'text-blue-600':'text-red-500')}`; document.getElementById('cnt-correct').innerText = correct; document.getElementById('cnt-wrong').innerText = wrong; document.getElementById('cnt-question').innerText = question; document.getElementById('btn-print-current').onclick = () => window.open(`print_paper.html?id=${aid}`, '_blank'); }
+        function showHugePreview(el, num, src1, src2) { const tip = document.getElementById('hw-tooltip'); const img = document.getElementById('hw-tooltip-img'); document.getElementById('hw-tooltip-header').innerText = `No. ${num}`; img.src = src1; img.onerror = () => img.src = src2; const rect = el.getBoundingClientRect(); let left = rect.right + 20; if(left+400>window.innerWidth) left = rect.left - 420; let top = rect.top - 100; if(top<10) top=10; tip.style.left = left+'px'; tip.style.top = top+'px'; tip.style.display = 'block'; }
+        function hideHugePreview() { document.getElementById('hw-tooltip').style.display='none'; }
+        function closeHwDetail() { document.getElementById('hw-detail-modal').classList.add('hidden'); hideHugePreview(); }
+        async function loadStudentBooks(sid) { const { data: books } = await _supabase.from('student_books').select('*, workbooks(title)').eq('student_id', sid); const listDiv = document.getElementById(`book-list-${sid}`); if(!books || !books.length) { listDiv.innerHTML = '<div class="text-gray-400">없음</div>'; } else { listDiv.innerHTML = books.map(b => `<div class="bg-gray-50 p-3 rounded border hover:border-indigo-300 transition flex justify-between items-center"><div><div class="font-bold text-gray-800 text-sm">${b.workbooks.title}</div><div class="text-[10px] text-gray-500">자동화 설정 대기중</div></div><div class="flex gap-2"><button onclick="openConfigPopup('${sid}', '${b.workbooks.title}', ${b.workbook_id})" class="bg-pink-100 text-pink-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-pink-200">⚙️ 상세설정</button><button onclick="removeBook('${sid}', ${b.workbook_id})" class="text-red-400 hover:text-red-600 font-bold px-2">×</button></div></div>`).join(''); } const { data: allBooks } = await _supabase.from('workbooks').select('id, title').order('created_at', {ascending:false}); const sel = document.getElementById(`new-book-sel-${sid}`); sel.innerHTML = '<option value="">선택...</option>' + allBooks.map(b => `<option value="${b.id}">${b.title}</option>`).join(''); }
+        function openConfigPopup(sid, title, wbid) { const url = `admin_homework_config.html?sid=${sid}&wbid=${wbid}&name=Student&title=${encodeURIComponent(title)}`; const w = 900, h = 700; window.open(url, '_blank', `width=${w},height=${h},top=${(screen.height-h)/2},left=${(screen.width-w)/2}`); }
+        async function assignBook(sid) { const wbId = document.getElementById(`new-book-sel-${sid}`).value; if(!wbId) return alert("선택하세요"); const { error } = await _supabase.from('student_books').insert([{student_id: sid, workbook_id: parseInt(wbId)}]); if(error) alert("실패: "+error.message); else { alert("배정 완료"); loadStudentBooks(sid); } }
+        async function removeBook(sid, wbid) { if(confirm("취소?")) { await _supabase.from('student_books').delete().match({student_id: sid, workbook_id: wbid}); loadStudentBooks(sid); } }
+        
+        // ★ [수정됨] 선생님 계정에서 진짜 삭제 기능 연결 (delete_user_by_admin) ★
+        async function deleteUser(username) { 
+            // 1. 확인 사살
+            if(!confirm(`정말 [${username}] 계정을 영구 삭제하시겠습니까?\n(이 작업은 되돌릴 수 없으며, 모든 학습 기록이 사라집니다!)`)) return; 
+            
+            try {
+                // 2. 관리자 권한으로 삭제 함수(RPC) 바로 호출
+                // (이제 자바스크립트에서 ID를 찾지 않고, 서버가 알아서 username으로 처리함)
+                const { error } = await _supabase.rpc('delete_user_by_admin', {
+                    target_username: username
+                });
+
+                if (error) throw error;
+
+                // 3. 성공 시
+                alert(`🗑️ [${username}] 삭제가 완료되었습니다.`);
+                loadStudents(); // 목록 새로고침
+
+            } catch (e) {
+                console.error(e);
+                alert("삭제 실패: " + (e.message || "알 수 없는 오류"));
+            }
+        }
+        
+        function openAnalysis(id) { const w=1100,h=850; window.open(`student_analysis.html?id=${id}`, '_blank', `width=${w},height=${h},top=${(screen.height-h)/2},left=${(screen.width-w)/2}`); }
+        async function checkChallenges() { const { count } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('status', 'pending'); if(count > 0) { document.getElementById('challenge-alert').classList.remove('hidden'); document.getElementById('challenge-cnt').innerText = count; } }
+        function openChallengeManager() { const w=800,h=600; window.open('manager_challenge.html', '_blank', `width=${w},height=${h},top=${(screen.height-h)/2},left=${(screen.width-w)/2}`); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 2rem; }</style>
+</head>
+<body>
+    <script src="config.js"></script>
+
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-crown text-indigo-500"></i> 티어(등급) 규칙 관리</h2>
+
+        <div id="tier-container" class="space-y-2 mb-8">
+            </div>
+
+        <div class="flex gap-4">
+            <button onclick="verifyTiers()" class="flex-1 py-4 bg-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-300 transition">
+                <i class="fa-solid fa-magnifying-glass"></i> 규칙 검증
+            </button>
+            <button onclick="saveTiers()" id="btn-save" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition opacity-50 cursor-not-allowed" disabled>
+                <i class="fa-solid fa-save"></i> 최종 확인 (DB 저장)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let tiers = [];
+
+        async function init() {
+            const { data } = await _supabase.from('tier_rules').select('*').order('min_xp');
+            if(data && data.length > 0) tiers = data;
+            else tiers = [
+                {tier_name:'Bronze', min_xp:0, max_xp:1000},
+                {tier_name:'Silver', min_xp:1001, max_xp:3000},
+                {tier_name:'Gold', min_xp:3001, max_xp:999999}
+            ];
+            renderTiers();
+        }
+
+        function renderTiers() {
+            const container = document.getElementById('tier-container');
+            container.innerHTML = '';
+
+            tiers.forEach((t, idx) => {
+                // 상단 + 버튼
+                if(idx === 0) container.innerHTML += insertBtn(idx);
+
+                // 티어 카드
+                container.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-sm flex items-center gap-4 group hover:border-indigo-300 transition">
+                        <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400">${idx+1}</div>
+                        <input type="text" value="${t.tier_name}" onchange="updateTier(${idx}, 'tier_name', this.value)" class="font-bold text-lg w-32 border-b border-transparent focus:border-indigo-500 focus:outline-none" placeholder="티어명">
+                        
+                        <div class="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-lg">
+                            <span class="text-xs text-slate-400">XP 구간</span>
+                            <input type="number" value="${t.min_xp}" onchange="updateTier(${idx}, 'min_xp', this.value)" class="w-20 text-center font-mono font-bold bg-transparent border-b focus:border-indigo-500 outline-none">
+                            <span>~</span>
+                            <input type="number" value="${t.max_xp}" onchange="updateTier(${idx}, 'max_xp', this.value)" class="w-20 text-center font-mono font-bold bg-transparent border-b focus:border-indigo-500 outline-none">
+                        </div>
+
+                        <button onclick="deleteTier(${idx})" class="ml-auto text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+
+                // 하단 + 버튼
+                container.innerHTML += insertBtn(idx + 1);
+            });
+            
+            // 변경 생기면 저장 버튼 비활성화 (검증 필요)
+            document.getElementById('btn-save').disabled = true;
+            document.getElementById('btn-save').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function insertBtn(idx) {
+            return `<div class="flex justify-center h-4 opacity-0 hover:opacity-100 transition-opacity cursor-pointer" onclick="addTier(${idx})">
+                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs shadow-sm border border-indigo-200">+</div>
+            </div>`;
+        }
+
+        function addTier(idx) {
+            tiers.splice(idx, 0, { tier_name: 'New Tier', min_xp: 0, max_xp: 0 });
+            renderTiers();
+        }
+
+        function deleteTier(idx) {
+            if(confirm("삭제하시겠습니까?")) {
+                tiers.splice(idx, 1);
+                renderTiers();
+            }
+        }
+
+        function updateTier(idx, key, val) {
+            tiers[idx][key] = (key === 'tier_name') ? val : parseInt(val);
+            document.getElementById('btn-save').disabled = true;
+            document.getElementById('btn-save').classList.add('opacity-50');
+        }
+
+        // ★ 검증 로직 (수학 선생님 모드) ★
+        function verifyTiers() {
+            // XP 순으로 정렬
+            tiers.sort((a, b) => a.min_xp - b.min_xp);
+            
+            let hasError = false;
+            let msg = "";
+
+            for (let i = 0; i < tiers.length - 1; i++) {
+                const current = tiers[i];
+                const next = tiers[i+1];
+
+                if (current.max_xp >= next.min_xp) {
+                    hasError = true;
+                    msg = `[오류] '${current.tier_name}'와 '${next.tier_name}'의 구간이 겹칩니다!`;
+                    break;
+                }
+                if (current.max_xp + 1 !== next.min_xp) {
+                    hasError = true;
+                    msg = `[오류] '${current.tier_name}'(${current.max_xp})와 '${next.tier_name}'(${next.min_xp}) 사이에 빈 구간이 있습니다!`;
+                    break;
+                }
+            }
+
+            if (hasError) {
+                alert(msg);
+            } else {
+                alert("✅ 검증 완료! 규칙이 완벽합니다.\n이제 저장할 수 있습니다.");
+                document.getElementById('btn-save').disabled = false;
+                document.getElementById('btn-save').classList.remove('opacity-50', 'cursor-not-allowed');
+                renderTiers(); // 정렬된 상태로 다시 렌더링
+            }
+        }
+
+        async function saveTiers() {
+            if(!confirm("이대로 저장하시겠습니까?")) return;
+            
+            // 기존 룰 삭제 후 재생성 (순서 인덱스 포함)
+            await _supabase.from('tier_rules').delete().neq('id', 0);
+            
+            const insertData = tiers.map((t, idx) => ({
+                tier_name: t.tier_name,
+                min_xp: t.min_xp,
+                max_xp: t.max_xp,
+                order_index: idx + 1
+            }));
+
+            const { error } = await _supabase.from('tier_rules').insert(insertData);
+            if(error) alert("저장 실패: " + error.message);
+            else alert("✅ 티어 규칙이 저장되었습니다!");
+        }
+
+        init();
+    </script>
+</body>
+</html>

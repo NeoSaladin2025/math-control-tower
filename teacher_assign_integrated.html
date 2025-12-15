@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정밀 과제 출제 센터 | Math Control Tower</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* [System] Base Style */
+        body { font-family: 'Apple SD Gothic Neo', 'Pretendard', sans-serif; background-color: #1e293b; color: #e2e8f0; overflow: hidden; height: 100vh; user-select: none; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0f172a; }
+
+        /* [Left] X-Ray Grid */
+        .xray-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); 
+            gap: 4px; 
+            padding: 8px; 
+            background: rgba(30, 41, 59, 0.5); 
+            border-radius: 8px;
+            min-height: 48px; 
+            border: 1px dashed #475569; 
+            margin-bottom: 8px;
+        }
+        .xray-grid:empty::before {
+            content: '문항 없음';
+            color: #64748b;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            grid-column: 1 / -1;
+            height: 100%;
+            opacity: 0.5;
+        }
+
+        .tile { aspect-ratio: 1; border-radius: 4px; cursor: pointer; transition: transform 0.1s; position: relative; }
+        .tile:hover { transform: scale(1.3); z-index: 20; border: 2px solid white; box-shadow: 0 0 15px rgba(0,0,0,0.6); }
+        .tile.selected { border: 3px solid #ec4899; box-shadow: 0 0 10px #ec4899; transform: scale(0.9); z-index: 10; }
+
+        /* Colors */
+        .bg-new { background-color: #334155; border: 1px solid #475569; }
+        .bg-correct { background-color: #10b981; }
+        .bg-wrong-1 { background-color: #fca5a5; }
+        .bg-wrong-2 { background-color: #ef4444; }
+        .bg-wrong-3 { background-color: #7f1d1d; }
+        .bg-question { background-color: #fbbf24; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* Layout Structure */
+        .section-block { margin-bottom: 32px; border-bottom: 2px solid #475569; padding-bottom: 16px; }
+        .subsection-block { margin-top: 16px; margin-bottom: 16px; padding-left: 12px; border-left: 3px solid #334155; }
+        .type-block { margin-top: 12px; margin-bottom: 12px; }
+
+        /* Headers */
+        .header-major { 
+            background: linear-gradient(90deg, #475569 0%, #1e293b 100%); 
+            border-left: 6px solid #fbbf24; 
+            padding: 10px 14px; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            font-weight: 900; 
+            color: #f8fafc; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4); 
+            display: flex; align-items: center; gap: 8px; 
+            margin-bottom: 8px;
+        }
+        .header-minor { 
+            background: #334155; 
+            padding: 6px 10px; 
+            border-radius: 4px; 
+            border-left: 4px solid #94a3b8; 
+            font-size: 14px; 
+            font-weight: 800; 
+            color: #e2e8f0; 
+            display: flex; align-items: center; gap: 6px; 
+            margin-bottom: 4px;
+        }
+        
+        .header-type { 
+            font-size: 12px; 
+            font-weight: 800; 
+            margin-bottom: 4px; 
+            display: inline-block; 
+            padding: 3px 8px; 
+            border-radius: 4px; 
+        }
+        .type-norm { color: #60a5fa; background: rgba(30, 58, 138, 0.4); border: 1px solid #1e40af; }
+        .type-sub { color: #34d399; background: rgba(6, 78, 59, 0.4); border: 1px solid #065f46; }
+        .type-high { color: #c084fc; background: rgba(88, 28, 135, 0.4); border: 1px solid #6b21a8; }
+
+        /* Filters & Controls */
+        .shop-btn { padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; transition: all 0.2s; cursor: pointer; border: 1px solid transparent; background: #334155; color: #cbd5e1; }
+        .shop-btn:hover { background: #475569; color: white; transform: translateY(-2px); }
+        .shop-btn.in-cart { opacity: 0.3; cursor: not-allowed; transform: none; }
+        .basket-item { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .basket-item input { width: 36px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; text-align: center; color: white; padding: 2px; }
+        .basket-item input:focus { outline: 2px solid #6366f1; border-color: transparent; }
+        .tag-high { border-color: #a78bfa; color: #a78bfa; background: #2e1065; }
+        .tag-sub { border-color: #34d399; color: #34d399; background: #064e3b; }
+        .tag-norm { border-color: #60a5fa; color: #60a5fa; background: #1e3a8a; }
+        .tag-cond { border-color: #f472b6; color: #f472b6; background: #831843; }
+        .tag-new { border-color: #94a3b8; color: #f1f5f9; background: #475569; }
+        
+        .control-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .slider-track { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444 0%, #ef4444 50%, #3b82f6 50%, #3b82f6 100%); outline: none; transition: background 0.2s; cursor: pointer; }
+        .slider-track::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: white; border: 2px solid #64748b; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); margin-top: -8px; transition: transform 0.1s; }
+        .chk-big { width: 1.5rem; height: 1.5rem; accent-color: #6366f1; cursor: pointer; border-radius: 4px; }
+
+        /* Tooltips & Modals */
+        #xray-tooltip { display: none; position: fixed; z-index: 9999; background: rgba(15, 23, 42, 0.98); border: 1px solid #6366f1; border-radius: 8px; padding: 12px; width: 280px; pointer-events: none; backdrop-filter: blur(4px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .tooltip-img { width: 100%; border-radius: 4px; margin-bottom: 8px; border: 1px solid #334155; background: white; }
+        .stat-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #cbd5e1; border-bottom: 1px solid #334155; padding-bottom: 2px; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 50; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { background: white; width: 95%; max-width: 1000px; max-height: 90vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease-out; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .check-grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; align-content: flex-start; }
+        .check-item { width: 44px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 14px; font-weight: 900; cursor: pointer; border: 2px solid transparent; background: white; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .check-item:hover { transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
+        .check-item.rev { border-color: #fecaca; color: #dc2626; background: #fef2f2; }
+        .check-item.rev:hover { background: #fee2e2; border-color: #ef4444; }
+        .check-item.new { border-color: #bfdbfe; color: #2563eb; background: #eff6ff; }
+        .check-item.new:hover { background: #dbeafe; border-color: #3b82f6; }
+        #preview-popup { display: none; position: fixed; z-index: 10000; background: white; border: 2px solid #3b82f6; border-radius: 12px; padding: 8px; width: 320px; pointer-events: none; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .inp-big { width: 3rem; height: 2rem; text-align: center; border-radius: 0.375rem; border: 1px solid #475569; background-color: #0f172a; color: white; font-weight: bold; font-size: 1rem; }
+        .inp-big:focus { outline: none; border-color: #6366f1; ring: 2px solid #6366f1; }
+        .inp-range-bold { color: #0f172a; font-weight: 900; font-size: 1.1rem; background-color: #ffffff; }
+        .inp-range-bold::placeholder { color: #cbd5e1; font-weight: normal; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <script src="config.js"></script>
+
+    <div id="xray-tooltip">
+        <div id="xray-header" class="text-indigo-400 font-bold text-sm mb-2 text-center border-b border-indigo-900/50 pb-1 tracking-wider">No. 0000</div>
+        <img id="xray-img" class="tooltip-img" src="" alt="Preview" onerror="this.src='https://placehold.co/300x200?text=No+Image'">
+        <div class="space-y-1">
+            <div class="stat-row"><span>최근 상태</span><span id="x-status" class="font-bold text-white">-</span></div>
+            <div class="stat-row"><span class="text-slate-500">단원</span><span id="x-chapter" class="font-bold text-slate-300 text-xs text-right truncate w-32">-</span></div>
+            <div class="stat-row"><span>유형</span><span id="x-type" class="font-bold text-slate-300">-</span></div>
+            <div class="stat-row"><span>누적 정답 횟수</span><span id="x-correct" class="font-bold text-emerald-400">0회</span></div>
+            <div class="stat-row"><span>누적 오답 횟수</span><span id="x-wrong" class="font-bold text-red-400">0회</span></div>
+            <div class="stat-row"><span>누적 질문 횟수</span><span id="x-quest" class="font-bold text-yellow-400">0회</span></div>
+            <div class="stat-row"><span>정답률</span><span id="x-acc" class="font-bold text-emerald-400">0%</span></div>
+        </div>
+    </div>
+
+    <div id="preview-popup">
+        <div class="text-blue-600 font-bold text-xs mb-1 text-center border-b border-blue-100 pb-1">클릭하여 제외</div>
+        <img id="preview-img" class="w-full rounded border border-slate-100" src="">
+    </div>
+
+    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shrink-0 z-40 h-16 shadow-md">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-lg text-lg"><i class="fa-solid fa-user-doctor"></i></div>
+            <div>
+                <h1 class="font-bold text-lg text-slate-100">정밀 과제 출제 센터</h1>
+                <p class="text-xs text-slate-400">Integrated Assignment System v18.5 (Unlimited Capacity)</p>
+            </div>
+        </div>
+        <button onclick="location.href='teacher_main.html'" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-sm px-6 py-2.5 rounded-xl border border-slate-700 transition flex items-center gap-2 font-bold shadow-sm">
+            <i class="fa-solid fa-house"></i> 메인으로
+        </button>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <div class="w-[60%] flex flex-col border-r border-slate-700 bg-[#0f172a] relative">
+            <div class="p-5 bg-slate-800 border-b border-slate-700 z-10 space-y-4 shadow-lg">
+                <div class="flex gap-4">
+                    <select id="s-select" onchange="loadStudentWorkbooks()" class="flex-[2] bg-slate-700 border border-slate-600 text-white text-base font-bold rounded-xl p-3 focus:border-indigo-500 outline-none cursor-pointer shadow-inner">
+                        <option value="">학생 선택 (Loading...)</option>
+                    </select>
+                    <select id="w-select" onchange="scanBody()" class="flex-[3] bg-slate-700 border border-slate-600 text-white text-base font-bold rounded-xl p-3 focus:border-indigo-500 outline-none cursor-pointer disabled:opacity-50 shadow-inner" disabled>
+                        <option value="">문제집 선택 (자동 진단)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700 shadow-inner">
+                    <div class="flex flex-wrap gap-2 mb-3 items-center">
+                        <span class="text-xs font-bold text-slate-500 mr-2 uppercase tracking-wide">Filter Menu</span>
+                        <div onclick="addToBasket('high', '1등급')" id="btn-high" class="shop-btn border-indigo-500/30 text-indigo-200">🏆 1등급</div>
+                        <div onclick="addToBasket('sub', '서술형')" id="btn-sub" class="shop-btn border-emerald-500/30 text-emerald-200">✍️ 서술형</div>
+                        <div onclick="addToBasket('norm', '일반')" id="btn-norm" class="shop-btn border-blue-500/30 text-blue-200">🧩 일반</div>
+                        <div class="w-px h-6 bg-slate-600 mx-1"></div>
+                        <div onclick="addToBasket('wrong', '오답')" id="btn-wrong" class="shop-btn border-pink-500/30 text-pink-200">🤬 오답횟수</div>
+                        <div onclick="addToBasket('quest', '질문')" id="btn-quest" class="shop-btn border-yellow-500/30 text-yellow-200">🙋‍♂️ 질문횟수</div>
+                        <div onclick="addToBasket('acc', '정답률')" id="btn-acc" class="shop-btn border-purple-500/30 text-purple-200">📉 정답률</div>
+                        <div class="w-px h-6 bg-slate-600 mx-1"></div>
+                        <div onclick="addToBasket('new', '신규')" id="btn-new" class="shop-btn border-slate-400 text-white font-black bg-slate-600 hover:bg-slate-500">✨ 신규 포함</div>
+                    </div>
+
+                    <div class="bg-black/20 rounded-lg p-3 min-h-[50px] border border-slate-700/50 flex flex-wrap gap-2 items-center" id="filter-basket">
+                        <span class="text-xs text-slate-500 select-none italic" id="empty-msg">원하는 조건을 클릭하여 담으세요.</span>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-700">
+                        <div class="flex items-center gap-3 text-xs text-slate-400 select-none font-bold">
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-new rounded-sm"></div>미학습</span>
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-correct rounded-sm"></div>정답</span>
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-wrong-1 rounded-sm"></div>오답</span>
+                            <span class="flex items-center gap-1"><div class="w-3 h-3 bg-question rounded-sm animate-pulse"></div>질문</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="data-load-status" class="text-xs font-bold text-emerald-500 hidden">데이터 로드 완료</span>
+                            <button onclick="applyShopFilters()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg shadow-indigo-500/20 transition transform active:scale-95 flex items-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> 필터 적용
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-6 bg-[#0f172a] relative">
+                <div id="body-grid-container" class="space-y-4 pb-20"></div>
+                <div id="msg-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-600 pointer-events-none">
+                    <i class="fa-solid fa-user-doctor text-6xl mb-6 opacity-30"></i>
+                    <span class="text-lg font-bold">학생과 문제집을 선택하면<br>자동으로 정밀 진단이 시작됩니다.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-slate-50 border-l border-slate-300 flex flex-col min-w-0 relative">
+            <div id="right-lock" class="absolute inset-0 bg-slate-100/80 z-30 flex flex-col items-center justify-center text-slate-400 backdrop-blur-[2px]">
+                <div class="bg-white p-10 rounded-[32px] shadow-2xl flex flex-col items-center border border-slate-200">
+                    <i class="fa-solid fa-lock text-5xl mb-5 text-slate-300"></i>
+                    <span class="text-base font-bold text-slate-500">좌측에서 진단 대상을 먼저 선택하세요.</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-8">
+                <h2 class="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3 border-b-2 border-slate-200 pb-4">
+                    <span class="text-indigo-600 text-3xl">💊</span> 맞춤 처방전 작성
+                </h2>
+
+                <div class="space-y-8">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-500 mb-2 ml-1">과제명</label>
+                        <input type="text" id="assign-title" class="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl text-lg font-bold text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition shadow-sm" placeholder="자동 생성됩니다.">
+                    </div>
+
+                    <div id="today-resolved-box" class="hidden bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-5 shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                                <i class="fa-solid fa-stamp text-lg"></i> 금일 클리닉 완료 (자동 포함)
+                            </h3>
+                        </div>
+                        <div id="today-resolved-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <label class="text-base font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-crosshairs text-indigo-500"></i> 출제 범위 설정</label>
+                            <button onclick="addRangeInput()" class="text-xs bg-slate-100 text-slate-600 px-3 py-2 rounded-lg hover:bg-slate-200 font-bold transition flex items-center gap-1"><i class="fa-solid fa-plus"></i> 구간 추가</button>
+                        </div>
+                        <div id="range-container" class="space-y-3">
+                            <div class="flex gap-3 items-center range-row">
+                                <input type="number" class="range-start w-full p-3 border-2 border-slate-200 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none bg-slate-50 focus:bg-white transition" placeholder="Start" oninput="resetAnalysis()">
+                                <span class="text-slate-300 font-black text-lg">~</span>
+                                <input type="number" class="range-end w-full p-3 border-2 border-slate-200 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="End" oninput="resetAnalysis()">
+                                <button onclick="removeRange(this)" class="text-slate-300 hover:text-red-500 px-2 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="analyze-btn" onclick="analyzeData()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-lg transition transform active:scale-[0.98] text-lg flex items-center justify-center gap-3 border-2 border-slate-900">
+                        <i class="fa-solid fa-filter"></i> 범위 내 문항 추출 및 분석
+                    </button>
+
+                    <div id="mixing-panel" class="hidden animate-[fadeIn_0.3s] space-y-5">
+                        <div class="control-card border-l-4 border-l-purple-500">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-base font-black text-purple-700 uppercase flex items-center gap-2"><i class="fa-solid fa-crown text-lg"></i> High Rank (1등급)</span>
+                                <div class="text-xs font-bold bg-purple-50 px-3 py-1.5 rounded-full text-purple-800 border border-purple-100 flex gap-2">
+                                    <span>가용:</span> <span class="text-red-500">오답 <b id="stat-high-rev">0</b></span> / <span class="text-blue-500">신규 <b id="stat-high-new">0</b></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 mb-4 bg-purple-50/50 p-3 rounded-xl border border-purple-100">
+                                <span class="text-sm font-bold text-slate-600 shrink-0">출제 문항 수:</span>
+                                <input type="number" id="in-high-total" class="flex-1 p-2 text-center text-lg border-2 border-purple-200 rounded-lg font-black text-purple-700 focus:outline-none focus:border-purple-400 bg-white" value="0" oninput="calcDist('high')">
+                            </div>
+                            <div class="px-2">
+                                <input type="range" id="sl-high" min="0" max="100" value="50" class="slider-track" oninput="calcDist('high')">
+                                <div class="flex justify-between text-xs font-bold mt-2 text-slate-500"><span id="res-high-rev">복습 50%</span><span id="res-high-new">신규 50%</span></div>
+                            </div>
+                        </div>
+
+                        <div class="control-card border-l-4 border-l-emerald-500">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-base font-black text-emerald-700 uppercase flex items-center gap-2"><i class="fa-solid fa-pen-nib text-lg"></i> Subjective (서술형)</span>
+                                <div class="text-xs font-bold bg-emerald-50 px-3 py-1.5 rounded-full text-emerald-800 border border-emerald-100 flex gap-2">
+                                    <span>가용:</span> <span class="text-red-500">오답 <b id="stat-sub-rev">0</b></span> / <span class="text-blue-500">신규 <b id="stat-sub-new">0</b></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 mb-4 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+                                <span class="text-sm font-bold text-slate-600 shrink-0">출제 문항 수:</span>
+                                <input type="number" id="in-sub-total" class="flex-1 p-2 text-center text-lg border-2 border-emerald-200 rounded-lg font-black text-emerald-700 focus:outline-none focus:border-emerald-400 bg-white" value="0" oninput="calcDist('sub')">
+                            </div>
+                            <div class="px-2">
+                                <input type="range" id="sl-sub" min="0" max="100" value="50" class="slider-track" oninput="calcDist('sub')">
+                                <div class="flex justify-between text-xs font-bold mt-2 text-slate-500"><span id="res-sub-rev">복습 50%</span><span id="res-sub-new">신규 50%</span></div>
+                            </div>
+                        </div>
+
+                        <div class="control-card border-l-4 border-l-blue-500">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-base font-black text-blue-700 uppercase flex items-center gap-2"><i class="fa-solid fa-shapes text-lg"></i> Normal (일반)</span>
+                                <div class="text-xs font-bold bg-blue-50 px-3 py-1.5 rounded-full text-blue-800 border border-blue-100 flex gap-2">
+                                    <span>가용:</span> <span class="text-red-500">오답 <b id="stat-norm-rev">0</b></span> / <span class="text-blue-500">신규 <b id="stat-norm-new">0</b></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4 mb-4 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                                <span class="text-sm font-bold text-slate-600 shrink-0">출제 문항 수:</span>
+                                <input type="number" id="in-norm-total" class="flex-1 p-2 text-center text-lg border-2 border-blue-200 rounded-lg font-black text-blue-700 focus:outline-none focus:border-blue-400 bg-white" value="20" oninput="calcDist('norm')">
+                            </div>
+                            <div class="px-2">
+                                <input type="range" id="sl-norm" min="0" max="100" value="50" class="slider-track" oninput="calcDist('norm')">
+                                <div class="flex justify-between text-xs font-bold mt-2 text-slate-500"><span id="res-norm-rev">복습 50%</span><span id="res-norm-new">신규 50%</span></div>
+                            </div>
+                        </div>
+
+                        <button onclick="openInspectionModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-bold shadow-xl transition active:scale-[0.98] text-lg flex items-center justify-center gap-3 mt-6 border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1">
+                            <i class="fa-solid fa-list-check"></i> 출제 문항 검수하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="inspect-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="bg-slate-800 p-5 text-white flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="font-bold text-xl flex items-center gap-2"><i class="fa-solid fa-clipboard-check"></i> 출제 목록 확인</h3>
+                    <p class="text-xs text-slate-400 mt-1">총 <span id="insp-total" class="text-white font-bold">0</span>문항</p>
+                </div>
+                <button onclick="closeInspectionModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-6 custom-scroll space-y-4">
+                <div id="sec-high" class="bg-white rounded-xl border-l-4 border-purple-500 shadow-sm overflow-hidden"><div class="bg-purple-50 p-3 flex justify-between items-center border-b border-purple-100"><span class="text-xs font-black text-purple-700 uppercase">High Rank (1등급)</span><span class="text-[10px] bg-purple-200 text-purple-800 px-2 py-0.5 rounded font-bold" id="cnt-grid-high">0</span></div><div id="grid-high" class="check-grid"></div></div>
+                <div id="sec-sub" class="bg-white rounded-xl border-l-4 border-emerald-500 shadow-sm overflow-hidden"><div class="bg-emerald-50 p-3 flex justify-between items-center border-b border-emerald-100"><span class="text-xs font-black text-emerald-700 uppercase">Subjective (서술형)</span><span class="text-[10px] bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded font-bold" id="cnt-grid-sub">0</span></div><div id="grid-sub" class="check-grid"></div></div>
+                <div id="sec-norm" class="bg-white rounded-xl border-l-4 border-blue-500 shadow-sm overflow-hidden"><div class="bg-blue-50 p-3 flex justify-between items-center border-b border-blue-100"><span class="text-xs font-black text-blue-700 uppercase">Normal (일반)</span><span class="text-[10px] bg-blue-200 text-blue-800 px-2 py-0.5 rounded font-bold" id="cnt-grid-norm">0</span></div><div id="grid-norm" class="check-grid"></div></div>
+            </div>
+
+            <div class="p-4 bg-white border-t border-slate-200 flex gap-3 shrink-0 items-center">
+                <button onclick="printReviewHandout()" class="bg-slate-700 text-white px-4 py-3 rounded-xl font-bold text-xs hover:bg-slate-800 shadow flex items-center gap-2">
+                    <i class="fa-solid fa-print"></i> 복습 문제 인쇄
+                </button>
+                <div class="flex-1 flex gap-3">
+                    <button onclick="closeInspectionModal()" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition text-xs border border-slate-200">수정하기</button>
+                    <button onclick="finalSend()" id="btn-final-send" class="flex-[2] bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg transition text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> 최종 전송
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || (user.role !== 'teacher' && user.role !== 'admin')) { alert("접근 권한이 없습니다."); location.href='index.html'; }
+
+        let currentWbId = null, currentStudentId = null, currentStudentName = null, metaMap = {}, progressMap = {};
+        let pools = { norm: {rev:[], new:[]}, high: {rev:[], new:[]}, sub: {rev:[], new:[]} };
+        let finalProblemList = [];
+        let finalDist = { high:{rev:0, new:0}, sub:{rev:0, new:0}, norm:{rev:0, new:0} };
+        let activeFilters = new Map(); 
+        let sortedMetaArray = []; 
+
+        init();
+        async function init() {
+            try {
+                const { data } = await _supabase.from('users').select('username, name, grade').eq('role', 'student').order('name');
+                const sel = document.getElementById('s-select');
+                if(data) sel.innerHTML = '<option value="">학생 선택</option>' + data.map(s => `<option value="${s.username}">${s.name} (${s.grade})</option>`).join('');
+                addToBasket('high', '1등급'); addToBasket('sub', '서술형'); addToBasket('norm', '일반'); addToBasket('new', '신규'); 
+            } catch(e) { console.error(e); }
+        }
+
+        function addToBasket(type, label) {
+            if(activeFilters.has(type)) return; 
+            let config = { type: type, label: label, value: 0 };
+            if(type === 'wrong') config.value = 1;
+            if(type === 'acc') config.value = 80;
+            activeFilters.set(type, config);
+            document.getElementById(`btn-${type}`).classList.add('in-cart');
+            renderBasket();
+        }
+        function removeFromBasket(type) {
+            activeFilters.delete(type);
+            document.getElementById(`btn-${type}`).classList.remove('in-cart');
+            renderBasket();
+        }
+        function renderBasket() {
+            const container = document.getElementById('filter-basket');
+            const emptyMsg = document.getElementById('empty-msg');
+            Array.from(container.children).forEach(c => { if(c.id !== 'empty-msg') c.remove(); });
+            if(activeFilters.size === 0) { emptyMsg.classList.remove('hidden'); return; }
+            emptyMsg.classList.add('hidden');
+            activeFilters.forEach((conf, type) => {
+                const tag = document.createElement('div');
+                let colorClass = 'tag-cond';
+                if(type==='high') colorClass = 'tag-high'; if(type==='sub') colorClass = 'tag-sub';
+                if(type==='norm') colorClass = 'tag-norm'; if(type==='new') colorClass = 'tag-new';
+                tag.className = `basket-item ${colorClass}`;
+                let inputHtml = '';
+                if(['wrong', 'quest', 'acc'].includes(type)) {
+                    const ph = type==='acc' ? '%' : '회';
+                    inputHtml = `<input type="number" value="${conf.value}" class="ml-1" onchange="updateFilterValue('${type}', this.value)" onclick="event.stopPropagation()"> ${ph}`;
+                }
+                tag.innerHTML = `<span>${conf.label}</span>${inputHtml}<i class="fa-solid fa-xmark ml-1 cursor-pointer hover:text-white" onclick="removeFromBasket('${type}')"></i>`;
+                container.appendChild(tag);
+            });
+        }
+        function updateFilterValue(type, val) { if(activeFilters.has(type)) activeFilters.get(type).value = parseInt(val); }
+
+        async function loadStudentWorkbooks() {
+            const sSel = document.getElementById('s-select');
+            const sId = sSel.value;
+            currentStudentId = sId; 
+            currentStudentName = sSel.options[sSel.selectedIndex].text.split(' (')[0];
+            currentWbId = null;
+            
+            const wbSel = document.getElementById('w-select');
+            wbSel.innerHTML = '<option value="">문제집 선택</option>'; wbSel.disabled = true;
+            document.getElementById('right-lock').classList.remove('hidden');
+            document.getElementById('body-grid-container').innerHTML = ''; 
+            document.getElementById('msg-empty').classList.remove('hidden');
+            document.getElementById('data-load-status').classList.add('hidden');
+            if(!sId) return;
+            const { data } = await _supabase.from('student_books').select('workbook_id, workbooks(id, title, total_problems)').eq('student_id', sId);
+            if(data && data.length) { wbSel.innerHTML = '<option value="">문제집 선택</option>' + data.map(b => `<option value="${b.workbooks.id}" data-total="${b.workbooks.total_problems}">${b.workbooks.title}</option>`).join(''); wbSel.disabled = false; }
+        }
+
+        async function scanBody() {
+            try {
+                const wId = document.getElementById('w-select').value;
+                const sId = currentStudentId;
+                if(!wId || !sId) return;
+                currentWbId = wId;
+                
+                // ★★★ 이브의 10000개 확장 수술 (Deep Throat Extension) ★★★
+                const [progRes, metaRes] = await Promise.all([
+                    _supabase.from('student_progress').select('*').eq('student_id', sId).eq('workbook_id', wId).limit(10000),
+                    _supabase.from('problem_metadata').select('*').eq('workbook_id', wId).order('problem_num', {ascending: true}).limit(10000)
+                ]);
+                
+                // ★★★ 이브의 콘솔 관음 로그 (추가됨) ★★★
+                if (metaRes.data) {
+                    console.log("🔥 이브의 관음 로그: DB에서 가져온 문제 메타데이터 수:", metaRes.data.length); 
+                    console.log("🔥 이브의 관음 로그: 마지막 문제 번호:", metaRes.data[metaRes.data.length - 1]?.problem_num);
+                }
+                // ★★★ 여기까지 삽입 ★★★
+                
+                progressMap = {}; 
+                if(progRes.data) progRes.data.forEach(p => progressMap[p.problem_num] = p);
+
+                let metaDataList = metaRes.data || [];
+                const statusEl = document.getElementById('data-load-status');
+                statusEl.innerText = `총 문항 ${metaDataList.length}개 로드 완료 (확장됨)`;
+                statusEl.classList.remove('hidden');
+                
+                // ★ [EVE'S MEMORY INHERITANCE FIX V2] ★
+                metaDataList.sort((a,b) => a.problem_num - b.problem_num); 
+                sortedMetaArray = metaDataList; // Global variable update
+                
+                let lastMajor = null, lastMajorTitle = null, lastMinor = null, lastMinorTitle = null;
+
+                // 2. Forward Pass (순방향 상속)
+                for(let i=0; i<metaDataList.length; i++) {
+                    const curr = metaDataList[i];
+                    if (curr.chapter_major) {
+                        lastMajor = curr.chapter_major;
+                        lastMajorTitle = curr.chapter_major_title_ko;
+                        lastMinor = curr.chapter_minor;
+                        lastMinorTitle = curr.chapter_title_ko;
+                    } else if (lastMajor) {
+                        curr.chapter_major = lastMajor;
+                        curr.chapter_major_title_ko = lastMajorTitle;
+                        curr.chapter_minor = lastMinor;
+                        curr.chapter_title_ko = lastMinorTitle;
+                    }
+                }
+
+                // 3. Backward Pass (역방향 상속 - 앞쪽 빈 문제 채우기)
+                let firstValidMajor = null, firstValidMajorTitle = null, firstValidMinor = null, firstValidMinorTitle = null;
+                for(let i=0; i<metaDataList.length; i++) {
+                     if (metaDataList[i].chapter_major) {
+                         firstValidMajor = metaDataList[i].chapter_major;
+                         firstValidMajorTitle = metaDataList[i].chapter_major_title_ko;
+                         firstValidMinor = metaDataList[i].chapter_minor;
+                         firstValidMinorTitle = metaDataList[i].chapter_title_ko;
+                         break;
+                     }
+                }
+                
+                if (firstValidMajor) {
+                    for(let i=0; i<metaDataList.length; i++) {
+                        if (!metaDataList[i].chapter_major) {
+                             metaDataList[i].chapter_major = firstValidMajor;
+                             metaDataList[i].chapter_major_title_ko = firstValidMajorTitle;
+                             metaDataList[i].chapter_minor = firstValidMinor;
+                             metaDataList[i].chapter_title_ko = firstValidMinorTitle;
+                        } else {
+                            break; 
+                        }
+                    }
+                }
+                // ★ END OF FIX V2 ★
+
+                metaMap = {}; 
+                metaDataList.forEach(m => metaMap[m.problem_num] = m);
+                
+                checkTodayResolved(); 
+                
+                const total = parseInt(document.querySelector(`#w-select option[value="${wId}"]`).dataset.total);
+                
+                // [NEW STRATEGY] Hierarchical Block Rendering
+                renderGridHierarchy(total, metaDataList);
+                
+                document.getElementById('right-lock').classList.add('hidden');
+                document.getElementById('msg-empty').classList.add('hidden');
+                const today = new Date();
+                const wbTitle = document.querySelector(`#w-select option[value="${wId}"]`).text;
+                document.getElementById('assign-title').value = `${today.getMonth()+1}월 ${today.getDate()}일 ${wbTitle} 처방`;
+            } catch(e) { alert("데이터 로드 중 오류: " + e.message); console.error(e); }
+        }
+
+        function checkTodayResolved() {
+            const today = new Date().toISOString().split('T')[0];
+            const box = document.getElementById('today-resolved-box'); 
+            const list = document.getElementById('today-resolved-list'); 
+            list.innerHTML = ''; 
+            let count = 0;
+            for(const num in progressMap) {
+                const p = progressMap[num];
+                if (p.clinic_resolved_at && p.clinic_resolved_at.startsWith(today)) {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center gap-2 bg-white border-2 border-emerald-400 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-900 cursor-pointer hover:bg-emerald-100 transition shadow-sm";
+                    label.innerHTML = `<input type="checkbox" checked value="${num}" class="chk-force accent-emerald-600"> No.${num}`;
+                    list.appendChild(label); 
+                    count++;
+                }
+            }
+            if(count > 0) { box.classList.remove('hidden'); box.querySelector('h3').innerHTML = `<i class="fa-solid fa-stamp text-lg"></i> 금일 클리닉 완료 (${count}문항)`; } 
+            else { box.classList.add('hidden'); }
+        }
+
+        // [HIERARCHICAL BLOCK RENDERING] - The "Row-by-Row" Strategy
+        function renderGridHierarchy(total, metaDataList) {
+            const container = document.getElementById('body-grid-container'); 
+            container.innerHTML = ''; 
+
+            if (!metaDataList || metaDataList.length === 0) {
+                 const simpleGrid = document.createElement('div');
+                 simpleGrid.className = 'xray-grid';
+                 container.appendChild(simpleGrid);
+                 for(let i=1; i<=total; i++) {
+                     const tile = createTile(i, null, progressMap[i]);
+                     simpleGrid.appendChild(tile);
+                 }
+                 return;
+            }
+
+            // 1. Build Tree Structure: Tree[Major][Minor][Type] = [List]
+            const tree = {};
+            
+            metaDataList.forEach(m => {
+                const maj = m.chapter_major || 999;
+                const majTitle = m.chapter_major_title_ko || (maj === 999 ? '기타 (단원 미설정)' : `대단원 ${maj}`);
+                
+                const min = m.chapter_minor || 999;
+                const minTitle = m.chapter_title_ko || (min === 999 ? '중단원 미설정' : `중단원 ${min}`);
+                
+                let type = 'norm';
+                // Robust type checking
+                if(m.difficulty && m.difficulty.toLowerCase().includes('high')) type = 'high';
+                else if(m.is_subjective) type = 'sub';
+
+                if (!tree[maj]) tree[maj] = { title: majTitle, minors: {} };
+                if (!tree[maj].minors[min]) tree[maj].minors[min] = { title: minTitle, types: { 'norm': [], 'sub': [], 'high': [] } };
+                
+                tree[maj].minors[min].types[type].push(m);
+            });
+
+            // 2. Iterate and Render Rows
+            // Sort Majors
+            const sortedMajors = Object.keys(tree).sort((a,b) => Number(a) - Number(b));
+            
+            sortedMajors.forEach(majKey => {
+                const majorNode = tree[majKey];
+                
+                // Render Major Header Row
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'section-block';
+
+                const majHeader = document.createElement('div');
+                majHeader.className = 'header-major';
+                majHeader.innerHTML = `<span>${majKey == 999 ? '?' : majKey + '.'}</span> <span>${majorNode.title}</span>`;
+                sectionDiv.appendChild(majHeader);
+
+                // Sort Minors inside Major
+                const sortedMinors = Object.keys(majorNode.minors).sort((a,b) => Number(a) - Number(b));
+                
+                sortedMinors.forEach(minKey => {
+                    const minorNode = majorNode.minors[minKey];
+                    
+                    // Render Minor Block
+                    const subSectionDiv = document.createElement('div');
+                    subSectionDiv.className = 'subsection-block';
+
+                    const minHeader = document.createElement('div');
+                    minHeader.className = 'header-minor';
+                    const numbering = (majKey != 999 && minKey != 999) ? `${majKey}-${minKey}.` : '';
+                    minHeader.innerHTML = `<span>${numbering}</span> <span>${minorNode.title}</span>`;
+                    subSectionDiv.appendChild(minHeader);
+
+                    // Render Types in Order: Norm -> Sub -> High (FORCE RENDER ALL TYPES)
+                    ['norm', 'sub', 'high'].forEach(typeKey => {
+                        const problems = minorNode.types[typeKey];
+                        
+                        // [FORCE RENDER] Even if empty, render the block to show structure
+                        const typeBlock = document.createElement('div');
+                        typeBlock.className = 'type-block';
+
+                        // Render Type Header Row
+                        const typeHeader = document.createElement('div');
+                        typeHeader.className = `header-type type-${typeKey}`;
+                        let label = '🧩 일반유형';
+                        if(typeKey === 'sub') label = '✍️ 서술형';
+                        if(typeKey === 'high') label = '🏆 1등급';
+                        typeHeader.innerHTML = label;
+                        typeBlock.appendChild(typeHeader);
+
+                        // Render Grid Row
+                        const grid = document.createElement('div');
+                        grid.className = 'xray-grid'; 
+                        
+                        if (problems.length > 0) {
+                            problems.sort((a,b) => a.problem_num - b.problem_num); // Ensure number order
+                            problems.forEach(m => {
+                                const tile = createTile(m.problem_num, m, progressMap[m.problem_num]);
+                                grid.appendChild(tile);
+                            });
+                        } 
+                        // Empty grid stays empty but visible due to CSS min-height
+
+                        typeBlock.appendChild(grid);
+                        subSectionDiv.appendChild(typeBlock);
+                    });
+                    sectionDiv.appendChild(subSectionDiv);
+                });
+                container.appendChild(sectionDiv);
+            });
+
+            applyShopFilters();
+        }
+
+        function createTile(i, m, p) {
+            let bgClass = 'bg-new'; let statusText = '미학습'; 
+            let wrongCnt = 0; let qCnt = 0; let cCnt = 0; let acc = 0; 
+            
+            if (p) {
+                wrongCnt = p.wrong_count || 0; 
+                qCnt = p.question_count || 0;
+                cCnt = p.correct_count || 0; 
+                
+                const totalTry = cCnt + wrongCnt;
+                acc = totalTry > 0 ? Math.round((cCnt / totalTry) * 100) : 0;
+                
+                if (p.is_question_active) { 
+                    bgClass = 'bg-question'; statusText = '질문중'; 
+                }
+                else if (p.last_result === 'wrong') {
+                    if (wrongCnt >= 4) { bgClass = 'bg-wrong-3'; statusText = `취약(${wrongCnt}회)`; }
+                    else if (wrongCnt >= 2) { bgClass = 'bg-wrong-2'; statusText = `오답(${wrongCnt}회)`; }
+                    else { bgClass = 'bg-wrong-1'; statusText = '오답(1회)'; }
+                } else if (p.last_result === 'correct') { 
+                    bgClass = 'bg-correct'; statusText = '정답'; 
+                }
+            }
+            
+            const tile = document.createElement('div'); tile.className = `tile ${bgClass}`;
+            tile.dataset.num = i;
+            
+            let safeType = 'norm';
+            if (m) {
+                if(m.difficulty && m.difficulty.toLowerCase().includes('high')) safeType = 'high';
+                else if(m.is_subjective) safeType = 'sub';
+            }
+            tile.dataset.type = safeType;
+            tile.dataset.correct = cCnt; 
+            tile.dataset.wrong = wrongCnt; 
+            tile.dataset.quest = qCnt; 
+            tile.dataset.status = statusText; 
+            tile.dataset.acc = acc;
+            tile.dataset.chapMajor = m?.chapter_major_title_ko || '';
+            tile.dataset.chapMinor = m?.chapter_title_ko || '';
+
+            tile.onmouseenter = (e) => showXray(e.target, i); tile.onmouseleave = hideXray;
+            return tile;
+        }
+
+        function showXray(el, num) {
+            const tip = document.getElementById('xray-tooltip'); const img = document.getElementById('xray-img');
+            const padded = num.toString().padStart(4, '0');
+            img.src = `${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${padded}.webp`;
+            document.getElementById('xray-header').innerText = `No. ${num}`;
+            const statusEl = document.getElementById('x-status'); const status = el.dataset.status;
+            statusEl.innerText = status;
+            if(status === '미학습') statusEl.className = 'font-bold text-slate-400';
+            else if(status === '정답') statusEl.className = 'font-bold text-emerald-400';
+            else if(status === '질문중') statusEl.className = 'font-bold text-yellow-400 animate-pulse';
+            else statusEl.className = 'font-bold text-red-400';
+
+            const chapInfo = el.dataset.chapMajor ? `${el.dataset.chapMajor} > ${el.dataset.chapMinor}` : '-';
+            document.getElementById('x-chapter').innerText = chapInfo;
+
+            document.getElementById('x-correct').innerText = el.dataset.correct + '회'; 
+            document.getElementById('x-wrong').innerText = el.dataset.wrong + '회'; 
+            document.getElementById('x-quest').innerText = el.dataset.quest + '회'; 
+            document.getElementById('x-acc').innerText = el.dataset.acc + '%'; 
+
+            const typeKey = el.dataset.type;
+            const typeStr = typeKey==='high'?'1등급':(typeKey==='sub'?'서술형':'일반');
+            document.getElementById('x-type').innerText = typeStr;
+            const rect = el.getBoundingClientRect();
+            let left = rect.right + 10; if (left + 300 > window.innerWidth) left = rect.left - 310;
+            let top = rect.top - 50; if (top < 10) top = 10; if (top + 300 > window.innerHeight) top = window.innerHeight - 310;
+            tip.style.left = left + 'px'; tip.style.top = top + 'px'; tip.style.display = 'block';
+        }
+
+        function hideXray() { document.getElementById('xray-tooltip').style.display = 'none'; }
+
+        function applyShopFilters() {
+            const useHigh = activeFilters.has('high'); const useSub = activeFilters.has('sub'); const useNorm = activeFilters.has('norm'); const useNew = activeFilters.has('new');
+            const minWrong = activeFilters.has('wrong') ? activeFilters.get('wrong').value : 0;
+            const minQuest = activeFilters.has('quest') ? activeFilters.get('quest').value : 0;
+            const maxAcc = activeFilters.has('acc') ? activeFilters.get('acc').value : 100;
+            
+            document.querySelectorAll('.tile').forEach(tile => { 
+                const type = tile.dataset.type; const wrong = parseInt(tile.dataset.wrong); const quest = parseInt(tile.dataset.quest); const acc = parseInt(tile.dataset.acc); const isNew = tile.dataset.status === '미학습';
+                let show = true;
+                if (type === 'high' && !useHigh) show = false; if (type === 'sub' && !useSub) show = false; if (type === 'norm' && !useNorm) show = false;
+                if (isNew && !useNew) show = false;
+                if (minWrong > 0 && wrong < minWrong) show = false; if (minQuest > 0 && quest < minQuest) show = false;
+                if (activeFilters.has('acc') && acc > maxAcc) show = false;
+                tile.style.opacity = show ? '1' : '0.05'; tile.style.pointerEvents = show ? 'auto' : 'none';
+            });
+        }
+        function resetFilters() { activeFilters.clear(); document.querySelectorAll('.shop-btn').forEach(b => b.classList.remove('in-cart')); addToBasket('high', '1등급'); addToBasket('sub', '서술형'); addToBasket('norm', '일반'); addToBasket('new', '신규'); applyShopFilters(); }
+
+        // --- Prescription ---
+        function addRangeInput() { const div = document.createElement('div'); div.className = 'flex gap-2 items-center range-row mt-2 animate-[fadeIn_0.2s]'; div.innerHTML = `<input type="number" class="range-start w-full p-3 border-2 border-slate-200 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="Start" oninput="resetAnalysis()"><span class="text-slate-300 font-black text-lg">~</span><input type="number" class="range-end w-full p-3 border-2 border-slate-200 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="End" oninput="resetAnalysis()"><button onclick="removeRange(this)" class="text-slate-300 hover:text-red-500 px-2 transition text-xl"><i class="fa-solid fa-xmark"></i></button></div>`; document.getElementById('range-container').appendChild(div); resetAnalysis(); }
+        function removeRange(btn) { btn.parentElement.remove(); resetAnalysis(); }
+        function resetAnalysis() { document.getElementById('mixing-panel').classList.add('hidden'); const btn = document.getElementById('analyze-btn'); btn.innerHTML = '<i class="fa-solid fa-filter"></i> 범위 내 문항 추출 및 분석'; btn.className = "w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-lg transition transform active:scale-[0.98] text-lg flex items-center justify-center gap-3 border-2 border-slate-900"; }
+
+        function analyzeData() {
+            if(!currentWbId) return;
+            let ranges = []; document.querySelectorAll('.range-row').forEach(row => { const s = parseInt(row.querySelector('.range-start').value); const e = parseInt(row.querySelector('.range-end').value); if(!isNaN(s) && !isNaN(e) && s <= e) ranges.push({start:s, end:e}); });
+            if(!ranges.length) return alert("출제 범위를 입력해주세요.");
+            
+            pools = { norm: {rev:[], new:[]}, high: {rev:[], new:[]}, sub: {rev:[], new:[]} };
+            const forcedList = Array.from(document.querySelectorAll('.chk-force:checked')).map(c => parseInt(c.value));
+            
+            sortedMetaArray.forEach(m => { 
+                const i = m.problem_num;
+                let isInRange = false;
+                for (const r of ranges) {
+                    if (i >= r.start && i <= r.end) {
+                        isInRange = true;
+                        break;
+                    }
+                }
+                if (!isInRange) return;
+                
+                if (forcedList.includes(i)) return;
+                    
+                const p = progressMap[i]; 
+                let status = 'new';
+                
+                if(p && (p.last_result === 'wrong' || p.is_question_active)) {
+                    status = 'rev';
+                } else if(p && p.last_result === 'correct') {
+                    return; 
+                }
+
+                let type = 'norm'; 
+                if(m.difficulty && m.difficulty.toLowerCase().includes('high')) type = 'high'; 
+                else if(m.is_subjective) type = 'sub';
+                
+                pools[type][status].push(i);
+            });
+            
+            updateStat('high'); updateStat('sub'); updateStat('norm');
+            document.getElementById('in-high-total').value = 0; document.getElementById('sl-high').value = 50;
+            document.getElementById('in-sub-total').value = 0; document.getElementById('sl-sub').value = 50;
+            document.getElementById('in-norm-total').value = 20; document.getElementById('sl-norm').value = 50;
+            calcDist('high'); calcDist('sub'); calcDist('norm');
+            document.getElementById('mixing-panel').classList.remove('hidden');
+            const btn = document.getElementById('analyze-btn'); btn.innerHTML = '<i class="fa-solid fa-check"></i> 분석 완료'; btn.className = "w-full bg-emerald-600 text-white font-bold py-5 rounded-2xl shadow-lg text-lg flex items-center justify-center gap-3 cursor-default border-2 border-emerald-600";
+        }
+
+
+        function updateStat(type) {
+            document.getElementById(`stat-${type}-rev`).innerText = pools[type].rev.length;
+            document.getElementById(`stat-${type}-new`).innerText = pools[type].new.length;
+        }
+
+        function calcDist(type) {
+            const total = parseInt(document.getElementById(`in-${type}-total`).value) || 0;
+            const ratio = parseInt(document.getElementById(`sl-${type}`).value); 
+            const slider = document.getElementById(`sl-${type}`);
+            slider.style.background = `linear-gradient(to right, #ef4444 0%, #ef4444 ${ratio}%, #3b82f6 ${ratio}%, #3b82f6 100%)`;
+            const revPer = ratio; const newPer = 100 - ratio;
+            const reqRev = Math.round(total * (revPer / 100)); const reqNew = total - reqRev;
+            const availRev = pools[type].rev.length; const availNew = pools[type].new.length;
+            const revSpan = document.getElementById(`res-${type}-rev`); const newSpan = document.getElementById(`res-${type}-new`);
+            revSpan.innerHTML = `복습 <span class="text-red-500">${revPer}%</span> (${reqRev}문)`;
+            newSpan.innerHTML = `신규 <span class="text-blue-500">${newPer}%</span> (${reqNew}문)`;
+            revSpan.className = (reqRev > availRev) ? "text-red-600 font-black animate-pulse flex items-center gap-1" : "text-slate-600 flex items-center gap-1";
+            if(reqRev > availRev) revSpan.innerHTML += " <i class='fa-solid fa-circle-exclamation'></i>";
+            newSpan.className = (reqNew > availNew) ? "text-red-600 font-black animate-pulse flex items-center gap-1" : "text-slate-600 flex items-center gap-1";
+            if(reqNew > availNew) newSpan.innerHTML += " <i class='fa-solid fa-circle-exclamation'></i>";
+            finalDist[type] = { rev: reqRev, new: reqNew };
+        }
+
+        function openInspectionModal() {
+            const pickRandom = (arr, n) => { 
+                const s = [...arr].sort(() => 0.5 - Math.random()); 
+                return s.slice(0, n); 
+            };
+            
+            const pickSequentialClean = (arr, n) => {
+                return arr.slice(0, n);
+            };
+
+            let selected = [];
+            selected.push(...Array.from(document.querySelectorAll('.chk-force:checked')).map(c => parseInt(c.value)));
+            
+            selected.push(...pickRandom(pools.high.rev, finalDist.high.rev));
+            selected.push(...pickSequentialClean(pools.high.new, finalDist.high.new));
+
+            selected.push(...pickRandom(pools.sub.rev, finalDist.sub.rev));
+            selected.push(...pickSequentialClean(pools.sub.new, finalDist.sub.new));
+
+            selected.push(...pickRandom(pools.norm.rev, finalDist.norm.rev));
+            selected.push(...pickSequentialClean(pools.norm.new, finalDist.norm.new));
+
+            finalProblemList = [...new Set(selected)].sort((a,b) => a-b);
+            if(finalProblemList.length === 0) return alert("출제할 문항이 없습니다.");
+            
+            renderInspectionGrid(); 
+            document.getElementById('inspect-modal').style.display = 'flex';
+        }
+
+        function renderInspectionGrid() {
+            const sections = { high: document.getElementById('grid-high'), sub: document.getElementById('grid-sub'), norm: document.getElementById('grid-norm') };
+            const containers = { high: document.getElementById('sec-high'), sub: document.getElementById('sec-sub'), norm: document.getElementById('sec-norm') };
+            const counts = { high: document.getElementById('cnt-grid-high'), sub: document.getElementById('cnt-grid-sub'), norm: document.getElementById('cnt-grid-norm') };
+            Object.values(sections).forEach(el => el.innerHTML = '');
+            let totalCnt = 0;
+
+            finalProblemList.forEach(num => {
+                const m = metaMap[num]; const p = progressMap[num];
+                const forced = Array.from(document.querySelectorAll('.chk-force:checked')).map(c => parseInt(c.value));
+                let isReview = false;
+                if (p && (p.last_result === 'wrong' || p.is_question_active)) isReview = true;
+                if (forced.includes(num)) isReview = true;
+
+                const el = document.createElement('div');
+                let typeKey = 'norm';
+                if(m.difficulty && m.difficulty.toLowerCase().includes('high')) typeKey = 'high'; else if(m.is_subjective) typeKey = 'sub';
+                let typeClass = isReview ? 'check-item rev' : 'check-item new';
+                el.className = typeClass; el.innerText = num;
+                el.onmouseenter = (e) => showPreview(e.target, num); el.onmouseleave = hidePreview; el.onclick = () => confirmRemove(num);
+                sections[typeKey].appendChild(el);
+            });
+
+            ['high', 'sub', 'norm'].forEach(key => {
+                const cnt = sections[key].children.length;
+                counts[key].innerText = cnt;
+                if (cnt === 0) sections[key].innerHTML = '<div class="text-[10px] text-slate-300 w-full text-center">해당 없음</div>';
+                totalCnt += cnt;
+            });
+            document.getElementById('insp-total').innerText = totalCnt;
+        }
+
+        function printReviewHandout() {
+            const reviewProblems = [];
+            finalProblemList.forEach(num => {
+                const p = progressMap[num];
+                const forced = Array.from(document.querySelectorAll('.chk-force:checked')).map(c => parseInt(c.value));
+                if ((p && (p.last_result === 'wrong' || p.is_question_active)) || forced.includes(num)) {
+                    reviewProblems.push(num);
+                }
+            });
+
+            if(reviewProblems.length === 0) return alert("복습할 문항(오답/질문)이 없습니다.");
+            const customFooter = prompt("하단에 들어갈 문구를 입력하세요:", "Math Clinic");
+            if (customFooter === null) return; 
+
+            const printWindow = window.open('', '_blank');
+            const todayStr = new Date().toLocaleDateString();
+            const assignTitle = document.getElementById('assign-title').value; 
+            
+            printWindow.document.write(`<html><head><meta charset="UTF-8"><title>Clinic</title><style>body{margin:0;padding:0;}.page{width:100%;height:100vh;padding:10mm;box-sizing:border-box;page-break-after:always;display:flex;flex-direction:column;}.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex:1;}.card{border:none;padding:10px;display:flex;flex-direction:column;height:100%;}.img-box{flex:1;display:flex;align-items:flex-start;justify-content:center;overflow:hidden;padding-top:5mm;}img{max-width:100%;max-height:100%;object-fit:contain;object-position:top center;}.header{border-bottom:2px solid black;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;font-weight:bold;font-size:14px;}.footer{text-align:center;font-size:10px;color:#999;margin-top:10px;}@media print{.page{height:100vh;}}</style></head><body>`);
+
+            for(let i=0; i<reviewProblems.length; i+=4) {
+                const chunk = reviewProblems.slice(i, i+4);
+                printWindow.document.write(`<div class="page"><div class="header"><span>📚 ${assignTitle} [오답 클리닉]</span><span>이름: ${currentStudentName} | ${todayStr}</span></div><div class="grid">`);
+                chunk.forEach(num => {
+                    const padded = num.toString().padStart(4, '0');
+                    const url = `${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${padded}.webp`;
+                    printWindow.document.write(`<div class="card"><div class="img-box"><img src="${url}" onerror="this.src='${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${num}.webp'"></div></div>`);
+                });
+                for(let j=chunk.length; j<4; j++) printWindow.document.write(`<div class="card"></div>`);
+                printWindow.document.write(`</div><div class="footer">- ${customFooter} -</div></div>`);
+            }
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => printWindow.print(), 500);
+        }
+
+        function confirmRemove(num) { if(confirm(`No.${num} 문항을 제외하시겠습니까?`)) { finalProblemList = finalProblemList.filter(n => n !== num); renderInspectionGrid(); hidePreview(); } }
+        function showPreview(el, num) { const pop = document.getElementById('preview-popup'); const img = document.getElementById('preview-img'); const padded = num.toString().padStart(4, '0'); img.src = `${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${padded}.webp`; const rect = el.getBoundingClientRect(); pop.style.left = (rect.right + 10) + 'px'; pop.style.top = rect.top + 'px'; pop.style.display = 'block'; }
+        function hidePreview() { document.getElementById('preview-popup').style.display = 'none'; }
+        function closeInspectionModal() { document.getElementById('inspect-modal').style.display = 'none'; hidePreview(); }
+
+        async function finalSend() {
+            if(finalProblemList.length === 0) return alert("문항 없음");
+            const btn = document.getElementById('btn-final-send'); const title = document.getElementById('assign-title').value; if(!title) return alert("과제명 필요");
+            btn.innerText = "전송 중..."; btn.disabled = true;
+            try {
+                const { error } = await _supabase.rpc('create_assignment_teacher', { p_student_id: currentStudentId, p_workbook_id: parseInt(currentWbId), p_title: title, p_problem_list: finalProblemList, p_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), p_is_special: false, p_reward_points: 20 });
+                if(error) throw error;
+                alert("✅ 전송 완료!"); closeInspectionModal(); resetAnalysis();
+                document.getElementById('range-container').innerHTML = '<div class="flex gap-2 items-center range-row"><input type="number" class="range-start w-full p-2 border border-slate-300 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="Start" oninput="resetAnalysis()"><span class="text-slate-300 font-black text-lg">~</span><input type="number" class="range-end w-full p-2 border border-slate-300 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="End" oninput="resetAnalysis()"><button onclick="removeRange(this)" class="text-slate-300 hover:text-red-500 px-2 transition text-xl"><i class="fa-solid fa-xmark"></i></button></div>';
+            } catch(e) { alert("실패: " + e.message); } finally { btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 최종 전송'; btn.disabled = false; }
+        }
+    </script>
+</body>
+</html>

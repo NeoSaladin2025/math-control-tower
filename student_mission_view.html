@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>특별 과제 수행</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        html, body { height: 100%; margin: 0; overflow: hidden; background-color: #1e293b; color: white; font-family: 'Apple SD Gothic Neo', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        .timer-box { font-family: monospace; background: black; color: #ef4444; padding: 12px; border-radius: 8px; text-align: center; font-size: 1.8rem; font-weight: bold; border: 1px solid #7f1d1d; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); letter-spacing: 2px; }
+        .blink { animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-full w-full">
+    <script src="config.js"></script>
+
+    <div class="flex-1 h-full flex flex-col border-r border-slate-700 bg-slate-900 min-h-0">
+        <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 shrink-0">
+            <h1 class="text-lg font-bold text-white flex items-center gap-2 truncate">
+                <span>📑</span> <span id="mission-title">과제 로딩 중...</span>
+            </h1>
+            <span class="text-xs text-slate-400 hidden md:inline shrink-0">문제를 확인하고 풀이를 작성하세요.</span>
+        </div>
+        <div id="problem-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 bg-[#0f172a] scroll-smooth">
+            <div class="text-center py-20 text-slate-500">데이터를 불러오는 중입니다...</div>
+        </div>
+    </div>
+
+    <div class="w-full md:w-[380px] bg-slate-800 flex flex-col shrink-0 border-l border-slate-700 h-[40vh] md:h-full">
+        <div class="p-5 border-b border-slate-700 bg-slate-800/90 z-10 shrink-0">
+            <div class="text-xs text-slate-400 mb-1 text-center uppercase tracking-wide">Time Remaining</div>
+            <div id="timer" class="timer-box">--:--:--</div>
+            <div class="flex justify-between text-xs mt-2 px-1 font-mono">
+                <span class="text-emerald-400 font-bold">REWARD: +<span id="rew-val">0</span></span>
+                <span class="text-red-400 font-bold">PENALTY: -<span id="pen-val">0</span></span>
+            </div>
+        </div>
+
+        <div class="flex-1 p-5 overflow-y-auto custom-scroll min-h-0">
+            <div class="mb-5">
+                <label class="block text-sm font-bold text-slate-300 mb-2 flex items-center gap-1"><span>📸 풀이 인증</span> <span class="text-red-500">*</span></label>
+                <div class="border-2 border-dashed border-slate-600 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-700 hover:border-indigo-500 transition group" onclick="document.getElementById('files').click()">
+                    <div class="text-2xl mb-1 group-hover:scale-110 transition">📤</div>
+                    <div class="text-xs text-slate-400">터치하여 연습장 업로드<br>(여러 장 가능)</div>
+                </div>
+                <input type="file" id="files" multiple accept="image/*" class="hidden" onchange="previewFiles()">
+                <div id="preview-area" class="flex gap-2 mt-3 overflow-x-auto pb-2 min-h-[60px]"></div>
+            </div>
+            <div class="mb-2">
+                <label class="block text-sm font-bold text-slate-300 mb-2">💬 학습 코멘트</label>
+                <textarea id="comment" class="w-full bg-slate-900 border border-slate-600 rounded-xl p-3 text-sm text-white focus:border-indigo-500 outline-none h-24 resize-none transition" placeholder="선생님께 드릴 말씀..."></textarea>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-700 bg-slate-900 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)]">
+            <button onclick="submitMission()" id="btn-submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition transform active:scale-[0.98] text-lg flex items-center justify-center gap-2">
+                <span>🚀</span> 과제 제출하기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const assignId = params.get('id');
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if(!user || !assignId) { alert("잘못된 접근"); window.close(); }
+
+        let timerInterval; let isLocked = false;
+
+        async function init() {
+            const { data: assign } = await _supabase.from('assignments').select('*').eq('id', assignId).single();
+            if(!assign) { alert("존재하지 않는 과제입니다."); window.close(); }
+
+            document.getElementById('mission-title').innerText = assign.title;
+            const rType = assign.reward_type === 'xp' ? 'XP' : 'Pt';
+            const pType = assign.penalty_type === 'xp' ? 'XP' : 'Pt';
+            document.getElementById('rew-val').innerText = `${assign.reward_points} ${rType}`;
+            document.getElementById('pen-val').innerText = `${assign.penalty_points} ${pType}`;
+
+            const container = document.getElementById('problem-container');
+            container.innerHTML = '';
+            
+            if (assign.problem_list && assign.problem_list.length > 0) {
+                assign.problem_list.forEach(num => {
+                    const padded = num.toString().padStart(4, '0');
+                    const url = `${SUPABASE_URL}/storage/v1/object/public/problems/${assign.workbook_id}/${padded}.webp`;
+                    const wrap = document.createElement('div');
+                    wrap.className = "bg-white rounded-lg p-1 shadow-md max-w-4xl mx-auto overflow-hidden mb-6";
+                    wrap.innerHTML = `<div class="bg-indigo-50 text-indigo-800 font-bold text-sm px-4 py-2 border-b border-indigo-100 flex justify-between"><span>Question No. ${num}</span></div><img src="${url}" class="w-full h-auto block" onerror="this.src='https://placehold.co/600x200?text=Image+Not+Found'">`;
+                    container.appendChild(wrap);
+                });
+            } else { container.innerHTML = '<div class="text-center py-20 text-slate-500">표시할 문제가 없습니다.</div>'; }
+
+            startTimer(assign.deadline);
+        }
+
+        function startTimer(deadlineIso) {
+            const end = new Date(deadlineIso).getTime();
+            const lockTime = end + (1000 * 60 * 60 * 24 * 2);
+
+            function update() {
+                const now = new Date().getTime();
+                const diff = end - now;
+                const el = document.getElementById('timer');
+
+                if (now > lockTime) {
+                    el.innerText = "LOCKED";
+                    el.className = "timer-box text-slate-600 border-slate-700 bg-slate-900";
+                    disableSubmit();
+                    clearInterval(timerInterval);
+                } else if (diff < 0) {
+                    el.innerText = "TIME OVER";
+                    el.className = "timer-box bg-red-950 text-red-500 border-red-900 blink";
+                } else {
+                    const h = Math.floor(diff / (1000 * 60 * 60));
+                    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const s = Math.floor((diff % (1000 * 60)) / 1000);
+                    el.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                }
+            }
+            update();
+            timerInterval = setInterval(update, 1000);
+        }
+
+        function disableSubmit() {
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.className = "w-full bg-slate-700 text-slate-500 py-3.5 rounded-xl font-bold cursor-not-allowed";
+            btn.innerText = "제출 불가 (기한 만료)";
+            isLocked = true;
+        }
+
+        function previewFiles() {
+            const input = document.getElementById('files');
+            const area = document.getElementById('preview-area');
+            area.innerHTML = '';
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = "h-16 w-auto rounded-lg border border-slate-500 object-cover";
+                    area.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ★ [보안 패치 완료] RPC 함수 호출로 변경 ★
+        async function submitMission() {
+            if (isLocked) return alert("기한이 만료되어 제출할 수 없습니다.");
+            const files = document.getElementById('files').files;
+            const comment = document.getElementById('comment').value;
+            if (files.length === 0) return alert("인증샷은 필수입니다.");
+
+            const btn = document.getElementById('btn-submit');
+            btn.innerText = "서버 전송 중... ⏳"; 
+            btn.disabled = true; 
+
+            try {
+                const imgUrls = [];
+                for (let i=0; i<files.length; i++) {
+                    const file = files[i];
+                    const ext = file.name.split('.').pop();
+                    const fname = `mission_${assignId}_${i}_${Date.now()}.${ext}`;
+                    const { error: upErr } = await _supabase.storage.from('solutions').upload(fname, file);
+                    if(upErr) throw upErr;
+                    imgUrls.push(`${SUPABASE_URL}/storage/v1/object/public/solutions/${fname}`);
+                }
+
+                // ★ 기존: 직접 UPDATE -> 변경: RPC 호출
+                const { error: dbErr } = await _supabase.rpc('submit_mission_student', {
+                    p_assign_id: assignId,
+                    p_img_urls: imgUrls,
+                    p_comment: comment
+                });
+
+                if(dbErr) throw dbErr;
+
+                alert("✅ 제출되었습니다! (리스트에서 사라집니다)");
+                
+                if (window.opener) { 
+                    window.opener.postMessage('mission_complete', '*'); 
+                }
+                window.close();
+
+            } catch(e) {
+                alert("전송 오류: " + e.message);
+                btn.innerText = "🚀 과제 제출하기"; btn.disabled = false;
+            }
+        }
+        init();
+    </script>
+</body>
+</html>

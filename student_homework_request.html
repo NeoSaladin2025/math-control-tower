@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>요청 과제 센터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #ecfdf5; user-select: none; -webkit-user-select: none; }
+        
+        .omr-btn { 
+            width: 44px; height: 44px; 
+            border-radius: 12px; 
+            font-weight: 800; font-size: 14px; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+            border: 2px solid #d1fae5; background: white; color: #059669;
+            box-shadow: 0 2px 0 #a7f3d0; 
+        }
+        .omr-btn:active { transform: translateY(2px); box-shadow: none; }
+        
+        .status-correct { background-color: white; border-color: #d1fae5; color: #059669; }
+        .status-wrong   { background-color: #fee2e2; border-color: #ef4444; color: #ef4444; box-shadow: 0 2px 0 #fca5a5; }
+        .status-question { background-color: #fef3c7; border-color: #f59e0b; color: #d97706; box-shadow: 0 2px 0 #fcd34d; }
+        
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #10b981; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* ★ OMR 패널 애니메이션 (위로 촥!) ★ */
+        #omr-panel { transition: opacity 0.2s, transform 0.2s; }
+        #omr-panel.show { opacity: 1; transform: scale(1); pointer-events: auto; }
+        #omr-panel.hide { opacity: 0; transform: scale(0.95); pointer-events: none; }
+    </style>
+</head>
+<body class="p-4 md:p-6 pb-20 min-h-screen flex flex-col items-center">
+
+    <script src="config.js"></script>
+
+    <div class="w-full max-w-2xl space-y-6 flex-1 flex flex-col">
+        <div class="bg-white rounded-2xl shadow-sm p-5 flex justify-between items-center border border-emerald-100 shrink-0">
+            <div>
+                <h1 class="text-xl font-black text-emerald-800 flex items-center gap-2"><span>🙋‍♂️</span> 요청 과제함</h1>
+                <p class="text-xs text-emerald-600 font-medium">내가 요청해서 생성된 숙제들입니다.</p>
+            </div>
+            <button onclick="location.href='student_main.html'" class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-100 transition">🏠 홈</button>
+        </div>
+
+        <div id="assign-list-area" class="flex-1">
+            <div id="assign-list" class="space-y-4">
+                <div class="text-center py-10"><div class="loader"></div></div>
+            </div>
+        </div>
+
+        <div id="omr-overlay" class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div id="omr-panel" class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-emerald-100 overflow-hidden flex flex-col max-h-[85vh] hide transform transition-all duration-300">
+                
+                <div class="bg-emerald-600 p-5 text-white flex justify-between items-start shrink-0">
+                    <div>
+                        <h3 class="font-bold text-lg leading-tight" id="omr-title">-</h3>
+                        <div class="flex gap-3 text-[11px] opacity-90 mt-2 font-medium bg-emerald-700/50 inline-block px-2 py-1 rounded-lg">
+                            <span class="flex items-center gap-1"><i class="fa-regular fa-hand-pointer"></i> 1클릭: 오답</span>
+                            <span class="flex items-center gap-1"><i class="fa-regular fa-hand-pointer"></i> 2클릭: 질문</span>
+                            <span class="flex items-center gap-1"><i class="fa-regular fa-hand-pointer"></i> 3클릭: 정답</span>
+                        </div>
+                    </div>
+                    <button onclick="closeOmr()" class="text-white/70 hover:text-white text-2xl transition bg-emerald-700/30 w-8 h-8 rounded-full flex items-center justify-center hover:bg-emerald-700">✕</button>
+                </div>
+                
+                <div class="p-6 flex-1 overflow-y-auto bg-slate-50">
+                    <div id="omr-grid" class="flex flex-wrap gap-3 justify-center mb-8 pt-2"></div>
+                </div>
+
+                <div class="p-4 bg-white border-t border-slate-100 shrink-0">
+                    <button onclick="submitHomework()" id="btn-omr-submit" class="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-emerald-700 hover:shadow-xl transition transform active:scale-[0.98] flex items-center justify-center gap-2">
+                        🚀 결과 제출하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || user.role !== 'student') { alert("잘못된 접근"); location.href = 'index.html'; }
+
+        let currentAssignId = null;
+        let currentProblemList = [];
+        let answers = {}; 
+
+        async function init() {
+            const { data } = await _supabase.from('assignments')
+                .select('*, workbooks(title)')
+                .eq('student_id', user.username)
+                .eq('status', 'assigned')
+                .eq('is_request', true)
+                .order('created_at', {ascending: false});
+            
+            const list = document.getElementById('assign-list');
+            if(!data || data.length === 0) {
+                list.innerHTML = '<div class="text-center py-20 text-emerald-400 bg-white rounded-xl border border-dashed border-emerald-200">요청한 과제가 없습니다.<br>문제집함에서 과제를 요청해보세요! 🙋‍♂️</div>';
+                return;
+            }
+
+            list.innerHTML = data.map(a => `
+                <div onclick="openOmr(${a.id}, '${a.title}', [${a.problem_list}])" class="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm cursor-pointer hover:border-emerald-500 hover:shadow-md transition relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-xs text-emerald-600 mb-1 font-bold flex items-center gap-1"><i class="fa-solid fa-wand-magic-sparkles"></i> 요청 과제</div>
+                            <div class="font-black text-gray-800 text-lg group-hover:text-emerald-700 transition">${a.title}</div>
+                            <div class="text-xs text-gray-500 mt-1 font-bold bg-emerald-50 inline-block px-2 py-0.5 rounded text-emerald-600">${a.workbooks.title} · ${a.problem_list.length}문항</div>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition"><i class="fa-solid fa-pen"></i></div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function openOmr(aid, title, pList) {
+            currentAssignId = aid;
+            currentProblemList = pList;
+            answers = {}; 
+            pList.forEach(p => answers[p] = 'correct'); 
+
+            document.getElementById('omr-title').innerText = title;
+            const grid = document.getElementById('omr-grid');
+            grid.innerHTML = '';
+
+            pList.forEach(num => {
+                const btn = document.createElement('div');
+                btn.className = 'omr-btn status-correct';
+                btn.innerText = num;
+                btn.id = `btn-${num}`;
+                btn.onclick = () => toggleStatus(num);
+                grid.appendChild(btn);
+            });
+
+            // ★ 애니메이션 효과와 함께 열기 ★
+            const overlay = document.getElementById('omr-overlay');
+            const panel = document.getElementById('omr-panel');
+            
+            overlay.classList.remove('hidden');
+            // 약간의 딜레이를 줘야 transition이 먹힘
+            setTimeout(() => {
+                panel.classList.remove('hide');
+                panel.classList.add('show');
+            }, 10);
+        }
+
+        function closeOmr() {
+            const overlay = document.getElementById('omr-overlay');
+            const panel = document.getElementById('omr-panel');
+            
+            panel.classList.remove('show');
+            panel.classList.add('hide');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 200); // 애니메이션 시간(0.2s)만큼 대기 후 숨김
+        }
+
+        function toggleStatus(num) {
+            const btn = document.getElementById(`btn-${num}`);
+            const current = answers[num];
+            if (current === 'correct') { 
+                answers[num] = 'wrong'; 
+                btn.className = 'omr-btn status-wrong'; 
+            } else if (current === 'wrong') { 
+                answers[num] = 'question'; 
+                btn.className = 'omr-btn status-question'; 
+            } else { 
+                answers[num] = 'correct'; 
+                btn.className = 'omr-btn status-correct'; 
+            }
+        }
+
+        async function submitHomework() {
+            if(!confirm("제출하시겠습니까?")) return;
+            const btn = document.getElementById('btn-omr-submit');
+            btn.innerText = "제출 중..."; btn.disabled = true;
+
+            try {
+                await _supabase.from('assignments').update({ status: 'submitted', submitted_at: new Date() }).eq('id', currentAssignId);
+                const wbId = (await _supabase.from('assignments').select('workbook_id').eq('id', currentAssignId).single()).data.workbook_id;
+                const promises = currentProblemList.map(num => 
+                    _supabase.rpc('submit_progress', {
+                        p_student_id: user.username,
+                        p_workbook_id: wbId,
+                        p_problem_num: num,
+                        p_result: answers[num]
+                    })
+                );
+                await Promise.all(promises);
+
+                alert("✅ 요청 과제 제출 완료!");
+                location.reload();
+            } catch (e) {
+                alert("오류: " + e.message);
+                btn.innerText = "🚀 결과 제출하기"; btn.disabled = false;
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

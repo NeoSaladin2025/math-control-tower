@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>학생 정밀 분석 리포트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f1f5f9; color: #334155; }
+        .donut { width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--color) var(--percent), #e2e8f0 0); position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+        .donut::after { content: ''; position: absolute; width: 60px; height: 60px; background: white; border-radius: 50%; }
+        .donut-text { position: absolute; z-index: 10; font-weight: bold; font-size: 14px; color: #334155; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body class="p-6 md:p-10 max-w-5xl mx-auto">
+
+    <script src="config.js"></script>
+
+    <div class="flex justify-between items-center mb-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <span id="s-name" class="text-indigo-600">-</span> 학생 정밀 분석
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">학습 상태 진단 완료.</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="goToXray()" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg font-bold text-sm shadow transition">
+                🩺 X-Ray 진단
+            </button>
+            <button onclick="window.close()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm transition">
+                닫기
+            </button>
+        </div>
+    </div>
+
+    <div class="mb-6">
+        <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">분석할 문제집</label>
+        <div class="flex gap-2">
+            <select id="wb-select" class="flex-1 p-3 border border-slate-300 rounded-lg bg-white font-bold text-slate-700 outline-none focus:border-indigo-500"></select>
+            <button onclick="loadData()" class="bg-indigo-600 text-white px-6 rounded-lg font-bold hover:bg-indigo-700 shadow">조회</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="stat-card border-t-4 border-t-indigo-500">
+            <div class="text-xs font-bold text-indigo-600 mb-4 uppercase">High Rank (1등급)</div>
+            <div class="donut" style="--color: #6366f1; --percent: 0%;">
+                <span class="donut-text" id="per-high">0%</span>
+            </div>
+            <div class="mt-4 text-sm font-bold text-slate-700"><span id="cnt-high">0</span> / <span id="tot-high">0</span> 완료</div>
+        </div>
+        <div class="stat-card border-t-4 border-t-emerald-500">
+            <div class="text-xs font-bold text-emerald-600 mb-4 uppercase">Subjective (서술형)</div>
+            <div class="donut" style="--color: #10b981; --percent: 0%;">
+                <span class="donut-text" id="per-sub">0%</span>
+            </div>
+            <div class="mt-4 text-sm font-bold text-slate-700"><span id="cnt-sub">0</span> / <span id="tot-sub">0</span> 완료</div>
+        </div>
+        <div class="stat-card border-t-4 border-t-blue-500">
+            <div class="text-xs font-bold text-blue-600 mb-4 uppercase">Normal (일반)</div>
+            <div class="donut" style="--color: #3b82f6; --percent: 0%;">
+                <span class="donut-text" id="per-norm">0%</span>
+            </div>
+            <div class="mt-4 text-sm font-bold text-slate-700"><span id="cnt-norm">0</span> / <span id="tot-norm">0</span> 완료</div>
+        </div>
+    </div>
+
+    <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-8 text-center shadow-lg border border-slate-700">
+        <h3 class="text-xl font-bold text-white mb-2">🔎 심층 취약점 분석 & 맞춤 숙제 생성</h3>
+        <p class="text-slate-400 text-sm mb-6">범위 설정, 유형별 정밀 필터링, 스페셜 옵션(Time Attack)을 사용하여<br>가장 효과적인 학습 처방을 내리세요.</p>
+        <button onclick="openHunterPopup()" class="bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-500 hover:to-red-500 text-white font-bold px-10 py-4 rounded-xl text-lg shadow-xl transform transition hover:scale-105 flex items-center gap-3 mx-auto">
+            <span>🔫</span> 스페셜 숙제 출제 센터 입장
+        </button>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const sId = params.get('id');
+        let currentWbId = null;
+        let currentWbTitle = '';
+
+        if(!sId) { alert("학생 정보가 없습니다."); window.close(); }
+        document.getElementById('s-name').innerText = sId;
+
+        async function init() {
+            const { data } = await _supabase.from('student_books').select('workbook_id, workbooks(title)').eq('student_id', sId);
+            const sel = document.getElementById('wb-select');
+            if(!data || !data.length) { sel.innerHTML = '<option>교재 없음</option>'; return; }
+            sel.innerHTML = data.map(b => `<option value="${b.workbook_id}" data-title="${b.workbooks.title}">${b.workbooks.title}</option>`).join('');
+            loadData();
+        }
+
+        async function loadData() {
+            const sel = document.getElementById('wb-select');
+            currentWbId = sel.value;
+            currentWbTitle = sel.options[sel.selectedIndex].dataset.title;
+
+            if(!currentWbId) return;
+
+            const [metaRes, progRes, wbRes] = await Promise.all([
+                _supabase.from('problem_metadata').select('*').eq('workbook_id', currentWbId),
+                _supabase.from('student_progress').select('*').eq('student_id', sId).eq('workbook_id', currentWbId),
+                _supabase.from('workbooks').select('total_problems').eq('id', currentWbId).single()
+            ]);
+
+            const meta = metaRes.data || [];
+            const prog = progRes.data || [];
+            const pMap = {}; prog.forEach(p => pMap[p.problem_num] = p);
+
+            const stats = { high: { total:0, done:0 }, sub: { total:0, done:0 }, norm: { total:0, done:0 } };
+
+            meta.forEach(m => {
+                let type = 'norm';
+                if(m.difficulty === 'high_rank') type = 'high';
+                else if(m.is_subjective) type = 'sub';
+                stats[type].total++;
+                if (pMap[m.problem_num]) stats[type].done++;
+            });
+
+            updateChart('high', stats.high);
+            updateChart('sub', stats.sub);
+            updateChart('norm', stats.norm);
+        }
+
+        function updateChart(type, data) {
+            const per = data.total > 0 ? Math.round((data.done / data.total) * 100) : 0;
+            const el = document.querySelector(`.stat-card:nth-child(${type==='high'?1:type==='sub'?2:3}) .donut`);
+            el.style.setProperty('--percent', per + '%');
+            document.getElementById(`per-${type}`).innerText = per + '%';
+            document.getElementById(`cnt-${type}`).innerText = data.done;
+            document.getElementById(`tot-${type}`).innerText = data.total;
+        }
+
+        // --- 포털 이동 함수 ---
+        function openHunterPopup() {
+            if (!currentWbId) return alert("먼저 문제집을 조회해주세요.");
+            const w = 1280, h = 900;
+            const left = (screen.width - w) / 2;
+            const top = (screen.height - h) / 2;
+            // ★ 중요: admin_analysis_popup.html 로 연결!
+            // URL 파라미터로 학생ID, 책ID, 책제목을 넘겨줌
+            const url = `admin_analysis_popup.html?sid=${sId}&wbid=${currentWbId}&title=${encodeURIComponent(currentWbTitle)}&name=${encodeURIComponent(sId)}`;
+            window.open(url, '_blank', `width=${w},height=${h},top=${top},left=${left}`);
+        }
+
+        function goToXray() {
+            if (!currentWbId) return alert("문제집을 먼저 조회해주세요.");
+            const w = 1250, h = 950;
+            const left = (screen.width - w) / 2;
+            const top = (screen.height - h) / 2;
+            window.open('admin_god_stats.html', '_blank', `width=${w},height=${h},top=${top},left=${left}`);
+        }
+
+        init();
+    </script>
+</body>
+</html>

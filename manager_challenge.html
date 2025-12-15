@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>기특놀이 인증 관리 센터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f3f4f6; }
+        .split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: 300px; }
+        .view-box { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: white; position: relative; }
+        .view-box img { width: 100%; height: 100%; object-fit: contain; }
+        .label { position: absolute; top: 0; left: 0; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; font-size: 10px; border-bottom-right-radius: 8px; }
+        .loader { display:inline-block; border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="p-6 max-w-5xl mx-auto">
+
+    <script src="config.js"></script>
+
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <span>🎁</span> 기특놀이 인증 & 피드백 센터
+        </h1>
+        <button onclick="window.close()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded font-bold text-sm">닫기</button>
+    </div>
+
+    <div id="list" class="space-y-6">
+        <div class="text-center py-20 text-gray-500">데이터 로딩 중...</div>
+    </div>
+
+    <script>
+        // 전역 변수 (파일 저장용)
+        let selectedFiles = {};
+
+        async function load() {
+            const { data } = await _supabase.from('student_solutions')
+                .select('*')
+                .eq('status', 'pending')
+                .order('created_at');
+            
+            const list = document.getElementById('list');
+            if(!data || !data.length) { list.innerHTML = '<div class="text-center py-10 text-gray-400">대기 중인 인증 요청이 없습니다.</div>'; return; }
+
+            list.innerHTML = '';
+            
+            // 각 요청마다 카드 생성
+            for (const item of data) {
+                // 원본 문제 이미지 경로 계산 (0001 패딩)
+                const padded = item.problem_num.toString().padStart(4, '0');
+                const originUrl = `${SUPABASE_URL}/storage/v1/object/public/problems/${item.workbook_id}/${padded}.webp`;
+
+                const div = document.createElement('div');
+                div.className = "bg-white p-5 rounded-xl shadow-md border border-gray-200";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <div class="font-bold text-lg text-indigo-700">
+                            ${item.student_id} 학생 <span class="text-gray-400 text-sm">|</span> No. ${item.problem_num}
+                        </div>
+                        <div class="text-xs text-gray-400">${new Date(item.created_at).toLocaleString()}</div>
+                    </div>
+
+                    <div class="split-view mb-4">
+                        <div class="view-box bg-gray-50">
+                            <span class="label bg-blue-600">원본 문제</span>
+                            <img src="${originUrl}" onerror="this.src='https://placehold.co/400x300?text=No+Image'">
+                        </div>
+                        <div class="view-box bg-pink-50">
+                            <span class="label bg-pink-600">학생 인증샷</span>
+                            <a href="${item.image_url}" target="_blank">
+                                <img src="${item.image_url}" class="cursor-zoom-in hover:scale-105 transition">
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg border">
+                        <div class="mb-2 font-bold text-sm text-gray-700">💬 선생님의 피드백 & 솔루션 전송</div>
+                        <textarea id="feed-${item.id}" class="w-full border rounded p-2 text-sm h-20 mb-3 focus:ring-2 focus:ring-indigo-200 outline-none" placeholder="칭찬이나 지적사항을 적어주세요..."></textarea>
+                        
+                        <div class="flex items-center gap-2 mb-4">
+                            <input type="file" id="file-${item.id}" class="hidden" onchange="fileSelect(${item.id})">
+                            <label for="file-${item.id}" class="cursor-pointer bg-white border border-gray-300 text-gray-600 px-3 py-1.5 rounded text-xs font-bold hover:bg-gray-100 flex items-center gap-1">
+                                <span>📎</span> 솔루션 파일 첨부 (Img/HTML)
+                            </label>
+                            <span id="fname-${item.id}" class="text-xs text-blue-600 font-bold"></span>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="process(${item.id}, '${item.student_id}', 'approved')" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-sm shadow transition">
+                                ✅ 승인 (+1점) & 전송
+                            </button>
+                            <button onclick="process(${item.id}, '${item.student_id}', 'rejected')" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-bold text-sm shadow transition">
+                                ❌ 반려 & 피드백 전송
+                            </button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            }
+        }
+
+        function fileSelect(id) {
+            const file = document.getElementById(`file-${id}`).files[0];
+            if(file) {
+                selectedFiles[id] = file;
+                document.getElementById(`fname-${id}`).innerText = `📄 ${file.name}`;
+            }
+        }
+
+        async function process(id, sid, status) {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "처리 중..."; btn.disabled = true;
+
+            try {
+                const feedback = document.getElementById(`feed-${id}`).value;
+                let fileUrl = null;
+                let fileType = null;
+
+                // 1. 파일 업로드 (있으면)
+                const file = selectedFiles[id];
+                if (file) {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    fileType = (ext === 'html' || ext === 'htm') ? 'html' : 'image';
+                    
+                    const fname = `t_sol_${id}_${Date.now()}.${ext}`;
+                    const { error: upErr } = await _supabase.storage.from('solutions').upload(fname, file);
+                    if(upErr) throw upErr;
+                    
+                    fileUrl = `${SUPABASE_URL}/storage/v1/object/public/solutions/${fname}`;
+                }
+
+                // 2. DB 업데이트
+                await _supabase.from('student_solutions').update({
+                    status: status,
+                    teacher_feedback: feedback,
+                    teacher_file_url: fileUrl,
+                    file_type: fileType,
+                    is_read: false // 학생이 다시 읽어야 함
+                }).eq('id', id);
+
+                // 3. 포인트 지급 (승인 시)
+                if(status === 'approved') {
+                    const { data } = await _supabase.from('users').select('points').eq('username', sid).single();
+                    await _supabase.from('users').update({ points: (data.points || 0) + 1 }).eq('username', sid);
+                }
+
+                alert("처리가 완료되었습니다.");
+                load(); // 새로고침
+
+            } catch(e) {
+                alert("오류 발생: " + e.message);
+                btn.innerText = originalText; btn.disabled = false;
+            }
+        }
+
+        load();
+    </script>
+</body>
+</html>
