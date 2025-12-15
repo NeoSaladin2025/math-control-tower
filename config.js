@@ -1,7 +1,7 @@
 // [Math Control Tower] 설정 파일
 // Supabase 프로젝트 연결 정보
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = 'https://uiasidzcyzdburjxtpsb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TuZyMzI0hAMU1oKzBih9ag_ZXaoST5-';
 // const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 1. Supabase 클라이언트 초기화
