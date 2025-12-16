@@ -2,91 +2,157 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>스페셜 숙제 심판</title>
+    <title>관리자: 스페셜 과제 심판</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #cbd5e1; font-family: 'Pretendard', sans-serif; }
+        .glass-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
+        .stat-box { background: #0f172a; border-radius: 8px; padding: 10px; border: 1px solid #334155; }
+        .input-elite { background: #020617; border: 1px solid #475569; color: white; padding: 8px; border-radius: 6px; width: 100%; font-family: monospace; font-weight: bold; text-align: right; }
+        .input-elite:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+    </style>
 </head>
-<body class="bg-gray-900 p-6 text-white min-h-screen">
+<body class="p-6 min-h-screen">
     <script src="config.js"></script>
-    <h1 class="text-2xl font-bold text-red-500 mb-6">⚖️ 최후의 심판 (Special Check)</h1>
-    <div id="list" class="space-y-6"></div>
+
+    <div class="max-w-4xl mx-auto mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-black text-white flex items-center gap-2">
+                <i class="fa-solid fa-scale-balanced text-indigo-500"></i> Assessment Dashboard
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Special Assignment Final Judgment System</p>
+        </div>
+        <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg text-xs font-bold transition">
+            <i class="fa-solid fa-rotate mr-1"></i> Refresh
+        </button>
+    </div>
+
+    <div id="loading" class="text-center py-20 text-slate-500">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i><br>데이터 로딩 중...
+    </div>
+
+    <div id="list-container" class="space-y-6 hidden"></div>
 
     <script>
         async function load() {
-            // 제출되었지만 아직 채점 안 된(final_score is null) 스페셜 숙제
-            const { data } = await _supabase.from('assignments')
+            const container = document.getElementById('list-container');
+            const loader = document.getElementById('loading');
+            
+            // 1. 심판 대기 과제 조회
+            const { data: list, error } = await _supabase
+                .from('assignments')
                 .select('*')
                 .eq('is_special', true)
                 .eq('status', 'submitted')
-                .is('final_score', null); // 아직 판결 안 남
+                .is('final_score', null)
+                .order('submitted_at', { ascending: true });
 
-            const list = document.getElementById('list');
-            if(!data || !data.length) { list.innerHTML = '<div class="text-gray-500">심판할 대상이 없습니다.</div>'; return; }
+            loader.classList.add('hidden');
+            container.classList.remove('hidden');
 
-            list.innerHTML = data.map(a => {
-                // 지각 체크
-                const deadline = new Date(a.deadline);
-                const submitted = new Date(a.submitted_at);
-                let timeMsg = `<span class="text-green-400">✅ 정상 제출</span>`;
-                let isLate = false;
+            if (!list || list.length === 0) {
+                container.innerHTML = `<div class="text-center py-20 text-slate-600 border border-dashed border-slate-700 rounded-xl">심판 대기 중인 과제가 없습니다.</div>`;
+                return;
+            }
 
-                if (submitted > deadline) {
-                    isLate = true;
-                    const diff = submitted - deadline;
-                    const hours = Math.floor(diff / (1000 * 60 * 60));
-                    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                    timeMsg = `<span class="text-red-500 font-bold">⚠️ [${hours}시간 ${mins}분] 지각!</span>`;
-                }
+            container.innerHTML = '';
+            
+            for (const item of list) {
+                // [A] 스페셜 보상 정보 조회
+                const { data: sp } = await _supabase.from('assignment_specials').select('*').eq('assignment_id', item.id).maybeSingle();
+                const rule = sp || { reward_xp: item.reward_points || 0, reward_cp: 0, penalty_xp: item.penalty_points || 0, penalty_cp: 0 };
+                
+                // [B] ★ [EVE FIX] 학생 코멘트 조회 (student_opinions 테이블 사용) ★
+                const { data: op } = await _supabase.from('student_opinions')
+                    .select('content')
+                    .eq('related_id', item.id)
+                    .eq('category', 'SPECIAL_SUBMISSION') // 카테고리 매칭
+                    .maybeSingle();
+                
+                const studentMsg = op ? op.content : '(코멘트 없음)';
 
-                // 이미지 갤러리
-                const imgs = a.submission_images || [];
-                const imgHtml = imgs.map(url => `<a href="${url}" target="_blank"><img src="${url}" class="w-24 h-24 object-cover rounded border border-gray-600 hover:border-white"></a>`).join('');
+                // [C] 지각 체크
+                const deadline = new Date(item.deadline);
+                const submitted = new Date(item.submitted_at);
+                const isLate = submitted > deadline;
+                let timeBadge = isLate 
+                    ? `<span class="bg-red-950 text-red-400 text-[10px] px-2 py-0.5 rounded border border-red-800">⚠️ LATE</span>` 
+                    : `<span class="bg-emerald-950 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-800">✅ ON TIME</span>`;
 
-                return `
-                <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                    <div class="flex justify-between mb-4">
-                        <div>
-                            <div class="font-bold text-xl">${a.student_id} - ${a.title}</div>
-                            <div class="text-sm mt-1">${timeMsg}</div>
+                // [D] 이미지 파싱
+                const imgContainerId = `imgs-${item.id}`;
+                const card = document.createElement('div');
+                card.className = "glass-card p-6 fade-in";
+                
+                card.innerHTML = `
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="flex-1 space-y-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-indigo-400 font-bold text-lg">${item.student_id}</span>
+                                        ${timeBadge}
+                                    </div>
+                                    <h3 class="font-bold text-white text-md">${item.title}</h3>
+                                </div>
+                                <div class="text-right text-[10px] text-slate-500 font-mono">제출: ${submitted.toLocaleString()}</div>
+                            </div>
+
+                            <div class="bg-slate-900/50 p-3 rounded-lg border border-slate-700 min-h-[60px]">
+                                <p class="text-xs text-slate-400 font-bold mb-1">💬 학생 의견 (Student Opinion)</p>
+                                <p class="text-sm text-slate-300 italic">"${studentMsg}"</p>
+                            </div>
+
+                            <div class="space-y-2">
+                                <p class="text-xs text-slate-400 font-bold">📂 제출 파일</p>
+                                <div class="flex gap-2 overflow-x-auto pb-2 custom-scroll" id="${imgContainerId}"><span class="text-xs text-slate-600">로딩 중...</span></div>
+                            </div>
                         </div>
-                        <div class="text-right text-xs text-gray-400">
-                            약속된 보상: +${a.reward_points} / 처벌: -${a.penalty_points}
+
+                        <div class="w-full md:w-80 bg-slate-950 rounded-xl p-4 border border-slate-800 flex flex-col gap-4">
+                            <div class="grid grid-cols-2 gap-2 text-center">
+                                <div class="stat-box opacity-70"><div class="text-[9px] text-emerald-500 font-bold">SUCCESS</div><div class="text-xs text-slate-300">+${rule.reward_xp} XP</div><div class="text-[10px] text-slate-500">+${rule.reward_cp} CP</div></div>
+                                <div class="stat-box opacity-70"><div class="text-[9px] text-red-500 font-bold">FAIL</div><div class="text-xs text-slate-300">-${rule.penalty_xp} XP</div><div class="text-[10px] text-slate-500">-${rule.penalty_cp} CP</div></div>
+                            </div>
+                            <div class="space-y-3 pt-2 border-t border-slate-800">
+                                <div class="flex justify-between items-center"><label class="text-xs font-bold text-indigo-400">Final XP</label><div class="w-24"><input type="number" id="xp-${item.id}" class="input-elite" value="${isLate ? -rule.penalty_xp : rule.reward_xp}"></div></div>
+                                <div class="flex justify-between items-center"><label class="text-xs font-bold text-indigo-400">Final CP</label><div class="w-24"><input type="number" id="cp-${item.id}" class="input-elite" value="${isLate ? -rule.penalty_cp : rule.reward_cp}"></div></div>
+                            </div>
+                            <textarea id="fb-${item.id}" class="w-full bg-slate-900 border border-slate-700 text-slate-300 text-xs p-2 rounded resize-none h-16 focus:border-indigo-500 outline-none" placeholder="피드백 입력..."></textarea>
+                            <button onclick="executeJudgment(${item.id}, '${item.student_id}')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg text-sm shadow-lg flex items-center justify-center gap-2"><i class="fa-solid fa-gavel"></i> 판결 집행</button>
                         </div>
-                    </div>
+                    </div>`;
+                container.appendChild(card);
 
-                    <div class="flex gap-2 mb-4 overflow-x-auto p-2 bg-black/30 rounded">${imgHtml}</div>
+                // 이미지 로드
+                const imgContainer = document.getElementById(imgContainerId);
+                let finalUrls = [];
+                try {
+                    const raw = item.submission_images;
+                    if (Array.isArray(raw)) finalUrls = raw;
+                    else if (typeof raw === 'string') finalUrls = raw.replace(/^{|}$/g, '').split(',').map(s=>s.replace(/"/g,''));
+                } catch(e){}
 
-                    <div class="bg-gray-700 p-4 rounded-lg">
-                        <div class="flex items-center gap-4 mb-2">
-                            <label>최종 포인트 판결:</label>
-                            <input type="number" id="score-${a.id}" class="bg-gray-900 border border-gray-500 text-white p-2 rounded w-20 text-center font-bold" 
-                                value="${isLate ? -a.penalty_points : a.reward_points}">
-                            <span class="text-xs text-gray-400">(양수:상 / 음수:벌)</span>
-                        </div>
-                        <textarea id="feed-${a.id}" class="w-full bg-gray-900 border border-gray-500 text-white p-2 rounded h-20 text-sm" placeholder="판결 이유 및 피드백..."></textarea>
-                    </div>
-
-                    <button onclick="judge(${a.id}, '${a.student_id}')" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold shadow-lg">
-                        🔨 판결 집행 (승인)
-                    </button>
-                </div>`;
-            }).join('');
+                if (finalUrls.length > 0) {
+                    imgContainer.innerHTML = finalUrls.map(url => `<a href="${url}" target="_blank" class="block shrink-0"><img src="${url}" class="w-16 h-16 object-cover rounded border border-slate-600 hover:border-white"></a>`).join('');
+                } else { imgContainer.innerHTML = `<span class="text-xs text-slate-600 italic">이미지 없음</span>`; }
+            }
         }
 
-        async function judge(aid, sid) {
-            const score = parseInt(document.getElementById(`score-${aid}`).value);
-            const feedback = document.getElementById(`feed-${aid}`).value;
+        async function executeJudgment(aid, sid) {
+            const xp = parseInt(document.getElementById(`xp-${aid}`).value)||0;
+            const cp = parseInt(document.getElementById(`cp-${aid}`).value)||0;
+            const fb = document.getElementById(`fb-${aid}`).value;
+            if (!confirm(`[심판 확인]\nXP: ${xp}, CP: ${cp}\n집행하시겠습니까?`)) return;
 
-            // 1. 과제 업데이트
-            await _supabase.from('assignments').update({ final_score: score, teacher_feedback: feedback }).eq('id', aid);
+            const { error } = await _supabase.rpc('judge_special_mission', {
+                p_assign_id: aid, p_student_id: sid, p_final_xp: xp, p_final_cp: cp, p_feedback: fb
+            });
 
-            // 2. 유저 포인트 반영
-            const { data: u } = await _supabase.from('users').select('points').eq('username', sid).single();
-            const newPoint = (u.points || 0) + score;
-            await _supabase.from('users').update({ points: newPoint }).eq('username', sid);
-
-            alert(`판결 완료! (학생 포인트 ${score > 0 ? '+' : ''}${score} 반영됨)`);
-            load();
+            if (error) alert("오류: " + error.message);
+            else { alert("✅ 판결 집행 완료"); load(); }
         }
         load();
     </script>
