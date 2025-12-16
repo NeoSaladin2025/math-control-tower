@@ -2,461 +2,393 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>맞춤형 취약점 공략 (Special Assignment)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>맞춤형 문제 추출 센터</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* [Dark Theme & Scrollbar] */
-        body { background-color: #0f172a; color: #cbd5e1; font-family: 'Pretendard', sans-serif; overflow: hidden; height: 100vh; user-select: none; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-
-        /* [Layout: Glass Panels] */
-        .glass-panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); display: flex; flex-direction: column; }
-        .section-header { padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px; }
-
-        /* [Grid & Tiles] */
-        .problem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 8px; padding: 16px; }
-        .tile { aspect-ratio: 1; border-radius: 10px; cursor: pointer; position: relative; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #334155; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; background: #1e293b; color: #64748b; }
-        .tile:hover { transform: scale(1.1); z-index: 10; border-color: white; color: white; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
-        .tile.selected { border: 2px solid #db2777; background: #831843; color: #fbcfe8; box-shadow: 0 0 15px rgba(219, 39, 119, 0.5); }
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background: #0f172a; color: #cbd5e1; height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
         
-        /* [Theme Colors] */
-        .theme-high { background: linear-gradient(135deg, rgba(88, 28, 135, 0.4), rgba(59, 7, 100, 0.4)); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 10px; }
-        .theme-sub { background: linear-gradient(135deg, rgba(6, 78, 59, 0.4), rgba(2, 44, 34, 0.4)); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 10px; }
-        .theme-norm { background: linear-gradient(135deg, rgba(30, 58, 138, 0.4), rgba(23, 37, 84, 0.4)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 10px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
 
-        /* [Baskets] */
-        .basket-zone { min-height: 40px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.2); margin-top: 8px; align-items: center; }
-        .tag-item { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: default; animation: fadeIn 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .tag-item i { cursor: pointer; opacity: 0.6; transition: 0.2s; } .tag-item i:hover { opacity: 1; transform: scale(1.2); color: #ffadad; }
-        
-        .tag-high { background: #7e22ce; color: #f3e8ff; border: 1px solid #a855f7; }
-        .tag-sub { background: #047857; color: #d1fae5; border: 1px solid #10b981; }
-        .tag-norm { background: #1d4ed8; color: #dbeafe; border: 1px solid #3b82f6; }
-        .tag-scope { background: #0f766e; color: #ccfbf1; border: 1px solid #14b8a6; }
-        .tag-time-input { background: #c2410c; color: #ffedd5; border: 1px solid #fb923c; padding: 2px 8px; display: flex; align-items: center; gap: 4px; }
+        .panel { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; }
+        .inp-dark { background: #0f172a; border: 1px solid #475569; color: white; padding: 4px; border-radius: 4px; width: 50px; text-align: center; font-weight: bold; font-size: 13px; }
+        .inp-dark:focus { border-color: #6366f1; outline: none; }
+        .inp-range { width: 60px; }
 
-        /* [Inputs] */
-        .big-input { background: #020617; border: 1px solid #475569; color: white; padding: 8px 12px; border-radius: 8px; font-size: 14px; outline: none; transition: 0.2s; font-weight: bold; }
-        .big-input:focus { border-color: #f472b6; box-shadow: 0 0 0 2px rgba(244, 114, 182, 0.2); }
-        .big-select { background: #020617; border: 1px solid #475569; color: white; padding: 8px; border-radius: 8px; font-size: 14px; outline: none; cursor: pointer; font-weight: bold; }
+        .range-tag { background: #064e3b; border: 1px solid #059669; color: #6ee7b7; padding: 4px 8px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
         
-        /* [CRITICAL FIX: TITLE INPUT CURSOR] */
-        .title-input { 
-            width: 100%; 
-            background: rgba(0,0,0,0.3); 
-            border: 1px solid #475569; 
-            color: white; 
-            padding: 10px; 
-            border-radius: 8px; 
-            font-size: 15px; 
-            font-weight: bold; 
-            outline: none;
-            /* Force interaction */
-            pointer-events: auto !important;
-            user-select: text !important;
-            z-index: 9999;
-            cursor: text;
+        .prob-item { cursor: pointer; transition: all 0.1s; border: 1px solid #334155; background: #1e293b; color: #94a3b8; font-size: 13px; display: flex; align-items: center; justify-content: center; height: 40px; border-radius: 6px; }
+        .prob-item:hover { border-color: #6366f1; color: white; background: #312e81; transform: scale(1.05); z-index: 10; }
+        .prob-item:active { transform: scale(0.95); }
+        .prob-item.in-basket { border-color: #ef4444; background: #450a0a; color: #fca5a5; opacity: 0.6; }
+
+        .basket-item { cursor: pointer; background: #312e81; border: 1px solid #4f46e5; color: white; font-size: 13px; display: flex; align-items: center; justify-content: center; height: 36px; border-radius: 6px; }
+        .basket-item:hover { background: #ef4444; border-color: #ef4444; }
+
+        /* ★ NEW: 초거대 풀발기 팝업 (Full Screen Preview) */
+        #preview-popup { 
+            display: none; position: fixed; z-index: 9999; 
+            border: 4px solid #6366f1; background: white; border-radius: 16px; 
+            box-shadow: 0 0 100px rgba(0,0,0,0.9); pointer-events: none; 
+            overflow: hidden; 
+            /* 화면 중앙 정렬 & 최대 사이즈 */
+            left: 50%; top: 50%; transform: translate(-50%, -50%);
+            width: auto; height: auto;
+            max-width: 95vw; max-height: 95vh; /* 화면의 95%까지 확장 */
+            min-width: 300px; /* 너무 작아지지 않게 */
         }
-        .title-input:focus { border-color: #f472b6; background: rgba(0,0,0,0.5); }
+        #preview-popup img { 
+            width: 100%; height: 100%; 
+            object-fit: contain; /* 비율 유지하며 꽉 채우기 */
+            display: block; background: white; 
+        }
         
-        .tiny-input { width: 40px; background: rgba(0,0,0,0.3); border: none; border-bottom: 1px solid #ffedd5; color: white; text-align: center; font-weight: bold; outline: none; pointer-events: auto; }
-        .tiny-input:focus { background: rgba(0,0,0,0.5); border-color: white; }
+        /* 툴팁 */
+        .tooltip-box { display: none; position: absolute; bottom: 100%; right: 0; width: 220px; background: rgba(15, 23, 42, 0.95); color: #cbd5e1; padding: 8px; border-radius: 6px; font-size: 11px; z-index: 50; border: 1px solid #475569; text-align: left; line-height: 1.4; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .has-tooltip:hover .tooltip-box { display: block; }
 
-        /* [Tooltip & Modal] */
-        #xray-tooltip { display: none; position: fixed; z-index: 9999; background: rgba(15, 23, 42, 0.98); border: 2px solid #6366f1; border-radius: 12px; padding: 16px; width: 300px; pointer-events: none; backdrop-filter: blur(10px); box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
-        .tooltip-img { width: 100%; border-radius: 6px; margin-bottom: 12px; border: 1px solid #334155; background: white; min-height: 120px; object-fit: contain; }
-        .stat-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+        .or-divider { display: flex; align-items: center; justify-content: center; font-size: 10px; color: #64748b; margin: 6px 0; }
+        .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: #334155; margin: 0 4px; }
 
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(8px); animation: fadeIn 0.2s; }
-        .modal-card { background: #1e293b; width: 600px; border-radius: 20px; border: 1px solid #475569; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); overflow: hidden; transform: scale(0.95); animation: zoomIn 0.2s forwards; }
-
-        .time-btn { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; background: #334155; color: #cbd5e1; transition: 0.2s; cursor: pointer; border: 1px solid transparent; display: flex; align-items: center; gap: 4px; }
-        .time-btn:hover { background: #475569; color: white; transform: translateY(-1px); }
-        .time-btn:active { transform: translateY(0); }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes zoomIn { to { transform: scale(1); } }
+        .type-radio { accent-color: #fbbf24; } 
+        .type-radio-pt { accent-color: #ec4899; }
     </style>
 </head>
-<body class="flex flex-col h-screen p-5 gap-5 bg-slate-950">
+<body class="text-sm">
 
     <script src="config.js"></script>
 
-    <div id="xray-tooltip">
-        <div id="xray-header" class="text-indigo-400 font-bold text-sm mb-3 text-center border-b border-indigo-900/50 pb-2">No. 0000</div>
-        <img id="xray-img" class="tooltip-img" src="" alt="Preview">
-        <div class="space-y-1">
-            <div class="stat-row"><span>단원</span><span id="x-chap" class="font-bold text-white text-right truncate w-40">-</span></div>
-            <div class="stat-row"><span>유형</span><span id="x-type" class="font-bold text-slate-300">-</span></div>
-            <div class="stat-row"><span>오답 / 질문</span><span class="font-bold text-white"><span id="x-wrong" class="text-red-400">0</span> / <span id="x-quest" class="text-yellow-400">0</span></span></div>
-            <div class="stat-row"><span>정답률</span><span id="x-acc" class="font-bold text-emerald-400">0%</span></div>
-        </div>
+    <div id="preview-popup">
+        <div class="bg-indigo-600 text-white text-sm font-bold p-3 text-center" id="prev-title">No. 0</div>
+        <img id="prev-img" src="">
     </div>
 
-    <div id="confirm-modal" class="modal-overlay">
-        <div class="modal-card">
-            <div class="bg-slate-900 p-5 border-b border-slate-700 flex justify-between items-center">
-                <h3 class="font-bold text-white text-xl"><i class="fa-solid fa-file-signature mr-2 text-pink-500"></i>최종 승인 확인</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div class="p-8 space-y-6">
-                <div class="space-y-4">
-                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-                        <div>
-                            <p class="text-xs text-slate-400 mb-1">숙제 제목</p>
-                            <div id="modal-title" class="text-lg font-bold text-white tracking-wide">제목 없음</div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-slate-400 mb-1">제출 기한 (Deadline)</p>
-                            <div id="modal-deadline" class="text-lg font-black text-orange-400">00.00 00:00</div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
-                            <p class="text-xs text-slate-400">출제 문항 수</p>
-                            <div class="text-2xl font-black text-pink-400 mt-1"><span id="modal-count">0</span> <span class="text-sm font-normal text-slate-500">문항</span></div>
-                        </div>
-                        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
-                            <p class="text-xs text-slate-400">보상 / 차감</p>
-                            <div class="text-lg font-black text-emerald-400 mt-1">XP: <span id="modal-rw-xp-disp">0</span> / <span class="text-red-400" id="modal-pn-xp-disp">0</span></div>
-                            <div class="text-xs text-slate-500">CP: <span id="modal-rw-cp-disp" class="text-emerald-400">0</span> / <span id="modal-pn-cp-disp" class="text-red-400">0</span></div>
-                        </div>
-                    </div>
-                </div>
-                <p class="text-sm text-center text-slate-500 pt-2 font-bold">위 내용으로 스페셜 과제를 전송하시겠습니까?</p>
-            </div>
-            <div class="p-5 bg-slate-900 border-t border-slate-700 flex gap-4">
-                <button onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-xl font-bold text-base transition">수정하기</button>
-                <button onclick="finalCreate()" class="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-pink-900/30 transition transform active:scale-95">🚀 전송 승인</button>
-            </div>
-        </div>
-    </div>
-
-    <header class="flex justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-xl shrink-0 h-18">
-        <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded-xl bg-pink-600 flex items-center justify-center text-white text-2xl shadow-lg"><i class="fa-solid fa-crosshairs"></i></div>
+    <div class="bg-slate-900 border-b border-slate-700 p-4 flex flex-col gap-4 shrink-0 h-1/2 min-h-[350px] overflow-y-auto custom-scroll">
+        <div class="flex justify-between items-center shrink-0">
             <div>
-                <h1 class="font-bold text-xl text-white tracking-tight">맞춤형 취약점 공략 <span class="text-sm text-pink-400 font-normal ml-2">Special Mission v8.0</span></h1>
-                <p class="text-xs text-slate-400">학생의 데이터를 정밀 분석하여 맞춤형 과제를 생성합니다.</p>
+                <h1 class="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-indigo-400">🎯</span> 맞춤형 취약점 공략
+                </h1>
+                <p class="text-[11px] text-slate-500"><span id="target-info" class="font-bold text-slate-300">학생</span>의 학습 데이터를 기반으로 문제를 추출합니다.</p>
+                <p class="md:hidden text-[10px] text-pink-400 mt-1">* 모바일: 문제를 꾹~ 누르면 크게 보기</p>
             </div>
-        </div>
-        <button onclick="window.close()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-5 py-2.5 rounded-xl text-sm font-bold transition">닫기</button>
-    </header>
-
-    <div class="flex flex-1 gap-5 min-h-0">
-        
-        <div class="w-[42%] flex flex-col gap-5 overflow-y-auto custom-scroll pr-1">
-            
-            <div class="glass-panel shrink-0">
-                <div class="section-header text-orange-400"><span class="flex items-center gap-2 text-base"><i class="fa-solid fa-pen-to-square"></i>기본 정보 설정</span></div>
-                <div class="p-4 space-y-4">
-                    <div>
-                        <label class="text-xs font-bold text-slate-400 mb-1 block ml-1">숙제 제목</label>
-                        <input type="text" id="assign-title" class="title-input" placeholder="예: 취약점 공략 (2025.12.16)" onmousedown="event.stopPropagation()">
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-400 mb-1 block ml-1">제출 기한 (데드라인)</label>
-                        <div class="flex flex-wrap gap-2 mb-2">
-                            <div onclick="addDeadlineInput('day')" class="time-btn hover:text-orange-300"><i class="fa-solid fa-calendar-plus"></i> 일(Day) 추가</div>
-                            <div onclick="addDeadlineInput('hour')" class="time-btn hover:text-orange-300"><i class="fa-solid fa-hourglass-start"></i> 시간(Hour) 추가</div>
-                            <div onclick="resetDeadline()" class="time-btn bg-slate-700 text-red-300 ml-auto"><i class="fa-solid fa-rotate-left"></i> 초기화</div>
-                        </div>
-                        <div id="deadline-basket" class="basket-zone border-orange-500/30">
-                            <div id="deadline-empty" class="w-full text-center text-slate-500 text-xs italic py-2">버튼을 눌러 기한(일/시간)을 추가하세요</div>
-                        </div>
-                        <div class="text-right mt-2 text-sm text-orange-400 font-black tracking-wide" id="preview-date">예상 마감: <span class="text-slate-500">설정 안됨</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 shrink-0">
-                <div class="glass-panel">
-                    <div class="section-header text-teal-400 text-sm"><span class="flex items-center gap-2"><i class="fa-solid fa-map"></i>출제 범위</span></div>
-                    <div class="p-3 space-y-2">
-                        <select id="chapter-select" class="big-select w-full text-xs" onchange="addChapterScope()"><option value="">📂 단원 추가...</option></select>
-                        <div id="scope-basket" class="basket-zone border-teal-500/30 min-h-[50px]"></div>
-                    </div>
-                </div>
-                <div class="glass-panel">
-                    <div class="section-header text-yellow-400 text-sm"><span class="flex items-center gap-2"><i class="fa-solid fa-coins"></i>보상/차감</span></div>
-                    <div class="p-3 space-y-2">
-                        <div class="flex gap-2 items-center"><span class="text-[10px] w-8 text-emerald-400 font-bold">XP보상</span><input type="number" id="rw-xp" class="big-input flex-1 text-right h-8 text-xs" value="50" onmousedown="event.stopPropagation()"></div>
-                        <div class="flex gap-2 items-center"><span class="text-[10px] w-8 text-emerald-400 font-bold">CP보상</span><input type="number" id="rw-cp" class="big-input flex-1 text-right h-8 text-xs" value="10" onmousedown="event.stopPropagation()"></div>
-                        <div class="h-px bg-slate-600 my-1"></div>
-                        <div class="flex gap-2 items-center"><span class="text-[10px] w-8 text-red-400 font-bold">XP차감</span><input type="number" id="pn-xp" class="big-input flex-1 text-right h-8 text-xs" value="100" onmousedown="event.stopPropagation()"></div>
-                        <div class="flex gap-2 items-center"><span class="text-[10px] w-8 text-red-400 font-bold">CP차감</span><input type="number" id="pn-cp" class="big-input flex-1 text-right h-8 text-xs" value="5" onmousedown="event.stopPropagation()"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-panel flex-1 min-h-[400px]">
-                <div class="section-header text-indigo-400"><span class="flex items-center gap-2 text-base"><i class="fa-solid fa-filter"></i>유형별 필터</span><button onclick="analyze()" class="bg-pink-600 hover:bg-pink-500 text-white text-xs px-4 py-1.5 rounded-lg shadow font-bold animate-pulse">추출 실행</button></div>
-                <div class="p-4 space-y-4 overflow-y-auto custom-scroll flex-1">
-                    <div class="theme-high"><div class="flex justify-between items-center mb-2"><span class="text-xs font-black text-purple-300">🏆 1등급</span><div class="flex gap-2"><label class="text-[10px] text-purple-200"><input type="radio" name="logic-high" value="OR" checked> OR</label><label class="text-[10px] text-purple-200"><input type="radio" name="logic-high" value="AND"> AND</label></div></div><div class="flex gap-1"><select id="metric-high" class="big-select flex-1 text-[10px] h-8 p-1"><option value="wrong">오답 (≥)</option><option value="quest">질문 (≥)</option><option value="acc">정답률 (≤)</option></select><input type="number" id="val-high" class="big-input w-12 text-center h-8 p-1" value="1" onmousedown="event.stopPropagation()"><button onclick="addFilter('high')" class="bg-purple-600 text-white w-8 h-8 rounded"><i class="fa-solid fa-plus"></i></button></div><div id="basket-high" class="basket-zone mt-2 min-h-[30px]"></div></div>
-                    <div class="theme-sub"><div class="flex justify-between items-center mb-2"><span class="text-xs font-black text-emerald-300">✍️ 서술형</span><div class="flex gap-2"><label class="text-[10px] text-emerald-200"><input type="radio" name="logic-sub" value="OR" checked> OR</label><label class="text-[10px] text-emerald-200"><input type="radio" name="logic-sub" value="AND"> AND</label></div></div><div class="flex gap-1"><select id="metric-sub" class="big-select flex-1 text-[10px] h-8 p-1"><option value="wrong">오답 (≥)</option><option value="quest">질문 (≥)</option><option value="acc">정답률 (≤)</option></select><input type="number" id="val-sub" class="big-input w-12 text-center h-8 p-1" value="1" onmousedown="event.stopPropagation()"><button onclick="addFilter('sub')" class="bg-emerald-600 text-white w-8 h-8 rounded"><i class="fa-solid fa-plus"></i></button></div><div id="basket-sub" class="basket-zone mt-2 min-h-[30px]"></div></div>
-                    <div class="theme-norm"><div class="flex justify-between items-center mb-2"><span class="text-xs font-black text-blue-300">🧩 일반형</span><div class="flex gap-2"><label class="text-[10px] text-blue-200"><input type="radio" name="logic-norm" value="OR" checked class="accent-blue-500"> OR</label><label class="text-[10px] text-blue-200"><input type="radio" name="logic-norm" value="AND" class="accent-blue-500"> AND</label></div></div><div class="flex gap-1"><select id="metric-norm" class="big-select flex-1 text-[10px] h-8 p-1"><option value="wrong">오답 (≥)</option><option value="quest">질문 (≥)</option><option value="acc">정답률 (≤)</option></select><input type="number" id="val-norm" class="big-input w-12 text-center h-8 p-1" value="2" onmousedown="event.stopPropagation()"><button onclick="addFilter('norm')" class="bg-blue-600 text-white w-8 h-8 rounded"><i class="fa-solid fa-plus"></i></button></div><div id="basket-norm" class="basket-zone mt-2 min-h-[30px]"></div></div>
-                </div>
+            <div class="flex gap-2">
+                <button onclick="executeHunt()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg shadow-lg flex items-center gap-2 transition transform active:scale-95">
+                    <span>🔍</span> 문제 추출
+                </button>
+                <button onclick="window.close()" class="bg-slate-700 text-slate-300 px-3 py-2 rounded hover:bg-slate-600 text-xs">닫기</button>
             </div>
         </div>
 
-        <div class="flex-1 glass-panel flex flex-col overflow-hidden relative">
-            <div class="section-header text-slate-200 py-4 px-5">
-                <span class="flex items-center gap-3 text-lg"><i class="fa-solid fa-list-check"></i>추출 결과 확인</span>
-                <div class="flex items-center gap-4 bg-black/30 px-4 py-2 rounded-xl border border-slate-600">
-                    <div class="text-right"><div class="text-[10px] text-slate-400 uppercase font-bold">Total</div><div class="text-2xl font-black text-pink-500 leading-none"><span id="sel-cnt-total">0</span><span class="text-sm text-slate-500 ml-1">개</span></div></div>
-                    <div class="w-px h-8 bg-slate-600"></div>
-                    <div class="flex gap-4 text-xs font-bold"><div class="text-center"><div class="text-purple-400 mb-0.5">1등급</div><span id="sel-cnt-high" class="text-white text-lg">0</span></div><div class="text-center"><div class="text-emerald-400 mb-0.5">서술형</div><span id="sel-cnt-sub" class="text-white text-lg">0</span></div><div class="text-center"><div class="text-blue-400 mb-0.5">일반</div><span id="sel-cnt-norm" class="text-white text-lg">0</span></div></div>
-                    <button onclick="clearSelection()" class="ml-2 text-xs text-slate-500 hover:text-white underline">초기화</button>
+        <div class="flex flex-col md:flex-row gap-4 h-full">
+            <div class="md:w-1/4 panel min-h-[150px] border-l-4 border-l-emerald-600">
+                <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
+                    <span class="font-bold text-emerald-400 text-xs">① 문제 범위 설정 (필수)</span>
+                </div>
+                <div class="flex gap-1 items-center mb-3">
+                    <input type="number" id="input-start" class="inp-dark inp-range" placeholder="시작"> 
+                    <span class="text-slate-500">~</span> 
+                    <input type="number" id="input-end" class="inp-dark inp-range" placeholder="끝">
+                    <button onclick="addRange()" class="ml-1 bg-emerald-700 text-white text-xs px-3 py-1 rounded hover:bg-emerald-600 font-bold">추가</button>
+                </div>
+                <div id="active-ranges" class="flex-1 overflow-y-auto space-y-1 bg-slate-900/50 p-1 rounded border border-slate-700">
+                    <div class="text-center text-[10px] text-slate-600 py-4" id="range-empty-msg">범위를 추가해주세요.</div>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto custom-scroll bg-[#0b1120] p-5 space-y-6">
-                <div id="res-group-high" class="hidden animate-[fadeIn_0.3s]"><div class="text-xs font-black text-purple-400 mb-2 border-b border-purple-900/50 pb-1 flex justify-between"><span>HIGH RANK (1등급)</span> <span id="disp-cnt-high">0</span></div><div id="grid-high" class="problem-grid bg-purple-900/5 rounded-xl border border-purple-900/30"></div></div>
-                <div id="res-group-sub" class="hidden animate-[fadeIn_0.3s]"><div class="text-xs font-black text-emerald-400 mb-2 border-b border-emerald-900/50 pb-1 flex justify-between"><span>SUBJECTIVE (서술형)</span> <span id="disp-cnt-sub">0</span></div><div id="grid-sub" class="problem-grid bg-emerald-900/5 rounded-xl border border-emerald-900/30"></div></div>
-                <div id="res-group-norm" class="hidden animate-[fadeIn_0.3s]"><div class="text-xs font-black text-blue-400 mb-2 border-b border-blue-900/50 pb-1 flex justify-between"><span>NORMAL (일반)</span> <span id="disp-cnt-norm">0</span></div><div id="grid-norm" class="problem-grid bg-blue-900/5 rounded-xl border border-blue-900/30"></div></div>
-                <div id="result-msg" class="h-full flex flex-col items-center justify-center text-slate-500 opacity-40"><i class="fa-solid fa-filter-circle-xmark text-6xl mb-4"></i><span class="text-lg font-bold">조건 설정 후 '추출 실행'을 눌러주세요.</span></div>
+
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div class="panel border-l-4 border-l-purple-500">
+                    <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="use-high" checked class="w-4 h-4 accent-purple-500"><span class="font-bold text-purple-400 text-sm">🏆 1등급</span></label>
+                        <label class="flex items-center gap-1 cursor-pointer has-tooltip"><input type="checkbox" id="h-new" class="accent-purple-400"><span class="text-[10px] text-purple-200">✨ 미학습 문제만</span><div class="tooltip-box">체크 시, 기존 필터 조건을 무시하고 <strong>한 번도 풀지 않은 새 문제</strong>만 추출합니다.</div></label>
+                    </div>
+                    <div class="space-y-1 flex-1 overflow-y-auto pr-1 text-xs">
+                        <div class="flex justify-between items-center"><span class="text-slate-300">누적 오답</span><div><input type="number" id="h-wrong" class="inp-dark" value="1"> <span class="text-slate-500">회 이상</span></div></div>
+                        <div class="or-divider">또는 (OR)</div>
+                        <div class="flex justify-between items-center"><span class="text-slate-300">누적 질문</span><div><input type="number" id="h-quest" class="inp-dark" value="1"> <span class="text-slate-500">회 이상</span></div></div>
+                        <div class="or-divider">또는 (OR)</div>
+                        <div class="flex justify-between items-center"><span class="text-slate-300">정답률</span><div><input type="number" id="h-acc" class="inp-dark" value="100"> <span class="text-slate-500">% 이하</span></div></div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-700 text-right has-tooltip relative">
+                        <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="h-and" class="accent-purple-500"><span class="text-[11px] text-purple-300 font-bold">조건 교차 적용 (AND)</span><span class="text-[10px] text-slate-500 bg-slate-800 rounded-full w-4 h-4 flex items-center justify-center border border-slate-600">?</span></label>
+                        <div class="tooltip-box">체크 시, 위 조건들을 <strong>모두 동시에 만족</strong>하는 문제만 엄선하여 추출합니다.</div>
+                    </div>
+                </div>
+                <div class="panel border-l-4 border-l-teal-500">
+                    <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="use-sub" checked class="w-4 h-4 accent-teal-500"><span class="font-bold text-teal-400 text-sm">✍️ 서술형</span></label>
+                        <label class="flex items-center gap-1 cursor-pointer has-tooltip"><input type="checkbox" id="s-new" class="accent-teal-400"><span class="text-[10px] text-teal-200">✨ 미학습 문제만</span><div class="tooltip-box">체크 시, <strong>아직 풀지 않은 새 문제</strong>만 추출합니다.</div></label>
+                    </div>
+                    <div class="space-y-1 flex-1 overflow-y-auto pr-1 text-xs">
+                        <div class="flex justify-between items-center"><span class="text-slate-300">누적 오답</span><div><input type="number" id="s-wrong" class="inp-dark" value="1"> <span class="text-slate-500">회 이상</span></div></div>
+                        <div class="or-divider">또는 (OR)</div>
+                        <div class="flex justify-between items-center"><span class="text-slate-300">누적 질문</span><div><input type="number" id="s-quest" class="inp-dark" value="1"> <span class="text-slate-500">회 이상</span></div></div>
+                        <div class="or-divider">또는 (OR)</div>
+                        <div class="flex justify-between items-center"><span class="text-slate-300">정답률</span><div><input type="number" id="s-acc" class="inp-dark" value="100"> <span class="text-slate-500">% 이하</span></div></div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-700 text-right has-tooltip relative">
+                        <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="s-and" class="accent-teal-500"><span class="text-[11px] text-teal-300 font-bold">조건 교차 적용 (AND)</span><span class="text-[10px] text-slate-500 bg-slate-800 rounded-full w-4 h-4 flex items-center justify-center border border-slate-600">?</span></label>
+                        <div class="tooltip-box">체크 시, 위 조건들을 <strong>모두 동시에 만족</strong>하는 문제만 엄선하여 추출합니다.</div>
+                    </div>
+                </div>
+                <div class="panel border-l-4 border-l-blue-500">
+                    <div class="flex items-center justify-between mb-3 border-b border-slate-700 pb-2">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="use-norm" checked class="w-4 h-4 accent-blue-500"><span class="font-bold text-blue-400 text-sm">🧩 일반형</span></label>
+                        <label class="flex items-center gap-1 cursor-pointer has-tooltip"><input type="checkbox" id="n-new" class="accent-blue-400"><span class="text-[10px] text-blue-200">✨ 미학습 문제만</span><div class="tooltip-box">체크 시, <strong>아직 풀지 않은 새 문제</strong>만 추출합니다.</div></label>
+                    </div>
+                    <div class="space-y-1 flex-1 overflow-y-auto pr-1 text-xs">
+                        <div class="flex justify-between items-center"><span class="text-slate-300">누적 오답</span><div><input type="number" id="n-wrong" class="inp-dark" value="2"> <span class="text-slate-500">회 이상</span></div></div>
+                        <div class="or-divider">또는 (OR)</div>
+                        <div class="flex justify-between items-center"><span class="text-slate-300">누적 질문</span><div><input type="number" id="n-quest" class="inp-dark" value="1"> <span class="text-slate-500">회 이상</span></div></div>
+                        <div class="or-divider">또는 (OR)</div>
+                        <div class="flex justify-between items-center"><span class="text-slate-300">정답률</span><div><input type="number" id="n-acc" class="inp-dark" value="80"> <span class="text-slate-500">% 이하</span></div></div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-700 text-right has-tooltip relative">
+                        <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="n-and" class="accent-blue-500"><span class="text-[11px] text-blue-300 font-bold">조건 교차 적용 (AND)</span><span class="text-[10px] text-slate-500 bg-slate-800 rounded-full w-4 h-4 flex items-center justify-center border border-slate-600">?</span></label>
+                        <div class="tooltip-box">체크 시, 위 조건들을 <strong>모두 동시에 만족</strong>하는 문제만 엄선하여 추출합니다.</div>
+                    </div>
+                </div>
             </div>
-            <div class="p-4 border-t border-slate-700 bg-slate-800/80 flex justify-end backdrop-blur-sm">
-                <button onclick="confirmAssignment()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-pink-900/40 text-sm flex items-center gap-3 transition transform active:scale-95"><i class="fa-solid fa-paper-plane"></i> 스페셜 숙제 생성</button>
+        </div>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden">
+        <div class="flex-1 p-4 border-r border-slate-700 flex flex-col bg-slate-800/50">
+            <h3 class="font-bold text-slate-400 text-sm mb-2 flex justify-between items-center">
+                <span>🔎 추출 결과 <span id="res-cnt" class="text-white ml-2">0</span>문항</span>
+                <span class="text-[10px] text-slate-500 hidden md:inline">클릭하여 담기 / 마우스 올려서 확인</span>
+            </h3>
+            <div id="result-grid" class="flex-1 overflow-y-auto grid grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-2 content-start p-1 custom-scroll">
+                <div class="col-span-full text-center py-20 text-slate-600 flex flex-col items-center gap-2">
+                    <span class="text-2xl opacity-50">📡</span>
+                    <span>범위와 조건을 설정하고<br>'문제 추출' 버튼을 눌러주세요.</span>
+                </div>
             </div>
+        </div>
+
+        <div class="w-1/3 md:w-1/4 p-4 flex flex-col bg-[#162032] border-l border-slate-700">
+            <h3 class="font-bold text-indigo-400 text-sm mb-2 flex justify-between items-center">
+                <span>🛒 출제 바구니</span>
+                <span class="bg-indigo-900 text-indigo-200 px-2 rounded-full text-xs" id="basket-cnt">0</span>
+            </h3>
+            <div id="basket-grid" class="flex-1 overflow-y-auto grid grid-cols-3 md:grid-cols-4 gap-2 content-start p-2 mb-4 border border-slate-600 rounded bg-[#0f172a] custom-scroll shadow-inner"></div>
+            <button onclick="openSpecialOptions()" class="bg-gradient-to-r from-red-600 to-pink-700 text-white font-bold py-3 rounded-xl shadow-lg hover:scale-[1.02] transition active:scale-95 flex flex-col items-center justify-center gap-1">
+                <span class="text-sm">💀 스페셜 숙제 생성</span>
+                <span class="text-[10px] opacity-80">(옵션 설정)</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="spec-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 p-6 rounded-xl border-2 border-red-500 w-full max-w-md shadow-2xl animate-[fadeIn_0.2s]">
+            <h2 class="text-xl font-bold text-red-500 mb-4 flex items-center gap-2"><span>💀</span> 스페셜 과제 옵션 설정</h2>
+            <div class="space-y-4 text-sm">
+                <div>
+                    <label class="block text-slate-400 mb-1 font-bold">과제 제목</label>
+                    <input type="text" id="sp-title" class="w-full bg-slate-900 border border-slate-600 rounded p-3 text-white focus:border-red-500 outline-none" value="특별 보충 학습 (기한 엄수)">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1 font-bold">⏰ 제출 마감일 (Time Attack)</label>
+                    <input type="datetime-local" id="sp-deadline" class="w-full bg-slate-900 border border-slate-600 rounded p-3 text-white focus:border-red-500 outline-none"><p class="text-[10px] text-slate-500 mt-1">* 기한 초과 시 2일간 유예 후 제출 불가 처리됩니다.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-emerald-900/20 p-3 rounded border border-emerald-800">
+                        <div class="font-bold text-emerald-400 mb-2 text-xs flex justify-between items-center"><span>🥕 성공 보상</span></div>
+                        <div class="flex gap-2 mb-2 text-[10px] justify-center"><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="rew_type" value="point" checked class="type-radio-pt"> <span class="text-pink-300">Point</span></label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="rew_type" value="xp" class="type-radio"> <span class="text-yellow-300">XP</span></label></div>
+                        <div class="flex justify-between mb-1 items-center"><span class="text-xs text-slate-400">지급량</span><input type="number" id="sp-rew-val" class="inp-dark w-12 border-emerald-700" value="5"></div>
+                    </div>
+                    <div class="bg-red-900/20 p-3 rounded border border-red-800">
+                        <div class="font-bold text-red-400 mb-2 text-xs flex justify-between items-center"><span>🩸 실패 패널티</span></div>
+                        <div class="flex gap-2 mb-2 text-[10px] justify-center"><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pen_type" value="point" checked class="type-radio-pt"> <span class="text-pink-300">Point</span></label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="pen_type" value="xp" class="type-radio"> <span class="text-yellow-300">XP</span></label></div>
+                        <div class="flex justify-between mb-1 items-center"><span class="text-xs text-slate-400">삭감량</span><input type="number" id="sp-pen-val" class="inp-dark w-12 border-red-700" value="3"></div>
+                    </div>
+                </div>
+                <label class="flex items-center gap-3 cursor-pointer bg-slate-900 p-3 rounded border border-slate-600 hover:border-slate-400"><input type="checkbox" id="sp-img-req" checked class="w-5 h-5 accent-red-500"> <span class="text-slate-300 font-bold text-xs">📸 풀이 과정 인증 필수 (연습장 촬영)</span></label>
+            </div>
+            <div class="flex gap-3 mt-6"><button onclick="createAssignment()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-lg transition transform active:scale-95">계약 체결 (생성)</button><button onclick="document.getElementById('spec-modal').classList.add('hidden')" class="bg-slate-700 hover:bg-slate-600 text-white px-4 rounded-lg font-bold">취소</button></div>
         </div>
     </div>
 
     <script>
-        // --- Init & Config ---
-        const urlParams = new URLSearchParams(window.location.search);
-        // decodeURIComponent is automatically handled by URLSearchParams for simple cases, but explicit handling is safer if encoding is weird
-        const STUDENT_ID_RAW = urlParams.get('sid');
-        const STUDENT_ID = decodeURIComponent(STUDENT_ID_RAW); // Force decode just in case
-        const WORKBOOK_ID = urlParams.get('wbid');
-        
-        if(!window._supabase) console.error("Supabase Client Not Initialized. Check config.js");
-        if(!STUDENT_ID || !WORKBOOK_ID) { alert("잘못된 접근입니다."); window.close(); }
+        // ★ 사용자 확인 (세션)
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!currentUser) { alert("로그인이 필요합니다."); window.close(); }
 
-        let fullMetadata = [], fullProgress = {};
-        let scopeBasket = new Set(), filters = { high: [], sub: [], norm: [] };
-        let selectedProblems = new Set(), problemTypes = {};
-        let deadlineItems = []; 
-        let resolvedUUID = null; 
+        const params = new URLSearchParams(window.location.search);
+        const sId = params.get('sid'); const wbId = params.get('wbid');
+        const wbTitle = decodeURIComponent(params.get('title') || '문제집'); const sName = decodeURIComponent(params.get('name') || '학생');
+        if(!sId || !wbId) { alert("잘못된 접근입니다."); window.close(); }
+        document.getElementById('target-info').innerText = `${sName} - [${wbTitle}]`;
 
-        // Attach global functions
-        window.finalCreate = finalCreate;
-        window.confirmAssignment = confirmAssignment;
-        window.addDeadlineInput = addDeadlineInput;
-        window.resetDeadline = resetDeadline;
-        window.removeDeadlineItem = removeDeadlineItem;
-        window.updateDeadlineValue = updateDeadlineValue;
-        window.addChapterScope = addChapterScope;
-        window.addFilter = addFilter;
-        window.analyze = analyze;
-        window.clearSelection = clearSelection;
-        window.closeModal = closeModal;
+        let basket = new Set();
+        let metaData = [];
+        let progressData = {};
+        let activeRanges = [];
+        let pressTimer = null;
 
-        init();
-        async function init() {
-            const today = new Date();
-            const dateStr = `${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
-            document.getElementById('assign-title').value = `취약점 공략 (${dateStr})`;
-            updatePreviewDate();
-
-            try {
-                // [ROBUST UUID RESOLVER START]
-                resolvedUUID = STUDENT_ID; 
-                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                
-                if (!uuidRegex.test(STUDENT_ID)) {
-                    console.log(`[Resolver] Finding UUID for: ${STUDENT_ID}`);
-                    
-                    // Priority 1: Exact Username
-                    let { data } = await _supabase.from('users').select('id').eq('username', STUDENT_ID).maybeSingle();
-                    
-                    // Priority 2: Exact Name
-                    if (!data) {
-                        const res = await _supabase.from('users').select('id').eq('name', STUDENT_ID).maybeSingle();
-                        data = res.data;
-                    }
-
-                    // Priority 3: Fuzzy Username (ILIKE)
-                    if (!data) {
-                        const res = await _supabase.from('users').select('id').ilike('username', `%${STUDENT_ID}%`).maybeSingle();
-                        data = res.data;
-                    }
-
-                    // Priority 4: Fuzzy Name (ILIKE)
-                    if (!data) {
-                        const res = await _supabase.from('users').select('id').ilike('name', `%${STUDENT_ID}%`).maybeSingle();
-                        data = res.data;
-                    }
-
-                    if (data) {
-                        resolvedUUID = data.id;
-                        console.log(`[Resolver] UUID Found: ${resolvedUUID}`);
-                    } else {
-                        console.warn(`[Resolver] Failed to find UUID for ${STUDENT_ID}. Progress data might be missing.`);
-                        // Note: We continue to load metadata so at least the teacher can see the problem structure.
-                    }
-                }
-                // [ROBUST UUID RESOLVER END]
-
-                const [metaRes, progRes] = await Promise.all([
-                    _supabase.from('problem_metadata').select('*').eq('workbook_id', WORKBOOK_ID).order('problem_num', {ascending: true}),
-                    _supabase.from('student_progress').select('*').eq('student_id', resolvedUUID || '00000000-0000-0000-0000-000000000000').eq('workbook_id', WORKBOOK_ID)
-                ]);
-                
-                if(metaRes.error) throw metaRes.error; 
-                fullMetadata = metaRes.data;
-                if(progRes.data) progRes.data.forEach(p => fullProgress[p.problem_num] = p);
-                
-                buildChapterTree(fullMetadata);
-            } catch(e) { console.error("Init Error:", e); }
+        function addRange() {
+            const start = parseInt(document.getElementById('input-start').value);
+            const end = parseInt(document.getElementById('input-end').value);
+            if (isNaN(start) || isNaN(end) || start > end) return alert("올바른 범위를 입력해주세요.");
+            activeRanges.push({s: start, e: end});
+            renderRanges();
+            document.getElementById('input-start').value = ''; document.getElementById('input-end').value = '';
+        }
+        function removeRange(index) { activeRanges.splice(index, 1); renderRanges(); }
+        function renderRanges() {
+            const container = document.getElementById('active-ranges');
+            if (activeRanges.length === 0) { container.innerHTML = '<div class="text-center text-[10px] text-slate-600 py-4" id="range-empty-msg">범위를 추가해주세요.</div>'; return; }
+            container.innerHTML = activeRanges.map((r, idx) => `<div class="range-tag"><span>${r.s} ~ ${r.e}번</span><button onclick="removeRange(${idx})" class="text-emerald-300 hover:text-white font-bold ml-2">✕</button></div>`).join('');
         }
 
-        // --- Deadline Logic ---
-        function addDeadlineInput(type) {
-            const id = Date.now(); deadlineItems.push({ id, type, value: 0 });
-            const basket = document.getElementById('deadline-basket'); document.getElementById('deadline-empty').style.display = 'none';
-            const tag = document.createElement('div'); tag.className = 'tag-item tag-time-input animate-[fadeIn_0.2s]'; tag.id = `time-tag-${id}`;
-            const label = type === 'day' ? '일' : '시간'; const icon = type === 'day' ? 'calendar-day' : 'clock';
-            tag.innerHTML = `<i class="fa-solid fa-${icon} text-orange-200"></i><span class="text-[10px] font-bold text-orange-100">${label}</span><input type="number" class="tiny-input" min="0" placeholder="0" oninput="updateDeadlineValue(${id}, this.value)" onmousedown="event.stopPropagation()"><i class="fa-solid fa-xmark ml-1 hover:text-white" onclick="removeDeadlineItem(${id})"></i>`;
-            basket.appendChild(tag);
+        async function loadData() {
+            const [mRes, pRes] = await Promise.all([
+                _supabase.from('problem_metadata').select('*').eq('workbook_id', wbId),
+                _supabase.from('student_progress').select('*').eq('student_id', sId).eq('workbook_id', wbId)
+            ]);
+            metaData = mRes.data || [];
+            if(pRes.data) pRes.data.forEach(p => progressData[p.problem_num] = p);
         }
-        function updateDeadlineValue(id, val) { const item = deadlineItems.find(i => i.id === id); if(item) { item.value = parseInt(val) || 0; updatePreviewDate(); } }
-        function removeDeadlineItem(id) { deadlineItems = deadlineItems.filter(i => i.id !== id); document.getElementById(`time-tag-${id}`).remove(); if(deadlineItems.length === 0) document.getElementById('deadline-empty').style.display = 'block'; updatePreviewDate(); }
-        function resetDeadline() { deadlineItems = []; document.getElementById('deadline-basket').innerHTML = '<div id="deadline-empty" class="w-full text-center text-slate-500 text-xs italic py-2">버튼을 눌러 기한(일/시간)을 추가하세요</div>'; updatePreviewDate(); }
-        function updatePreviewDate() {
-            let totalMinutes = 0; deadlineItems.forEach(item => { if(item.type === 'day') totalMinutes += item.value * 1440; if(item.type === 'hour') totalMinutes += item.value * 60; });
-            const displayEl = document.getElementById('preview-date');
-            if(totalMinutes === 0) { displayEl.innerHTML = `예상 마감: <span class="text-slate-500">설정 안됨</span>`; return; }
-            const now = new Date(); now.setMinutes(now.getMinutes() + totalMinutes);
-            const str = now.toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            displayEl.innerHTML = `예상 마감: <span class="text-white">${str}</span> <span class="text-[10px] text-slate-400">(${totalMinutes >= 60 ? Math.floor(totalMinutes/60)+'시간 '+(totalMinutes%60)+'분' : totalMinutes+'분'})</span>`;
-        }
+        loadData();
 
-        // --- Core Logic ---
-        function buildChapterTree(list) { 
-            let chapters = new Map(), lastMaj=null;
-            list.forEach(m => {
-                if(m.chapter_major) lastMaj=m; else if(lastMaj) { m.chapter_major=lastMaj.chapter_major; m.chapter_major_title_ko=lastMaj.chapter_major_title_ko; m.chapter_minor=lastMaj.chapter_minor; m.chapter_title_ko=lastMaj.chapter_title_ko; }
-                const mk = m.chapter_major||999, nk = m.chapter_minor||999;
-                if(!chapters.has(mk)) chapters.set(mk, {title: m.chapter_major_title_ko||'기타', minors: new Map()});
-                chapters.get(mk).minors.set(nk, m.chapter_title_ko||'기타');
-                m._chapKey = `${mk}_${nk}`;
-                if(m.difficulty?.includes('high')) problemTypes[m.problem_num]='high'; else if(m.is_subjective) problemTypes[m.problem_num]='sub'; else problemTypes[m.problem_num]='norm';
-            });
-            const sel = document.getElementById('chapter-select');
-            [...chapters.entries()].sort((a,b)=>a[0]-b[0]).forEach(([mk, mo]) => {
-                const grp = document.createElement('optgroup'); grp.label = `${mk}. ${mo.title}`;
-                [...mo.minors.entries()].sort((a,b)=>a[0]-b[0]).forEach(([nk, mt]) => {
-                    const opt = document.createElement('option'); opt.value = `${mk}_${nk}`; opt.text = `${mk}-${nk}. ${mt}`; grp.appendChild(opt);
-                });
-                sel.appendChild(grp);
-            });
-        }
-        function addChapterScope() { const sel = document.getElementById('chapter-select'); const val = sel.value; if(!val) return; if(scopeBasket.has(val)) return; scopeBasket.add(val); const tag = document.createElement('div'); tag.className = 'tag-item tag-scope'; tag.innerHTML = `<span>${sel.options[sel.selectedIndex].text}</span> <i class="fa-solid fa-xmark" onclick="removeScope('${val}', this)"></i>`; document.getElementById('scope-basket').appendChild(tag); sel.value = ""; }
-        function removeScope(val, el) { scopeBasket.delete(val); el.parentElement.remove(); }
-        function addFilter(cat) { const metric = document.getElementById(`metric-${cat}`).value; const val = parseInt(document.getElementById(`val-${cat}`).value); const id = `${cat}-${metric}-${val}`; if(filters[cat].some(f=>f.id===id)) return; const text = document.getElementById(`metric-${cat}`).selectedOptions[0].text.split(' ')[0]; const suffix = metric==='acc'?'%':'회'; filters[cat].push({id, metric, value: val}); const tag = document.createElement('div'); tag.className = `tag-item tag-${cat}`; tag.innerHTML = `<span>${text} ${val}${suffix}</span> <i class="fa-solid fa-xmark" onclick="removeFilter('${cat}','${id}',this)"></i>`; document.getElementById(`basket-${cat}`).appendChild(tag); }
-        function removeFilter(cat, id, el) { filters[cat] = filters[cat].filter(f=>f.id!==id); el.parentElement.remove(); }
-        
-        function analyze() { 
-            if(scopeBasket.size===0) return alert("출제 범위를 선택하세요.");
-            ['high','sub','norm'].forEach(k=>{ document.getElementById(`grid-${k}`).innerHTML=''; document.getElementById(`res-group-${k}`).classList.add('hidden'); });
-            document.getElementById('result-msg').classList.add('hidden');
-            let counts = {high:0, sub:0, norm:0}; selectedProblems.clear();
-            fullMetadata.forEach(m => {
-                if(!scopeBasket.has(m._chapKey)) return;
-                const type = problemTypes[m.problem_num]; const activeFilters = filters[type]; if(activeFilters.length===0) return;
-                const p = fullProgress[m.problem_num]; if(!p) return;
-                const w = p.wrong_count||0, q = p.question_count||0, acc = ((p.correct_count||0)+w)>0 ? Math.round((p.correct_count||0)/((p.correct_count||0)+w)*100) : 0;
-                let matches = 0;
-                activeFilters.forEach(f => { if((f.metric==='wrong'&&w>=f.value) || (f.metric==='quest'&&q>=f.value) || (f.metric==='acc'&&acc<=f.value)) matches++; });
-                const logic = document.querySelector(`input[name="logic-${type}"]:checked`).value;
-                if((logic==='OR'&&matches>0) || (logic==='AND'&&matches===activeFilters.length)) { renderTile(type, m, p); selectedProblems.add(m.problem_num); counts[type]++; }
-            });
-            ['high','sub','norm'].forEach(k=>{ if(counts[k]>0) { document.getElementById(`res-group-${k}`).classList.remove('hidden'); document.getElementById(`disp-cnt-${k}`).innerText = counts[k] + " 개"; } });
-            if(selectedProblems.size===0) document.getElementById('result-msg').classList.remove('hidden');
-            updateCounts();
-        }
-        function renderTile(type, m, p) { 
-            const tile = document.createElement('div'); tile.className = 'tile selected'; tile.dataset.num = m.problem_num; tile.innerText = m.problem_num; tile.dataset.type = type; tile.dataset.chap = `${m.chapter_major_title_ko||''} > ${m.chapter_title_ko||''}`; tile.dataset.wrong = p.wrong_count||0; tile.dataset.quest = p.question_count||0; const t = (p.correct_count||0)+(p.wrong_count||0); tile.dataset.acc = t>0?Math.round((p.correct_count||0)/t*100):0; tile.onclick = () => { const n = parseInt(tile.dataset.num); if(selectedProblems.has(n)) { selectedProblems.delete(n); tile.classList.remove('selected'); tile.style.opacity = '0.4'; } else { selectedProblems.add(n); tile.classList.add('selected'); tile.style.opacity = '1'; } updateCounts(); }; tile.onmouseenter = (e) => { const tip = document.getElementById('xray-tooltip'); const img = document.getElementById('xray-img'); img.src = `${SUPABASE_URL}/storage/v1/object/public/problems/${WORKBOOK_ID}/${m.problem_num.toString().padStart(4,'0')}.webp`; document.getElementById('xray-header').innerText = `No. ${m.problem_num}`; document.getElementById('x-chap').innerText = tile.dataset.chap; document.getElementById('x-type').innerText = type==='high'?'1등급':(type==='sub'?'서술형':'일반'); document.getElementById('x-wrong').innerText = tile.dataset.wrong; document.getElementById('x-quest').innerText = tile.dataset.quest; document.getElementById('x-acc').innerText = tile.dataset.acc+'%'; const r = tile.getBoundingClientRect(); let left = r.right+15; if(left+300 > window.innerWidth) left = r.left-310; let top = r.top-80; if(top<10) top=10; if(top+200 > window.innerHeight) top = window.innerHeight-210; tip.style.left = left+'px'; tip.style.top = top+'px'; tip.style.display='block'; }; tile.onmouseleave = () => document.getElementById('xray-tooltip').style.display='none'; document.getElementById(`grid-${type}`).appendChild(tile); }
-        function updateCounts() { let c={high:0, sub:0, norm:0}; selectedProblems.forEach(n=>{ c[problemTypes[n]]++; }); document.getElementById('sel-cnt-total').innerText = selectedProblems.size; ['high','sub','norm'].forEach(k=>document.getElementById(`sel-cnt-${k}`).innerText = c[k]); }
-        function clearSelection() { selectedProblems.clear(); document.querySelectorAll('.tile').forEach(t=>{t.classList.remove('selected'); t.style.opacity='0.4'}); updateCounts(); }
-
-        // --- Confirmation & Creation ---
-        function confirmAssignment() { 
-            if(selectedProblems.size===0) return alert("선택된 문항이 없습니다.");
-            if(deadlineItems.length===0 && document.getElementById('preview-date').innerText.includes('설정 안됨')) return alert("제출 기한을 설정해주세요.");
-            const title = document.getElementById('assign-title').value; if(!title.trim()) return alert("숙제 제목을 입력해주세요.");
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-deadline').innerText = document.getElementById('preview-date').innerText.replace('예상 마감: ', '');
-            document.getElementById('modal-count').innerText = selectedProblems.size;
-            document.getElementById('modal-rw-xp-disp').innerText = document.getElementById('rw-xp').value; 
-            document.getElementById('modal-rw-cp-disp').innerText = document.getElementById('rw-cp').value;
-            document.getElementById('modal-pn-xp-disp').innerText = document.getElementById('pn-xp').value;
-            document.getElementById('modal-pn-cp-disp').innerText = document.getElementById('pn-cp').value;
-            document.getElementById('confirm-modal').style.display = 'flex';
-        }
-        function closeModal() { document.getElementById('confirm-modal').style.display = 'none'; }
-
-        async function finalCreate() {
-            const btn = document.querySelector('#confirm-modal button:last-child');
-            btn.innerText = "데이터 전송 중..."; btn.disabled = true;
+        function executeHunt() {
+            if (activeRanges.length === 0) return alert("주인님, 범위를 설정해주셔야 추출할 수 있습니다.");
             
-            // [ROBUST UUID RESOLVER (RETRY IF NEEDED)]
-            let targetUUID = resolvedUUID; // Try to use cached UUID first
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            
-            if (!targetUUID || !uuidRegex.test(targetUUID)) {
-                // If resolvedUUID is missing or invalid, try to find it again (Deep Search)
-                try {
-                    console.log(`[FinalCreate] Retrying UUID resolution for: ${STUDENT_ID}`);
-                    let { data } = await _supabase.from('users').select('id').eq('username', STUDENT_ID).maybeSingle();
-                    if (!data) { data = (await _supabase.from('users').select('id').eq('name', STUDENT_ID).maybeSingle()).data; }
-                    if (!data) { data = (await _supabase.from('users').select('id').ilike('username', `%${STUDENT_ID}%`).maybeSingle()).data; }
-                    
-                    if (!data) throw new Error(`학생 '${STUDENT_ID}'의 ID(UUID)를 찾을 수 없습니다. (DB 미등록)`);
-                    targetUUID = data.id;
-                } catch(e) {
-                    alert("ID 변환 오류: " + e.message);
-                    btn.innerText = "🚀 전송 승인"; btn.disabled = false;
-                    return;
-                }
-            }
-
-            let totalMinutes = 0;
-            deadlineItems.forEach(item => {
-                if(item.type === 'day') totalMinutes += item.value * 1440;
-                if(item.type === 'hour') totalMinutes += item.value * 60;
+            const ranges = activeRanges;
+            const getConf = (pfx) => ({
+                use: document.getElementById(`use-${pfx}`).checked,
+                newOnly: document.getElementById(`${pfx[0]}-new`).checked,
+                wrong: parseInt(document.getElementById(`${pfx[0]}-wrong`).value)||0,
+                quest: parseInt(document.getElementById(`${pfx[0]}-quest`).value)||0,
+                acc: parseInt(document.getElementById(`${pfx[0]}-acc`).value)||100,
+                and: document.getElementById(`${pfx[0]}-and`).checked
             });
-            const now = new Date(); now.setMinutes(now.getMinutes() + totalMinutes);
+            const cHigh = getConf('high'), cSub = getConf('sub'), cNorm = getConf('norm');
 
-            try {
-                const payload = {
-                    p_student_id: targetUUID, 
-                    p_workbook_id: parseInt(WORKBOOK_ID),
-                    p_title: document.getElementById('modal-title').innerText,
-                    p_problem_list: Array.from(selectedProblems).sort((a,b)=>a-b),
-                    p_deadline: now.toISOString(),
-                    p_is_special: true,
-                    p_reward_points: 0, 
-                    p_reward_xp: parseInt(document.getElementById('modal-rw-xp-disp').innerText), 
-                    p_reward_cp: parseInt(document.getElementById('modal-rw-cp-disp').innerText), 
-                    p_penalty_xp: parseInt(document.getElementById('modal-pn-xp-disp').innerText), 
-                    p_penalty_cp: parseInt(document.getElementById('modal-pn-cp-disp').innerText)
-                };
+            const grid = document.getElementById('result-grid');
+            grid.innerHTML = '';
+            let results = [];
 
-                const { error } = await _supabase.rpc('create_assignment_teacher', payload); 
-                if(error) throw error;
-                
-                alert("✅ 스페셜 과제가 전송되었습니다!");
-                window.close();
-            } catch(e) {
-                console.error(e);
-                alert("전송 실패: " + e.message);
-                btn.innerText = "🚀 전송 승인"; btn.disabled = false;
-            }
+            metaData.forEach(m => {
+                const num = m.problem_num;
+                if (!ranges.some(r => num >= r.s && num <= r.e)) return;
+                const p = progressData[num];
+                let c = cNorm;
+                if (m.difficulty === 'high_rank') c = cHigh; else if (m.is_subjective) c = cSub;
+                if (!c.use) return;
+
+                let hit = false;
+                if (c.newOnly) { if (!p) hit = true; } 
+                else if (p) {
+                    const w = p.wrong_count || 0; const q = p.question_count || 0;
+                    const total = (p.correct_count||0) + w;
+                    const acc = total > 0 ? ((p.correct_count||0)/total)*100 : 0;
+                    if (c.and) { if (w >= c.wrong && q >= c.quest && (total>0 && acc <= c.acc)) hit = true; }
+                    else { if (w >= c.wrong || q >= c.quest || (total>0 && acc <= c.acc)) hit = true; }
+                }
+
+                if (hit) results.push(num);
+            });
+
+            results.sort((a, b) => a - b);
+            
+            document.getElementById('res-cnt').innerText = results.length;
+            if (results.length === 0) { grid.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500">조건에 맞는 문제가 없습니다.</div>'; return; }
+
+            results.forEach(num => {
+                const isInBasket = basket.has(num);
+                const div = document.createElement('div');
+                div.className = `prob-item ${isInBasket ? 'in-basket' : ''}`;
+                div.innerText = num;
+                div.onclick = () => toggleBasket(num);
+                div.onmouseenter = (e) => showPreview(e, num);
+                div.onmouseleave = hidePreview;
+                div.addEventListener('touchstart', (e) => { pressTimer = setTimeout(() => showMobilePreview(num), 600); });
+                div.addEventListener('touchend', (e) => { clearTimeout(pressTimer); hidePreview(); });
+                div.addEventListener('touchmove', () => clearTimeout(pressTimer));
+                grid.appendChild(div);
+            });
+        }
+
+        function toggleBasket(num) {
+            if (basket.has(num)) basket.delete(num); else basket.add(num);
+            renderBasket(); executeHunt(); 
+        }
+
+        function renderBasket() {
+            const grid = document.getElementById('basket-grid');
+            grid.innerHTML = '';
+            Array.from(basket).sort((a,b)=>a-b).forEach(num => {
+                const div = document.createElement('div');
+                div.className = 'basket-item';
+                div.innerText = num;
+                div.onclick = () => toggleBasket(num);
+                grid.appendChild(div);
+            });
+            document.getElementById('basket-cnt').innerText = basket.size;
+        }
+
+        function showPreview(e, num) {
+            if('ontouchstart' in window) return;
+            const pop = document.getElementById('preview-popup');
+            const padded = num.toString().padStart(4, '0');
+            document.getElementById('prev-title').innerText = `No. ${num}`;
+            document.getElementById('prev-img').src = `${SUPABASE_URL}/storage/v1/object/public/problems/${wbId}/${padded}.webp`;
+            
+            pop.style.transform = 'translate(-50%, -50%)'; 
+            pop.style.left = '50%'; pop.style.top = '50%'; 
+            pop.style.display = 'block';
+        }
+
+        function showMobilePreview(num) {
+            const pop = document.getElementById('preview-popup');
+            const padded = num.toString().padStart(4, '0');
+            document.getElementById('prev-title').innerText = `No. ${num} (미리보기)`;
+            document.getElementById('prev-img').src = `${SUPABASE_URL}/storage/v1/object/public/problems/${wbId}/${padded}.webp`;
+            pop.style.transform = 'translate(-50%, -50%)';
+            pop.style.left = '50%'; pop.style.top = '50%';
+            pop.style.display = 'block';
+        }
+
+        function hidePreview() { document.getElementById('preview-popup').style.display = 'none'; }
+
+        function openSpecialOptions() {
+            if (basket.size === 0) return alert("바구니가 비었습니다.");
+            document.getElementById('spec-modal').classList.remove('hidden');
+            const tmr = new Date(); tmr.setDate(tmr.getDate() + 1); tmr.setHours(23,59,0,0);
+            document.getElementById('sp-deadline').value = tmr.toISOString().slice(0,16);
+        }
+
+        async function createAssignment() {
+            const title = document.getElementById('sp-title').value;
+            const deadlineVal = document.getElementById('sp-deadline').value;
+            if(!deadlineVal) return alert("데드라인을 설정해주세요!");
+            const deadline = new Date(deadlineVal).toISOString();
+            
+            const rewVal = parseInt(document.getElementById('sp-rew-val').value);
+            const penVal = parseInt(document.getElementById('sp-pen-val').value);
+            const rewType = document.querySelector('input[name="rew_type"]:checked').value;
+            const penType = document.querySelector('input[name="pen_type"]:checked').value;
+            
+            const list = Array.from(basket).sort((a,b)=>a-b);
+
+            const payload = {
+                student_id: sId, workbook_id: parseInt(wbId),
+                title: title, type: 'special', status: 'assigned',
+                problem_list: list, review_list: list,
+                is_special: true, deadline: deadline,
+                reward_points: rewVal, penalty_points: penVal,
+                reward_type: rewType, penalty_type: penType,
+                teacher_id: currentUser.username, 
+                created_at: new Date()
+            };
+
+            const { error } = await _supabase.from('assignments').insert([payload]);
+            if(error) alert("생성 실패: "+error.message);
+            else { alert("😈 계약이 체결되었습니다!"); window.close(); }
         }
     </script>
 </body>
