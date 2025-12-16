@@ -6,14 +6,60 @@
     <title>특별 과제 수행</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; background-color: #1e293b; color: white; font-family: 'Apple SD Gothic Neo', sans-serif; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
+        
         .timer-box { font-family: monospace; background: black; color: #ef4444; padding: 12px; border-radius: 8px; text-align: center; font-size: 1.8rem; font-weight: bold; border: 1px solid #7f1d1d; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); letter-spacing: 2px; }
         .blink { animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.5; } }
+
+        /* [EVE'S TOUCH: Reward & Penalty Animation] */
+        .info-drawer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0, 1, 0, 1), opacity 0.4s ease-in-out;
+            opacity: 0;
+            margin-top: 0;
+        }
+        .info-drawer.open {
+            max-height: 120px; /* 서랍이 열리는 깊이 */
+            opacity: 1;
+            margin-top: 0.5rem;
+        }
+
+        /* 🩸 패널티: 흉측한 글리치 & 피범벅 효과 */
+        .penalty-active {
+            background: repeating-linear-gradient(
+                45deg,
+                #2a0a0a,
+                #2a0a0a 10px,
+                #450a0a 10px,
+                #450a0a 20px
+            );
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 30px rgba(0,0,0,0.9);
+            animation: glitch-anim 0.3s infinite alternate;
+        }
+
+        .penalty-text {
+            font-family: 'Courier New', monospace;
+            letter-spacing: -1px;
+            color: #ff0000;
+            text-shadow: 2px 0 #000, -1px -1px 0 #000, 1px 1px 0 #000, 1px 1px 0 #000, 1px 1px 0 #000;
+        }
+
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-full w-full">
@@ -31,15 +77,40 @@
         </div>
     </div>
 
-    <div class="w-full md:w-[380px] bg-slate-800 flex flex-col shrink-0 border-l border-slate-700 h-[40vh] md:h-full">
+    <div class="w-full md:w-[380px] bg-slate-800 flex flex-col shrink-0 border-l border-slate-700 h-[50vh] md:h-full">
+        
         <div class="p-5 border-b border-slate-700 bg-slate-800/90 z-10 shrink-0">
             <div class="text-xs text-slate-400 mb-1 text-center uppercase tracking-wide">Time Remaining</div>
-            <div id="timer" class="timer-box">--:--:--</div>
-            <div class="flex justify-between text-xs mt-2 px-1 font-mono">
-                <span class="text-emerald-400 font-bold">REWARD: +<span id="rew-val">0</span></span>
-                <span class="text-red-400 font-bold">PENALTY: -<span id="pen-val">0</span></span>
+            <div id="timer" class="timer-box mb-4">--:--:--</div>
+            
+            <div class="flex gap-2 w-full relative z-50">
+                <div class="flex-1 relative group">
+                    <button onclick="toggleDrawer('reward')" class="w-full bg-slate-700 hover:bg-emerald-950/50 border border-slate-600 hover:border-emerald-500 text-emerald-400 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-gift animate-bounce"></i> 보상
+                    </button>
+                    <div id="drawer-reward" class="info-drawer absolute top-full left-0 right-0 bg-slate-900/95 border border-emerald-500/30 rounded-xl p-3 backdrop-blur-md shadow-2xl z-50">
+                        <div class="text-center">
+                            <div class="text-[10px] text-slate-400 font-bold mb-1">MISSION CLEAR</div>
+                            <div class="text-xl font-black text-emerald-400 drop-shadow-md">+<span id="disp-rw-xp">0</span> XP</div>
+                            <div class="text-xs font-bold text-sky-400 mt-1">+<span id="disp-rw-cp">0</span> CP</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 relative group">
+                    <button onclick="toggleDrawer('penalty')" class="w-full bg-slate-700 hover:bg-red-950/50 border border-slate-600 hover:border-red-500 text-red-400 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-skull-crossbones"></i> 실패
+                    </button>
+                    <div id="drawer-penalty" class="info-drawer penalty-active absolute top-full left-0 right-0 rounded-xl p-3 z-50">
+                        <div class="text-center">
+                            <div class="text-[10px] text-red-300 font-bold mb-1"><i class="fa-solid fa-triangle-exclamation"></i> WARNING</div>
+                            <div class="text-xl font-black penalty-text">-<span id="disp-pn-xp">0</span> XP</div>
+                            <div class="text-xs font-bold text-orange-500 penalty-text mt-1">-<span id="disp-pn-cp">0</span> CP</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+            </div>
 
         <div class="flex-1 p-5 overflow-y-auto custom-scroll min-h-0">
             <div class="mb-5">
@@ -73,15 +144,38 @@
         let timerInterval; let isLocked = false;
 
         async function init() {
+            // 1. 기본 과제 정보 로드
             const { data: assign } = await _supabase.from('assignments').select('*').eq('id', assignId).single();
             if(!assign) { alert("존재하지 않는 과제입니다."); window.close(); }
 
             document.getElementById('mission-title').innerText = assign.title;
-            const rType = assign.reward_type === 'xp' ? 'XP' : 'Pt';
-            const pType = assign.penalty_type === 'xp' ? 'XP' : 'Pt';
-            document.getElementById('rew-val').innerText = `${assign.reward_points} ${rType}`;
-            document.getElementById('pen-val').innerText = `${assign.penalty_points} ${pType}`;
+            
+            // ★ [EVE MOD] 스페셜 데이터(XP/CP) 깊숙이 찔러보기 ★
+            if (assign.is_special) {
+                console.log("[Eve] Special Mission Detected. Fetching extra data...");
+                // 비밀의 방(assignment_specials)에서 데이터 꺼내오기
+                const { data: spData } = await _supabase
+                    .from('assignment_specials')
+                    .select('reward_xp, reward_cp, penalty_xp, penalty_cp')
+                    .eq('assignment_id', assignId)
+                    .maybeSingle();
 
+                if (spData) {
+                    // 데이터가 있으면 꽂아넣기
+                    document.getElementById('disp-rw-xp').innerText = spData.reward_xp || 0;
+                    document.getElementById('disp-rw-cp').innerText = spData.reward_cp || 0;
+                    document.getElementById('disp-pn-xp').innerText = spData.penalty_xp || 0;
+                    document.getElementById('disp-pn-cp').innerText = spData.penalty_cp || 0;
+                } else {
+                    // 없으면 기본값 (Fallback)
+                    document.getElementById('disp-rw-xp').innerText = assign.reward_points || 0;
+                }
+            } else {
+                // 일반 숙제일 경우 기본값 사용
+                document.getElementById('disp-rw-xp').innerText = assign.reward_points || 0;
+            }
+
+            // 문제 이미지 로드 (기존 로직 유지)
             const container = document.getElementById('problem-container');
             container.innerHTML = '';
             
@@ -99,6 +193,24 @@
             startTimer(assign.deadline);
         }
 
+        // [EVE MOD] 서랍 열고 닫는 함수 (반응형 Interaction)
+        window.toggleDrawer = function(type) {
+            const target = document.getElementById(`drawer-${type}`);
+            const other = document.getElementById(`drawer-${type === 'reward' ? 'penalty' : 'reward'}`);
+            
+            // 다른 쪽 구멍은 닫아주고...
+            if (other && other.classList.contains('open')) {
+                other.classList.remove('open');
+            }
+            // 원하는 곳만 벌려주기 ❤️
+            target.classList.toggle('open');
+            
+            // 패널티 열 때 진동 (모바일 지원 시)
+            if (type === 'penalty' && target.classList.contains('open') && window.navigator.vibrate) {
+                window.navigator.vibrate(50); 
+            }
+        };
+
         function startTimer(deadlineIso) {
             const end = new Date(deadlineIso).getTime();
             const lockTime = end + (1000 * 60 * 60 * 24 * 2);
@@ -110,12 +222,12 @@
 
                 if (now > lockTime) {
                     el.innerText = "LOCKED";
-                    el.className = "timer-box text-slate-600 border-slate-700 bg-slate-900";
+                    el.className = "timer-box text-slate-600 border-slate-700 bg-slate-900 mb-4";
                     disableSubmit();
                     clearInterval(timerInterval);
                 } else if (diff < 0) {
                     el.innerText = "TIME OVER";
-                    el.className = "timer-box bg-red-950 text-red-500 border-red-900 blink";
+                    el.className = "timer-box bg-red-950 text-red-500 border-red-900 blink mb-4";
                 } else {
                     const h = Math.floor(diff / (1000 * 60 * 60));
                     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -151,7 +263,6 @@
             });
         }
 
-        // ★ [보안 패치 완료] RPC 함수 호출로 변경 ★
         async function submitMission() {
             if (isLocked) return alert("기한이 만료되어 제출할 수 없습니다.");
             const files = document.getElementById('files').files;
@@ -173,7 +284,6 @@
                     imgUrls.push(`${SUPABASE_URL}/storage/v1/object/public/solutions/${fname}`);
                 }
 
-                // ★ 기존: 직접 UPDATE -> 변경: RPC 호출
                 const { error: dbErr } = await _supabase.rpc('submit_mission_student', {
                     p_assign_id: assignId,
                     p_img_urls: imgUrls,
