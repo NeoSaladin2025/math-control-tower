@@ -121,7 +121,6 @@
         async function init() { loadStudents(); checkChallenges(); } 
         init();
 
-        // ★ [보안 패치] 학생 등록 함수 (RPC 사용) ★
         async function registerUser(role) {
             let id, name, grade;
             if (role === 'student') {
@@ -136,14 +135,13 @@
 
             if (!id || !name) return alert('빈칸을 모두 채워주세요.');
 
-            // 직접 INSERT 대신 RPC 호출
             const { error } = await _supabase.rpc('manage_student', {
                 p_type: 'create',
                 p_username: id,
-                p_password: '1234', // 초기 비번
+                p_password: '1234', 
                 p_name: name,
                 p_grade: grade,
-                p_phone: '', // 필요시 추가
+                p_phone: '', 
                 p_role: role
             });
 
@@ -207,7 +205,10 @@
                         </div>
                         <div id="content-${u.username}-stats" class="hidden">
                             <div class="bg-white p-5 rounded-lg border shadow-sm">
-                                <h4 class="text-sm font-bold text-gray-700 mb-4 flex justify-between items-center"><span>📈 8각형 스탯 조정</span><span class="text-[10px] text-gray-400">0~10점 사이로 조정하세요.</span></h4>
+                                <h4 class="text-sm font-bold text-gray-700 mb-4 flex justify-between items-center">
+                                    <span>📈 8각형 스탯 조정</span>
+                                    <button onclick="saveAllStats('${u.username}')" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700 transition shadow-sm">💾 스탯 적용 (SAVE)</button>
+                                </h4>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
                                     ${renderStatSlider(u.username, 'calc', 'CALC (연산력)', u.stats?.calc)} ${renderStatSlider(u.username, 'read', 'READ (독해력)', u.stats?.read)} ${renderStatSlider(u.username, 'logic', 'LOGIC (추론력)', u.stats?.logic)} ${renderStatSlider(u.username, 'pat', 'PAT (패턴력)', u.stats?.pat)}
                                     ${renderStatSlider(u.username, 'tmp', 'TMP (속도)', u.stats?.tmp)} ${renderStatSlider(u.username, 'stb', 'STB (안정성)', u.stats?.stb)} ${renderStatSlider(u.username, 'exec', 'EXEC (실행력)', u.stats?.exec)} ${renderStatSlider(u.username, 'att', 'ATT (태도)', u.stats?.att)}
@@ -232,39 +233,29 @@
             }).join('');
         }
 
-        function renderStatSlider(sid, key, label, val = 5) { return `<div class="bg-slate-50 p-3 rounded-lg border border-slate-100"><div class="flex justify-between items-center mb-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">${label}</label><span class="text-sm font-black text-indigo-600" id="val-${sid}-${key}">${val}</span></div><input type="range" min="0" max="10" value="${val}" class="w-full accent-indigo-600" oninput="document.getElementById('val-${sid}-${key}').innerText = this.value" onchange="updateStat('${sid}', '${key}', this.value)"></div>`; }
+        // [수정] onchange 제거, ID 부여
+        function renderStatSlider(sid, key, label, val = 5) { return `<div class="bg-slate-50 p-3 rounded-lg border border-slate-100"><div class="flex justify-between items-center mb-1"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">${label}</label><span class="text-sm font-black text-indigo-600" id="val-${sid}-${key}">${val}</span></div><input type="range" id="stat-input-${sid}-${key}" min="0" max="10" value="${val}" class="w-full accent-indigo-600" oninput="document.getElementById('val-${sid}-${key}').innerText = this.value"></div>`; }
         
-        // ★ [보안 패치] 스탯 업데이트는 RPC 안 만들었음 (일단 둠 - 필요시 RPC화 가능) ★
-        async function updateStat(sid, key, val) { const { data } = await _supabase.from('users').select('stats').eq('username', sid).single(); const newStats = data.stats || {}; newStats[key] = parseInt(val); const { error } = await _supabase.from('users').update({ stats: newStats }).eq('username', sid); if(error) alert("저장 실패: " + error.message); }
-        
-        // ★ [보안 패치] 포인트 수동 조정은 give_points 함수 사용 ★
-        async function manualAdjust(sid) { 
-            const reason = document.getElementById(`adj-reason-${sid}`).value; 
-            const xpDelta = parseInt(document.getElementById(`adj-xp-${sid}`).value) || 0; 
-            const cpDelta = parseInt(document.getElementById(`adj-cp-${sid}`).value) || 0; 
-            if (!reason) return alert("조정 사유를 입력해주세요."); 
-            if (xpDelta === 0 && cpDelta === 0) return alert("조정할 값이 없습니다."); 
-            if (!confirm(`[${sid}] 님에게\nXP: ${xpDelta}\nCP: ${cpDelta}\n\n반영하시겠습니까?`)) return; 
+        // [신규] 일괄 저장 함수
+        async function saveAllStats(sid) {
+            if(!confirm(`[${sid}] 학생의 능력치를 저장하시겠습니까?`)) return;
             
-            // 보안 RPC 호출
-            const { error } = await _supabase.rpc('give_points', {
-                p_student_id: sid,
-                p_xp: xpDelta,
-                p_cp: cpDelta,
-                p_rule_name: `[수동] ${reason}`
+            // 현재 DB의 stats 객체를 가져옴 (기존 값 유지 위함)
+            const { data } = await _supabase.from('users').select('stats').eq('username', sid).single();
+            const newStats = data.stats || {};
+            
+            // 8개 스탯 값 읽어서 업데이트
+            const keys = ['calc', 'read', 'logic', 'pat', 'tmp', 'stb', 'exec', 'att'];
+            keys.forEach(k => {
+                const el = document.getElementById(`stat-input-${sid}-${k}`);
+                if(el) newStats[k] = parseInt(el.value);
             });
 
-            if(error) alert("실패: " + error.message);
-            else {
-                alert("처리되었습니다.");
-                // 화면 갱신을 위해 user 다시 로드
-                const { data: u } = await _supabase.from('users').select('*').eq('username', sid).single();
-                document.getElementById(`disp-xp-${sid}`).innerText = u.season_xp; 
-                document.getElementById(`disp-cp-${sid}`).innerText = u.cp; 
-                document.getElementById(`adj-reason-${sid}`).value = ''; 
-                document.getElementById(`adj-xp-${sid}`).value = ''; 
-                document.getElementById(`adj-cp-${sid}`).value = ''; 
-            }
+            // DB 업데이트
+            const { error } = await _supabase.from('users').update({ stats: newStats }).eq('username', sid);
+            
+            if(error) alert("저장 실패: " + error.message);
+            else alert("✅ 능력치가 성공적으로 적용되었습니다!");
         }
 
         function toggleDetail(id) { const row=document.getElementById(`detail-${id}`); const arrow=document.getElementById(`arrow-${id}`); if(row.classList.contains('open')){row.classList.remove('open');if(arrow)arrow.style.transform='rotate(0deg)';}else{row.classList.add('open');if(arrow)arrow.style.transform='rotate(180deg)';loadStudentHomework(id);loadStudentBooks(id);} }
@@ -279,34 +270,18 @@
         function openConfigPopup(sid, title, wbid) { const url = `admin_homework_config.html?sid=${sid}&wbid=${wbid}&name=Student&title=${encodeURIComponent(title)}`; const w = 900, h = 700; window.open(url, '_blank', `width=${w},height=${h},top=${(screen.height-h)/2},left=${(screen.width-w)/2}`); }
         async function assignBook(sid) { const wbId = document.getElementById(`new-book-sel-${sid}`).value; if(!wbId) return alert("선택하세요"); const { error } = await _supabase.from('student_books').insert([{student_id: sid, workbook_id: parseInt(wbId)}]); if(error) alert("실패: "+error.message); else { alert("배정 완료"); loadStudentBooks(sid); } }
         async function removeBook(sid, wbid) { if(confirm("취소?")) { await _supabase.from('student_books').delete().match({student_id: sid, workbook_id: wbid}); loadStudentBooks(sid); } }
-        
-        // ★ [수정됨] 선생님 계정에서 진짜 삭제 기능 연결 (delete_user_by_admin) ★
         async function deleteUser(username) { 
-            // 1. 확인 사살
             if(!confirm(`정말 [${username}] 계정을 영구 삭제하시겠습니까?\n(이 작업은 되돌릴 수 없으며, 모든 학습 기록이 사라집니다!)`)) return; 
-            
             try {
-                // 2. 관리자 권한으로 삭제 함수(RPC) 바로 호출
-                // (이제 자바스크립트에서 ID를 찾지 않고, 서버가 알아서 username으로 처리함)
-                const { error } = await _supabase.rpc('delete_user_by_admin', {
-                    target_username: username
-                });
-
+                const { error } = await _supabase.rpc('delete_user_by_admin', { target_username: username });
                 if (error) throw error;
-
-                // 3. 성공 시
-                alert(`🗑️ [${username}] 삭제가 완료되었습니다.`);
-                loadStudents(); // 목록 새로고침
-
-            } catch (e) {
-                console.error(e);
-                alert("삭제 실패: " + (e.message || "알 수 없는 오류"));
-            }
+                alert(`🗑️ [${username}] 삭제가 완료되었습니다.`); loadStudents(); 
+            } catch (e) { console.error(e); alert("삭제 실패: " + (e.message || "알 수 없는 오류")); }
         }
-        
         function openAnalysis(id) { const w=1100,h=850; window.open(`student_analysis.html?id=${id}`, '_blank', `width=${w},height=${h},top=${(screen.height-h)/2},left=${(screen.width-w)/2}`); }
         async function checkChallenges() { const { count } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('status', 'pending'); if(count > 0) { document.getElementById('challenge-alert').classList.remove('hidden'); document.getElementById('challenge-cnt').innerText = count; } }
         function openChallengeManager() { const w=800,h=600; window.open('manager_challenge.html', '_blank', `width=${w},height=${h},top=${(screen.height-h)/2},left=${(screen.width-w)/2}`); }
+        async function manualAdjust(sid) { const r = document.getElementById(`adj-reason-${sid}`).value; const xp = parseInt(document.getElementById(`adj-xp-${sid}`).value)||0; const cp = parseInt(document.getElementById(`adj-cp-${sid}`).value)||0; if(!r) return alert("사유 입력 필요"); if(xp===0&&cp===0) return; if(!confirm(`[${sid}]\nXP: ${xp}, CP: ${cp}\n적용?`)) return; const { error } = await _supabase.rpc('give_points', { p_student_id: sid, p_xp: xp, p_cp: cp, p_rule_name: `[수동] ${r}` }); if(error) alert("실패: "+error.message); else { alert("처리됨"); const { data: u } = await _supabase.from('users').select('*').eq('username', sid).single(); document.getElementById(`disp-xp-${sid}`).innerText = u.season_xp; document.getElementById(`disp-cp-${sid}`).innerText = u.cp; document.getElementById(`adj-reason-${sid}`).value=''; document.getElementById(`adj-xp-${sid}`).value=''; document.getElementById(`adj-cp-${sid}`).value=''; } }
     </script>
 </body>
 </html>

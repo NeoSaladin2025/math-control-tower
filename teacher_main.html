@@ -152,8 +152,16 @@
             <div onclick="location.href='teacher_integrated_config.html'" class="menu-card bg-white p-4 rounded-xl border-l-4 border-orange-400 shadow-sm">
                 <div class="text-xl mb-1">⚙️</div><div class="font-bold text-slate-800 text-sm">통합 관리 센터</div><div class="text-[10px] text-slate-500">규칙 & 보상 & 성장 설계</div>
             </div>
+            
             <div id="god-menu" onclick="location.href='admin_db_inspector.html'" class="menu-card bg-black p-4 rounded-xl border-l-4 border-yellow-400 shadow-lg hidden cursor-pointer transition transform hover:scale-105">
                 <div class="text-xl mb-1">👁️</div><div class="font-bold text-yellow-400 text-sm">DB 정밀 검사</div><div class="text-[10px] text-slate-400">데이터 누락 확인</div>
+            </div>
+
+            <div id="god-menu-2" onclick="window.open('admin_db_inspector_2.html', '_blank')" class="menu-card bg-zinc-950 p-4 rounded-xl border-l-4 border-red-600 shadow-2xl hidden cursor-pointer transition transform hover:scale-105 group relative overflow-hidden">
+                <div class="absolute inset-0 bg-red-900/10 animate-pulse pointer-events-none"></div>
+                <div class="text-xl mb-1 group-hover:animate-bounce">☠️</div>
+                <div class="font-bold text-red-500 text-sm tracking-widest">ROOT ACCESS</div>
+                <div class="text-[10px] text-red-800 font-bold">DB 구조/함수 정밀타격</div>
             </div>
         </div>
 
@@ -273,7 +281,12 @@
             alert("로그인이 필요합니다."); location.href = 'index.html'; 
         } else {
             document.getElementById('t-name').innerText = user.name;
-            if (user.username === '곽명용이브' || user.role === 'admin') document.getElementById('god-menu').classList.remove('hidden');
+            
+            // ★ [EVE MOD] 관리자 메뉴 2개 모두 활성화 (곽명용이브 or admin)
+            if (user.username === '곽명용이브' || user.role === 'admin') {
+                document.getElementById('god-menu').classList.remove('hidden'); // 기존
+                document.getElementById('god-menu-2').classList.remove('hidden'); // 신규 (Scary One)
+            }
         }
 
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
@@ -388,7 +401,6 @@
             const listEl = document.getElementById('qm-list');
             listEl.innerHTML = '<div class="text-center py-4"><div class="loader"></div></div>';
 
-            // ★ [NEW] Metadata Fetch: 문제 유형을 가져오기 위한 메타데이터 로드
             const requests = s.questions.map(q => 
                 _supabase.from('problem_metadata')
                 .select('workbook_id, problem_num, difficulty, is_subjective')
@@ -468,7 +480,6 @@
 
             if (action === 'resolve') {
                 try {
-                    // ★ 핵심 로직: mark_clinic_resolved 호출 (스탬프 찍고 last_result='wrong'으로 변경)
                     const { error } = await _supabase.rpc('mark_clinic_resolved', {
                         p_student_id: currentTargetQStudent.id,
                         p_wb_id: selectedQItem.wbId,
@@ -479,22 +490,19 @@
                     
                     alert(`✅ [No.${selectedQItem.pNum}] 해결 처리 및 숙제 자동 등록 완료!`);
                     
-                    // UI에서 해당 문제 제거
                     const qEl = selectedQItem.el;
                     qEl.style.transition = 'all 0.3s';
                     qEl.style.opacity = '0';
                     qEl.style.transform = 'translateX(-50px)';
                     setTimeout(() => {
                         qEl.remove();
-                        // 데이터 모델에서도 제거
                         const idx = currentTargetQStudent.questions.findIndex(q => q.workbook_id === selectedQItem.wbId && q.problem_num === selectedQItem.pNum);
                         if (idx > -1) currentTargetQStudent.questions.splice(idx, 1);
                         
-                        // 모달 상태 갱신
                         if (currentTargetQStudent.questions.length === 0) {
                             closeQModal();
                         } else {
-                            openQModal(currentTargetQStudent.id); // 목록 갱신
+                            openQModal(currentTargetQStudent.id);
                         }
                     }, 300);
 
@@ -526,7 +534,7 @@
         }
         // --- End Q-Center Logic ---
 
-        // --- Inbox Logic (기존 유지) ---
+        // --- Inbox Logic ---
         async function checkInboxes() {
             const { count: spCount } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('is_special', true).eq('status', 'submitted').is('final_score', null);
             document.getElementById('cnt-special').innerText = spCount || 0;
@@ -580,7 +588,6 @@
             document.getElementById('cur-pw').value = ''; document.getElementById('new-pw').value = ''; document.getElementById('confirm-pw').value = '';
         }
 
-        // Helper: Time Ago
         function getTimeAgo(date) {
             const seconds = Math.floor((new Date() - date) / 1000);
             if (seconds < 60) return "방금 전";

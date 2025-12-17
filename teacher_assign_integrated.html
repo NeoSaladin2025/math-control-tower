@@ -446,18 +446,15 @@
                 if(!wId || !sId) return;
                 currentWbId = wId;
                 
-                // ★★★ 이브의 10000개 확장 수술 (Deep Throat Extension) ★★★
                 const [progRes, metaRes] = await Promise.all([
                     _supabase.from('student_progress').select('*').eq('student_id', sId).eq('workbook_id', wId).limit(10000),
                     _supabase.from('problem_metadata').select('*').eq('workbook_id', wId).order('problem_num', {ascending: true}).limit(10000)
                 ]);
                 
-                // ★★★ 이브의 콘솔 관음 로그 (추가됨) ★★★
                 if (metaRes.data) {
                     console.log("🔥 이브의 관음 로그: DB에서 가져온 문제 메타데이터 수:", metaRes.data.length); 
                     console.log("🔥 이브의 관음 로그: 마지막 문제 번호:", metaRes.data[metaRes.data.length - 1]?.problem_num);
                 }
-                // ★★★ 여기까지 삽입 ★★★
                 
                 progressMap = {}; 
                 if(progRes.data) progRes.data.forEach(p => progressMap[p.problem_num] = p);
@@ -467,13 +464,11 @@
                 statusEl.innerText = `총 문항 ${metaDataList.length}개 로드 완료 (확장됨)`;
                 statusEl.classList.remove('hidden');
                 
-                // ★ [EVE'S MEMORY INHERITANCE FIX V2] ★
                 metaDataList.sort((a,b) => a.problem_num - b.problem_num); 
-                sortedMetaArray = metaDataList; // Global variable update
+                sortedMetaArray = metaDataList; 
                 
                 let lastMajor = null, lastMajorTitle = null, lastMinor = null, lastMinorTitle = null;
 
-                // 2. Forward Pass (순방향 상속)
                 for(let i=0; i<metaDataList.length; i++) {
                     const curr = metaDataList[i];
                     if (curr.chapter_major) {
@@ -489,7 +484,6 @@
                     }
                 }
 
-                // 3. Backward Pass (역방향 상속 - 앞쪽 빈 문제 채우기)
                 let firstValidMajor = null, firstValidMajorTitle = null, firstValidMinor = null, firstValidMinorTitle = null;
                 for(let i=0; i<metaDataList.length; i++) {
                      if (metaDataList[i].chapter_major) {
@@ -513,7 +507,6 @@
                         }
                     }
                 }
-                // ★ END OF FIX V2 ★
 
                 metaMap = {}; 
                 metaDataList.forEach(m => metaMap[m.problem_num] = m);
@@ -522,7 +515,6 @@
                 
                 const total = parseInt(document.querySelector(`#w-select option[value="${wId}"]`).dataset.total);
                 
-                // [NEW STRATEGY] Hierarchical Block Rendering
                 renderGridHierarchy(total, metaDataList);
                 
                 document.getElementById('right-lock').classList.add('hidden');
@@ -553,7 +545,6 @@
             else { box.classList.add('hidden'); }
         }
 
-        // [HIERARCHICAL BLOCK RENDERING] - The "Row-by-Row" Strategy
         function renderGridHierarchy(total, metaDataList) {
             const container = document.getElementById('body-grid-container'); 
             container.innerHTML = ''; 
@@ -569,7 +560,6 @@
                  return;
             }
 
-            // 1. Build Tree Structure: Tree[Major][Minor][Type] = [List]
             const tree = {};
             
             metaDataList.forEach(m => {
@@ -580,7 +570,6 @@
                 const minTitle = m.chapter_title_ko || (min === 999 ? '중단원 미설정' : `중단원 ${min}`);
                 
                 let type = 'norm';
-                // Robust type checking
                 if(m.difficulty && m.difficulty.toLowerCase().includes('high')) type = 'high';
                 else if(m.is_subjective) type = 'sub';
 
@@ -590,14 +579,11 @@
                 tree[maj].minors[min].types[type].push(m);
             });
 
-            // 2. Iterate and Render Rows
-            // Sort Majors
             const sortedMajors = Object.keys(tree).sort((a,b) => Number(a) - Number(b));
             
             sortedMajors.forEach(majKey => {
                 const majorNode = tree[majKey];
                 
-                // Render Major Header Row
                 const sectionDiv = document.createElement('div');
                 sectionDiv.className = 'section-block';
 
@@ -606,13 +592,11 @@
                 majHeader.innerHTML = `<span>${majKey == 999 ? '?' : majKey + '.'}</span> <span>${majorNode.title}</span>`;
                 sectionDiv.appendChild(majHeader);
 
-                // Sort Minors inside Major
                 const sortedMinors = Object.keys(majorNode.minors).sort((a,b) => Number(a) - Number(b));
                 
                 sortedMinors.forEach(minKey => {
                     const minorNode = majorNode.minors[minKey];
                     
-                    // Render Minor Block
                     const subSectionDiv = document.createElement('div');
                     subSectionDiv.className = 'subsection-block';
 
@@ -622,15 +606,12 @@
                     minHeader.innerHTML = `<span>${numbering}</span> <span>${minorNode.title}</span>`;
                     subSectionDiv.appendChild(minHeader);
 
-                    // Render Types in Order: Norm -> Sub -> High (FORCE RENDER ALL TYPES)
                     ['norm', 'sub', 'high'].forEach(typeKey => {
                         const problems = minorNode.types[typeKey];
                         
-                        // [FORCE RENDER] Even if empty, render the block to show structure
                         const typeBlock = document.createElement('div');
                         typeBlock.className = 'type-block';
 
-                        // Render Type Header Row
                         const typeHeader = document.createElement('div');
                         typeHeader.className = `header-type type-${typeKey}`;
                         let label = '🧩 일반유형';
@@ -639,18 +620,16 @@
                         typeHeader.innerHTML = label;
                         typeBlock.appendChild(typeHeader);
 
-                        // Render Grid Row
                         const grid = document.createElement('div');
                         grid.className = 'xray-grid'; 
                         
                         if (problems.length > 0) {
-                            problems.sort((a,b) => a.problem_num - b.problem_num); // Ensure number order
+                            problems.sort((a,b) => a.problem_num - b.problem_num); 
                             problems.forEach(m => {
                                 const tile = createTile(m.problem_num, m, progressMap[m.problem_num]);
                                 grid.appendChild(tile);
                             });
                         } 
-                        // Empty grid stays empty but visible due to CSS min-height
 
                         typeBlock.appendChild(grid);
                         subSectionDiv.appendChild(typeBlock);
@@ -893,6 +872,24 @@
             document.getElementById('insp-total').innerText = totalCnt;
         }
 
+        function confirmRemove(num) { if(confirm(`No.${num} 문항을 제외하시겠습니까?`)) { finalProblemList = finalProblemList.filter(n => n !== num); renderInspectionGrid(); hidePreview(); } }
+        function showPreview(el, num) { const pop = document.getElementById('preview-popup'); const img = document.getElementById('preview-img'); const padded = num.toString().padStart(4, '0'); img.src = `${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${padded}.webp`; const rect = el.getBoundingClientRect(); pop.style.left = (rect.right + 10) + 'px'; pop.style.top = rect.top + 'px'; pop.style.display = 'block'; }
+        function hidePreview() { document.getElementById('preview-popup').style.display = 'none'; }
+        function closeInspectionModal() { document.getElementById('inspect-modal').style.display = 'none'; hidePreview(); }
+
+        async function finalSend() {
+            if(finalProblemList.length === 0) return alert("문항 없음");
+            const btn = document.getElementById('btn-final-send'); const title = document.getElementById('assign-title').value; if(!title) return alert("과제명 필요");
+            btn.innerText = "전송 중..."; btn.disabled = true;
+            try {
+                const { error } = await _supabase.rpc('create_assignment_teacher', { p_student_id: currentStudentId, p_workbook_id: parseInt(currentWbId), p_title: title, p_problem_list: finalProblemList, p_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), p_is_special: false, p_reward_points: 20 });
+                if(error) throw error;
+                alert("✅ 전송 완료!"); closeInspectionModal(); resetAnalysis();
+                document.getElementById('range-container').innerHTML = '<div class="flex gap-2 items-center range-row"><input type="number" class="range-start w-full p-2 border border-slate-300 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="Start" oninput="resetAnalysis()"><span class="text-slate-300 font-black text-lg">~</span><input type="number" class="range-end w-full p-2 border border-slate-300 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="End" oninput="resetAnalysis()"><button onclick="removeRange(this)" class="text-slate-300 hover:text-red-500 px-2 transition text-xl"><i class="fa-solid fa-xmark"></i></button></div>';
+            } catch(e) { alert("실패: " + e.message); } finally { btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 최종 전송'; btn.disabled = false; }
+        }
+
+        // --- ★ [A4 Print Fix] 세로 흐름(Column Flow) & 높이 고정 ★ ---
         function printReviewHandout() {
             const reviewProblems = [];
             finalProblemList.forEach(num => {
@@ -911,40 +908,105 @@
             const todayStr = new Date().toLocaleDateString();
             const assignTitle = document.getElementById('assign-title').value; 
             
-            printWindow.document.write(`<html><head><meta charset="UTF-8"><title>Clinic</title><style>body{margin:0;padding:0;}.page{width:100%;height:100vh;padding:10mm;box-sizing:border-box;page-break-after:always;display:flex;flex-direction:column;}.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:20px;flex:1;}.card{border:none;padding:10px;display:flex;flex-direction:column;height:100%;}.img-box{flex:1;display:flex;align-items:flex-start;justify-content:center;overflow:hidden;padding-top:5mm;}img{max-width:100%;max-height:100%;object-fit:contain;object-position:top center;}.header{border-bottom:2px solid black;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;font-weight:bold;font-size:14px;}.footer{text-align:center;font-size:10px;color:#999;margin-top:10px;}@media print{.page{height:100vh;}}</style></head><body>`);
+            printWindow.document.write(`<html><head><meta charset="UTF-8"><title>Clinic</title><style>
+                @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+                @page { size: A4; margin: 0; }
+                body { margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; background: #ccc; }
+                .page { 
+                    width: 210mm; 
+                    height: 297mm; /* 높이 강제 고정 */
+                    padding: 20mm; 
+                    margin: 0 auto; 
+                    background: white; 
+                    box-sizing: border-box; 
+                    page-break-after: always; 
+                    display: flex; 
+                    flex-direction: column; 
+                    position: relative;
+                }
+                @media print { 
+                    body { background: white; }
+                    .page { margin: 0; width: 100%; height: 297mm; /* 인쇄 시에도 고정 */ } 
+                }
+                .header { 
+                    border-bottom: 2px solid #334155; 
+                    padding-bottom: 10px; 
+                    margin-bottom: 5mm; 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: flex-end;
+                    flex-shrink: 0;
+                }
+                .grid { 
+                    display: grid; 
+                    grid-template-columns: 1fr 1fr; 
+                    grid-template-rows: 1fr 1fr; 
+                    grid-auto-flow: column; /* ★ 좌상->좌하->우상->우하 순서 적용 (다단) ★ */
+                    gap: 15mm; 
+                    flex: 1; 
+                    overflow: hidden; 
+                }
+                .card { 
+                    display: flex; 
+                    flex-direction: column; 
+                    height: 100%; 
+                    box-sizing: border-box;
+                }
+                .img-box { 
+                    flex: 1; 
+                    width: 100%; 
+                    height: 100%;
+                    display: flex; 
+                    align-items: flex-start; /* 상단 정렬 */
+                    justify-content: center; 
+                    overflow: hidden; 
+                }
+                img { 
+                    max-width: 100%; 
+                    max-height: 100%; 
+                    object-fit: contain; 
+                    object-position: top center; 
+                }
+                .footer { 
+                    text-align: center; 
+                    font-size: 10px; 
+                    color: #94a3b8; 
+                    margin-top: 5mm; 
+                    font-weight: bold;
+                    flex-shrink: 0;
+                }
+            </style></head><body>`);
 
             for(let i=0; i<reviewProblems.length; i+=4) {
                 const chunk = reviewProblems.slice(i, i+4);
-                printWindow.document.write(`<div class="page"><div class="header"><span>📚 ${assignTitle} [오답 클리닉]</span><span>이름: ${currentStudentName} | ${todayStr}</span></div><div class="grid">`);
-                chunk.forEach(num => {
-                    const padded = num.toString().padStart(4, '0');
-                    const url = `${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${padded}.webp`;
-                    printWindow.document.write(`<div class="card"><div class="img-box"><img src="${url}" onerror="this.src='${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${num}.webp'"></div></div>`);
-                });
-                for(let j=chunk.length; j<4; j++) printWindow.document.write(`<div class="card"></div>`);
+                printWindow.document.write(`<div class="page">
+                    <div class="header">
+                        <span style="font-size:18px; font-weight:900; color:#1e293b;">📚 ${assignTitle} [오답 클리닉]</span>
+                        <span style="font-size:12px; font-weight:bold; color:#64748b;">이름: ${currentStudentName} | ${todayStr}</span>
+                    </div>
+                    <div class="grid">`);
+                
+                // ★ 4칸 강제 채우기 (빈 칸도 card로 렌더링해서 그리드 유지) ★
+                for(let k=0; k<4; k++) {
+                    if (k < chunk.length) {
+                        const num = chunk[k];
+                        const padded = num.toString().padStart(4, '0');
+                        const url = `${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${padded}.webp`;
+                        printWindow.document.write(`<div class="card"><div class="img-box"><img src="${url}" onerror="this.src='${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${num}.webp'"></div></div>`);
+                    } else {
+                        printWindow.document.write(`<div class="card"></div>`); // 빈 슬롯
+                    }
+                }
+                
                 printWindow.document.write(`</div><div class="footer">- ${customFooter} -</div></div>`);
             }
             printWindow.document.write('</body></html>');
             printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => printWindow.print(), 500);
-        }
-
-        function confirmRemove(num) { if(confirm(`No.${num} 문항을 제외하시겠습니까?`)) { finalProblemList = finalProblemList.filter(n => n !== num); renderInspectionGrid(); hidePreview(); } }
-        function showPreview(el, num) { const pop = document.getElementById('preview-popup'); const img = document.getElementById('preview-img'); const padded = num.toString().padStart(4, '0'); img.src = `${SUPABASE_URL}/storage/v1/object/public/problems/${currentWbId}/${padded}.webp`; const rect = el.getBoundingClientRect(); pop.style.left = (rect.right + 10) + 'px'; pop.style.top = rect.top + 'px'; pop.style.display = 'block'; }
-        function hidePreview() { document.getElementById('preview-popup').style.display = 'none'; }
-        function closeInspectionModal() { document.getElementById('inspect-modal').style.display = 'none'; hidePreview(); }
-
-        async function finalSend() {
-            if(finalProblemList.length === 0) return alert("문항 없음");
-            const btn = document.getElementById('btn-final-send'); const title = document.getElementById('assign-title').value; if(!title) return alert("과제명 필요");
-            btn.innerText = "전송 중..."; btn.disabled = true;
-            try {
-                const { error } = await _supabase.rpc('create_assignment_teacher', { p_student_id: currentStudentId, p_workbook_id: parseInt(currentWbId), p_title: title, p_problem_list: finalProblemList, p_deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), p_is_special: false, p_reward_points: 20 });
-                if(error) throw error;
-                alert("✅ 전송 완료!"); closeInspectionModal(); resetAnalysis();
-                document.getElementById('range-container').innerHTML = '<div class="flex gap-2 items-center range-row"><input type="number" class="range-start w-full p-2 border border-slate-300 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="Start" oninput="resetAnalysis()"><span class="text-slate-300 font-black text-lg">~</span><input type="number" class="range-end w-full p-2 border border-slate-300 rounded-xl text-center inp-range-bold focus:border-indigo-500 outline-none transition" placeholder="End" oninput="resetAnalysis()"><button onclick="removeRange(this)" class="text-slate-300 hover:text-red-500 px-2 transition text-xl"><i class="fa-solid fa-xmark"></i></button></div>';
-            } catch(e) { alert("실패: " + e.message); } finally { btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> 최종 전송'; btn.disabled = false; }
+            
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+            }, 1000); 
         }
     </script>
 </body>

@@ -33,8 +33,9 @@
             <button onclick="loadModule('config_level.html', this)" class="menu-btn w-full text-left p-3 rounded-xl font-bold flex items-center gap-3 text-slate-600">
                 <i class="fa-solid fa-layer-group w-6 text-center"></i> 레벨/성장 설계
             </button>
-            <button onclick="loadModule('config_tier.html', this)" class="menu-btn w-full text-left p-3 rounded-xl font-bold flex items-center gap-3 text-slate-600">
-                <i class="fa-solid fa-crown w-6 text-center"></i> 티어/등급 관리
+            
+            <button onclick="loadModule('config_season.html', this)" class="menu-btn w-full text-left p-3 rounded-xl font-bold flex items-center gap-3 text-slate-600 hover:text-indigo-600">
+                <i class="fa-solid fa-crown w-6 text-center text-amber-500"></i> 시즌 관리 (NEW)
             </button>
         </nav>
 
@@ -50,20 +51,17 @@
     </div>
 
     <script>
-        const user = checkAuth();
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
         if(user && user.role === 'student') { alert("교사 전용입니다."); location.href='index.html'; }
 
         function loadModule(url, btn) {
-            // iframe 주소 변경
             document.getElementById('content-frame').src = url;
-            
-            // 버튼 스타일 갱신
             document.querySelectorAll('.menu-btn').forEach(b => {
                 b.classList.remove('active', 'bg-indigo-600', 'text-white');
                 b.classList.add('text-slate-600');
             });
             btn.classList.remove('text-slate-600');
-            btn.classList.add('active');
+            btn.classList.add('active', 'bg-indigo-600', 'text-white');
         }
     </script>
 </body>

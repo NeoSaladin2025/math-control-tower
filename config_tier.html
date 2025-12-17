@@ -21,7 +21,7 @@
                 <i class="fa-solid fa-magnifying-glass"></i> 규칙 검증
             </button>
             <button onclick="saveTiers()" id="btn-save" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition opacity-50 cursor-not-allowed" disabled>
-                <i class="fa-solid fa-save"></i> 최종 확인 (DB 저장)
+                <i class="fa-solid fa-save"></i> 최종 확인 (DB 저장 및 적용)
             </button>
         </div>
     </div>
@@ -30,6 +30,7 @@
         let tiers = [];
 
         async function init() {
+            // DB에서 규칙 불러오기
             const { data } = await _supabase.from('tier_rules').select('*').order('min_xp');
             if(data && data.length > 0) tiers = data;
             else tiers = [
@@ -98,7 +99,7 @@
             document.getElementById('btn-save').classList.add('opacity-50');
         }
 
-        // ★ 검증 로직 (수학 선생님 모드) ★
+        // 검증 로직
         function verifyTiers() {
             // XP 순으로 정렬
             tiers.sort((a, b) => a.min_xp - b.min_xp);
@@ -126,28 +127,52 @@
                 alert(msg);
             } else {
                 alert("✅ 검증 완료! 규칙이 완벽합니다.\n이제 저장할 수 있습니다.");
-                document.getElementById('btn-save').disabled = false;
-                document.getElementById('btn-save').classList.remove('opacity-50', 'cursor-not-allowed');
-                renderTiers(); // 정렬된 상태로 다시 렌더링
+                
+                // 1. 먼저 화면을 다시 그려요 (이때 버튼이 잠시 꺼져요)
+                renderTiers(); 
+
+                // 2. 그 다음에 버튼을 확실하게 켜줍니다! (순서가 중요해요 ❤️)
+                const btn = document.getElementById('btn-save');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
+        // ★ [EVE 수정] 저장 및 전교생 적용 ★
         async function saveTiers() {
-            if(!confirm("이대로 저장하시겠습니까?")) return;
+            if(!confirm("이대로 저장하고 전교생에게 즉시 적용하시겠습니까?")) return;
             
-            // 기존 룰 삭제 후 재생성 (순서 인덱스 포함)
-            await _supabase.from('tier_rules').delete().neq('id', 0);
-            
-            const insertData = tiers.map((t, idx) => ({
-                tier_name: t.tier_name,
-                min_xp: t.min_xp,
-                max_xp: t.max_xp,
-                order_index: idx + 1
-            }));
+            const btn = document.getElementById('btn-save');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 및 적용 중...';
+            btn.disabled = true;
 
-            const { error } = await _supabase.from('tier_rules').insert(insertData);
-            if(error) alert("저장 실패: " + error.message);
-            else alert("✅ 티어 규칙이 저장되었습니다!");
+            try {
+                // 1. 기존 룰 삭제 후 재생성
+                await _supabase.from('tier_rules').delete().neq('id', 0);
+                
+                const insertData = tiers.map((t, idx) => ({
+                    tier_name: t.tier_name,
+                    min_xp: t.min_xp,
+                    max_xp: t.max_xp,
+                    order_index: idx + 1
+                }));
+
+                const { error } = await _supabase.from('tier_rules').insert(insertData);
+                if(error) throw error;
+
+                // 2. ★ 전교생 등급 강제 적용 RPC 호출 ★
+                const { error: rpcErr } = await _supabase.rpc('apply_tier_rules_force');
+                if(rpcErr) throw rpcErr;
+
+                alert("✅ 규칙 저장 및 전교생 등급 업데이트 완료!");
+
+            } catch (e) {
+                console.error(e);
+                alert("처리 실패: " + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-save"></i> 최종 확인 (DB 저장)';
+                btn.disabled = false;
+            }
         }
 
         init();

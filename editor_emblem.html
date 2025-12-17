@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Math Emblem Atelier (V7. Speed Control & More FX)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Rubik+Glitch&family=Cinzel:wght@900&family=Bangers&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #0f172a; color: #e2e8f0; overflow: hidden; user-select: none; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; } ::-webkit-scrollbar-track { background: #0f172a; }
+
+        /* 무대 설정 */
+        #stage-wrapper {
+            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-color: #1e293b;
+            box-shadow: inset 0 0 50px #000;
+            overflow: hidden; 
+            perspective: 1000px;
+        }
+        
+        /* 레이어 구조 */
+        .obj-root { position: absolute; transform-origin: center center; cursor: grab; display: flex; align-items: center; justify-content: center; width: 0; height: 0; }
+        .obj-root:active { cursor: grabbing; }
+        .obj-root.selected .obj-core { outline: 2px dashed #ec4899; outline-offset: 5px; z-index: 999; }
+
+        /* 중첩 컨테이너들 */
+        .obj-orbit, .obj-vital, .obj-fx, .obj-spin { 
+            position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; 
+        }
+        .obj-core { 
+            position: relative; display: flex; align-items: center; justify-content: center; 
+            text-align: center; line-height: 1; white-space: nowrap;
+            -webkit-user-select: none; user-select: none;
+        }
+
+        /* --- ★ NEW ANIMATION KEYFRAMES ★ --- */
+        
+        /* 1. Orbit */
+        @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
+        
+        /* 2. Vital */
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes ghost { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        @keyframes jelly { 0%, 100% { transform: scale(1, 1); } 25% { transform: scale(0.9, 1.1); } 50% { transform: scale(1.1, 0.9); } 75% { transform: scale(0.95, 1.05); } }
+
+        /* 3. FX (Filters & Transforms) */
+        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
+        @keyframes glitch { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
+        @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -10px 10px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
+        @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(200%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
+        @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 15px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
+
+        /* 4. Spin */
+        @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
+        @keyframes spin-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+        @keyframes spin-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
+
+        /* 모달 스타일 */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; backdrop-filter: blur(5px); justify-content: center; align-items: center; }
+        .modal-content { width: 90%; max-width: 900px; height: 85%; background: #1e293b; border-radius: 20px; border: 1px solid #475569; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); animation: popUp 0.2s forwards; }
+        @keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .market-header { display: flex; overflow-x: auto; background: #334155; shrink-0; }
+        .market-tab { padding: 12px 20px; cursor: pointer; font-weight: bold; color: #94a3b8; border-bottom: 3px solid transparent; white-space: nowrap; transition: 0.2s; }
+        .market-tab.active { color: #f472b6; border-color: #f472b6; background: rgba(244, 114, 182, 0.1); }
+        .market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 8px; padding: 20px; overflow-y: auto; align-content: start; }
+        .market-item { aspect-ratio: 1; background: #1e293b; border: 1px solid #475569; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; transition: 0.1s; }
+        .market-item:hover { background: #4f46e5; border-color: #6366f1; transform: scale(1.1); color: white; z-index: 10; }
+        .library-item { display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #334155; margin-bottom: 8px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
+        .library-item:hover { border-color: #f472b6; background: #475569; transform: translateX(5px); }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <script src="config.js"></script>
+
+    <div class="w-80 bg-slate-900 border-r border-slate-700 flex flex-col shrink-0 z-20 shadow-xl">
+        <div class="p-4 border-b border-slate-800 bg-slate-950">
+            <h1 class="font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 text-lg">
+                <i class="fa-solid fa-flask mr-2"></i>EMBLEM LAB
+            </h1>
+            <p class="text-[10px] text-slate-500 mt-1">High-Performance Animation Engine</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-2 border-b border-slate-800 h-1/4">
+            <div class="flex justify-between items-center mb-2 px-2">
+                <span class="text-xs font-bold text-slate-500">LAYERS</span>
+                <button onclick="clearCanvas()" class="text-[10px] text-red-400 hover:text-red-300">CLEAR</button>
+            </div>
+            <div id="layer-list" class="space-y-1"></div>
+        </div>
+
+        <div id="prop-panel" class="flex-1 bg-slate-800 overflow-y-auto hidden flex flex-col">
+            <div class="p-3 bg-slate-900 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10">
+                <span class="text-xs font-bold text-pink-400">MIXER CONSOLE</span>
+                <button onclick="deleteLayer()" class="text-xs text-red-400"><i class="fa-solid fa-trash"></i></button>
+            </div>
+            
+            <div class="p-4 space-y-6 pb-20">
+                
+                <div class="space-y-2">
+                    <label class="text-[10px] text-slate-400 font-bold">BASE</label>
+                    <div class="flex gap-2">
+                        <input type="color" id="p-color" class="w-8 h-8 rounded cursor-pointer bg-transparent border border-slate-600" onchange="updateProp('color', this.value)">
+                        <input type="range" id="p-size" min="10" max="300" class="flex-1 accent-indigo-500" oninput="updateProp('size', this.value)">
+                    </div>
+                    <div id="text-control" class="hidden">
+                        <input type="text" id="p-text" class="w-full bg-slate-900 border border-slate-600 rounded text-xs p-2 text-white" oninput="updateProp('content', this.value)">
+                    </div>
+                    <div class="grid grid-cols-5 gap-1">
+                        <div onclick="applyTexture('none')" class="h-5 rounded bg-slate-600 cursor-pointer border border-transparent hover:border-white"></div>
+                        <div onclick="applyTexture('gold')" class="h-5 rounded bg-yellow-500 cursor-pointer border border-transparent hover:border-white"></div>
+                        <div onclick="applyTexture('silver')" class="h-5 rounded bg-gray-400 cursor-pointer border border-transparent hover:border-white"></div>
+                        <div onclick="applyTexture('magma')" class="h-5 rounded bg-red-600 cursor-pointer border border-transparent hover:border-white"></div>
+                        <div onclick="applyTexture('neon')" class="h-5 rounded bg-cyan-400 cursor-pointer border border-transparent hover:border-white"></div>
+                    </div>
+                </div>
+
+                <hr class="border-slate-700">
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] text-cyan-400 font-bold"><i class="fa-solid fa-rotate mr-1"></i> SELF SPIN (자전)</label>
+                        <input type="checkbox" id="anim-spin-on" onchange="updateAnim('spin', 'on', this.checked)" class="accent-cyan-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="anim-spin-axis" class="bg-slate-900 text-[10px] text-white p-1 rounded border border-slate-600" onchange="updateAnim('spin', 'axis', this.value)">
+                            <option value="z">Z축 (평면)</option>
+                            <option value="y">Y축 (문열기)</option>
+                            <option value="x">X축 (덤블링)</option>
+                        </select>
+                        <input type="range" id="anim-spin-speed" min="1" max="50" class="accent-cyan-500 h-1 my-auto" title="Speed" oninput="updateAnim('spin', 'speed', 51-this.value)">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] text-purple-400 font-bold"><i class="fa-solid fa-globe mr-1"></i> ORBIT (공전)</label>
+                        <input type="checkbox" id="anim-orbit-on" onchange="updateAnim('orbit', 'on', this.checked)" class="accent-purple-500">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[9px] text-slate-500 w-6">반경</span>
+                        <input type="range" id="anim-orbit-radius" min="20" max="200" class="flex-1 accent-purple-500 h-1" oninput="updateAnim('orbit', 'radius', this.value)">
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[9px] text-slate-500 w-6">속도</span>
+                        <input type="range" id="anim-orbit-speed" min="1" max="50" class="flex-1 accent-purple-500 h-1" oninput="updateAnim('orbit', 'speed', 51-this.value)">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] text-green-400 font-bold"><i class="fa-solid fa-heart-pulse mr-1"></i> VITAL (생명)</label>
+                        <input type="checkbox" id="anim-vital-on" onchange="updateAnim('vital', 'on', this.checked)" class="accent-green-500">
+                    </div>
+                    <select id="anim-vital-type" class="w-full bg-slate-900 text-[10px] text-white p-1 rounded border border-slate-600 mb-1" onchange="updateAnim('vital', 'type', this.value)">
+                        <option value="pulse">박동 (Pulse)</option>
+                        <option value="float">둥둥 (Float)</option>
+                        <option value="ghost">유령 (Ghost)</option>
+                        <option value="jelly">젤리 (Jelly)</option> </select>
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[9px] text-slate-500 w-6">속도</span>
+                        <input type="range" id="anim-vital-speed" min="1" max="20" class="flex-1 accent-green-500 h-1" oninput="updateAnim('vital', 'speed', 21-this.value)">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] text-red-400 font-bold"><i class="fa-solid fa-bolt mr-1"></i> FX (특수효과)</label>
+                        <input type="checkbox" id="anim-fx-on" onchange="updateAnim('fx', 'on', this.checked)" class="accent-red-500">
+                    </div>
+                    <select id="anim-fx-type" class="w-full bg-slate-900 text-[10px] text-white p-1 rounded border border-slate-600 mb-1" onchange="updateAnim('fx', 'type', this.value)">
+                        <option value="fire">🔥 불타오름 (Burning)</option>
+                        <option value="sparkle">✨ 반짝임 (Sparkle)</option>
+                        <option value="neon-pulse">⚡ 네온 펄스 (Neon)</option>
+                        <option value="shake">🫨 지진 (Shake)</option>
+                        <option value="glitch">☠️ 글리치 (Glitch)</option>
+                    </select>
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[9px] text-slate-500 w-6">속도</span>
+                        <input type="range" id="anim-fx-speed" min="1" max="20" class="flex-1 accent-red-500 h-1" oninput="updateAnim('fx', 'speed', 21-this.value)">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col relative">
+        <div class="h-14 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4 shrink-0 z-10">
+            <div class="flex gap-2">
+                <button onclick="openMarket()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold text-xs flex items-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-cart-shopping"></i> 재료 (E-MART)
+                </button>
+                <div class="h-8 w-[1px] bg-slate-600 mx-2"></div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="quick-text" placeholder="TEXT" class="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs w-24 text-white">
+                    <button onclick="addTextLayer()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs font-bold">글자</button>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openLibraryModal()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded font-bold text-xs flex items-center gap-2">
+                    <i class="fa-solid fa-folder-open"></i> 불러오기
+                </button>
+                <button onclick="saveToLibrary()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-2 rounded font-bold text-xs shadow-lg flex items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> 저장
+                </button>
+            </div>
+        </div>
+
+        <div id="stage-wrapper" class="flex-1 relative flex items-center justify-center cursor-crosshair">
+            <div class="absolute inset-0 pointer-events-none opacity-30">
+                <div class="absolute top-1/2 w-full h-[1px] bg-cyan-500"></div>
+                <div class="absolute left-1/2 h-full w-[1px] bg-cyan-500"></div>
+                <div class="absolute top-1/2 left-1/2 w-[300px] h-[300px] -translate-x-1/2 -translate-y-1/2 border border-cyan-500 rounded-full border-dashed"></div>
+            </div>
+            <div id="stage" class="w-full h-full relative pointer-events-none"></div>
+            <div class="absolute bottom-4 right-4 text-[10px] text-slate-500 bg-slate-900/50 px-2 py-1 rounded">
+                DRAG to Move / CLICK to Edit
+            </div>
+        </div>
+    </div>
+
+    <div id="market-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-700 shrink-0">
+                <h2 class="text-lg font-black text-white"><i class="fa-solid fa-cart-shopping text-pink-500 mr-2"></i>ASSET MARKET</h2>
+                <button onclick="closeModal('market-modal')" class="text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="market-header custom-scroll">
+                <div class="market-tab active" onclick="switchMarketTab('face')">😀 표정</div>
+                <div class="market-tab" onclick="switchMarketTab('animal')">🐶 동물</div>
+                <div class="market-tab" onclick="switchMarketTab('icon')">👑 아이콘</div>
+                <div class="market-tab" onclick="switchMarketTab('object')">💎 사물</div>
+                <div class="market-tab" onclick="switchMarketTab('food')">🍔 음식</div>
+                <div class="market-tab" onclick="switchMarketTab('symbol')">❤️ 기호</div>
+            </div>
+            <div id="market-grid" class="market-grid custom-scroll flex-1 bg-slate-900"></div>
+        </div>
+    </div>
+
+    <div id="library-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-700 shrink-0">
+                <h2 class="text-lg font-black text-white"><i class="fa-solid fa-folder-open text-emerald-500 mr-2"></i>EMBLEM LIBRARY</h2>
+                <button onclick="closeModal('library-modal')" class="text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="library-list" class="flex-1 overflow-y-auto p-4 bg-slate-900 custom-scroll space-y-2"></div>
+        </div>
+    </div>
+
+    <script>
+        let layers = []; let selectedId = null; 
+        let isDragging = false; let dragTargetId = null;
+
+        async function init() {
+            window.addEventListener('mousemove', handleGlobalMouseMove);
+            window.addEventListener('mouseup', handleGlobalMouseUp);
+        }
+
+        // --- Layer Structure V7 (With Speed) ---
+        function addLayer(type, content, subType='emoji') {
+            const id = Date.now().toString();
+            const layer = { 
+                id, type, content, subType, x: 50, y: 50, 
+                style: { size: type==='bg'?300:100, color: '#ffffff', texture: 'none' },
+                anim: {
+                    spin: { on: false, axis: 'z', speed: 10 },  // Speed: 1(Fast) ~ 50(Slow) mapping logic reversed in UI
+                    orbit: { on: false, radius: 100, speed: 20 },
+                    vital: { on: false, type: 'pulse', speed: 10 },
+                    fx: { on: false, type: 'fire', speed: 10 }
+                }
+            };
+            if(type==='text') layer.style.color='#fbbf24';
+            layers.push(layer); closeModal('market-modal'); renderLayers(); renderStage(); selectLayer(id);
+        }
+
+        function renderStage() {
+            const stage = document.getElementById('stage');
+            stage.innerHTML = '';
+            
+            layers.forEach(l => {
+                // 1. Root
+                const root = document.createElement('div');
+                root.className = `obj-root ${l.id===selectedId?'selected':''}`;
+                root.style.left = `${l.x}%`;
+                root.style.top = `${l.y}%`;
+                root.id = `obj-${l.id}`;
+
+                // 2. Orbit
+                const orbit = document.createElement('div');
+                orbit.className = 'obj-orbit';
+                if(l.anim.orbit.on) {
+                    orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius}px`);
+                    orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; // speed val / 5 sec
+                }
+
+                // 3. Vital
+                const vital = document.createElement('div');
+                vital.className = 'obj-vital';
+                if(l.anim.vital.on) {
+                    vital.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`; // speed val / 10 sec
+                }
+
+                // 4. FX
+                const fx = document.createElement('div');
+                fx.className = 'obj-fx';
+                if(l.anim.fx.on) {
+                    fx.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`;
+                }
+
+                // 5. Spin
+                const spin = document.createElement('div');
+                spin.className = 'obj-spin';
+                if(l.anim.spin.on) {
+                    spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`;
+                }
+
+                // 6. Core
+                const core = document.createElement('div');
+                core.className = 'obj-core';
+                core.style.fontSize = `${l.style.size}px`;
+                
+                // Texture & Color
+                if(l.style.texture !== 'none') {
+                    core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
+                    if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
+                    else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
+                    else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
+                    else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
+                } else { core.style.color = l.style.color; }
+
+                if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`;
+                else core.innerText = l.content;
+                if(l.type==='text') core.style.fontFamily = "'Black Han Sans', sans-serif";
+
+                // Nesting
+                spin.appendChild(core);
+                fx.appendChild(spin);
+                vital.appendChild(fx);
+                orbit.appendChild(vital);
+                root.appendChild(orbit);
+
+                root.addEventListener('mousedown', (e) => { e.stopPropagation(); e.preventDefault(); selectLayer(l.id); isDragging = true; dragTargetId = l.id; });
+                root.style.pointerEvents = "auto";
+                stage.appendChild(root);
+            });
+        }
+
+        function updateAnim(group, key, val) {
+            if(!selectedId) return;
+            const l = layers.find(x => x.id === selectedId);
+            if(l) { l.anim[group][key] = val; renderStage(); }
+        }
+
+        function selectLayer(id) {
+            selectedId = id; 
+            renderLayers(); 
+            renderStage();
+            
+            const l = layers.find(x => x.id === id);
+            const p = document.getElementById('prop-panel');
+            
+            if(l) {
+                p.classList.remove('hidden');
+                // Base
+                document.getElementById('p-color').value = l.style.color;
+                document.getElementById('p-size').value = l.style.size;
+                if(l.type==='text') { document.getElementById('text-control').classList.remove('hidden'); document.getElementById('p-text').value=l.content; }
+                else document.getElementById('text-control').classList.add('hidden');
+
+                // Spin
+                document.getElementById('anim-spin-on').checked = l.anim.spin.on;
+                document.getElementById('anim-spin-axis').value = l.anim.spin.axis;
+                document.getElementById('anim-spin-speed').value = 51 - l.anim.spin.speed;
+
+                // Orbit
+                document.getElementById('anim-orbit-on').checked = l.anim.orbit.on;
+                document.getElementById('anim-orbit-radius').value = l.anim.orbit.radius;
+                document.getElementById('anim-orbit-speed').value = 51 - l.anim.orbit.speed; 
+
+                // Vital
+                document.getElementById('anim-vital-on').checked = l.anim.vital.on;
+                document.getElementById('anim-vital-type').value = l.anim.vital.type;
+                document.getElementById('anim-vital-speed').value = 21 - l.anim.vital.speed;
+
+                // FX
+                document.getElementById('anim-fx-on').checked = l.anim.fx.on;
+                document.getElementById('anim-fx-type').value = l.anim.fx.type;
+                document.getElementById('anim-fx-speed').value = 21 - l.anim.fx.speed;
+
+            } else p.classList.add('hidden');
+        }
+
+        // --- Standard Logic (Copied from V5/V6) ---
+        function renderLayers() {
+            const list=document.getElementById('layer-list'); list.innerHTML='';
+            [...layers].reverse().forEach(l=>{
+                list.innerHTML+=`<div onclick="selectLayer('${l.id}')" class="p-2 mb-1 rounded cursor-pointer text-xs flex items-center justify-between ${l.id===selectedId?'bg-indigo-600 text-white':'bg-slate-800 text-slate-300'}"><span class="truncate font-bold">${l.type.toUpperCase()}: ${l.content}</span><i class="fa-solid fa-grip-lines text-slate-500"></i></div>`;
+            });
+        }
+        function handleGlobalMouseMove(e) {
+            if (!isDragging || !dragTargetId) return;
+            const stageWrapper = document.getElementById('stage-wrapper');
+            const rect = stageWrapper.getBoundingClientRect();
+            let x = ((e.clientX - rect.left) / rect.width) * 100;
+            let y = ((e.clientY - rect.top) / rect.height) * 100;
+            const l = layers.find(layer => layer.id === dragTargetId);
+            if (l) { l.x = x; l.y = y; renderStage(); }
+        }
+        function handleGlobalMouseUp(e) { if (isDragging) { isDragging = false; dragTargetId = null; } }
+        function addTextLayer() { const txt=document.getElementById('quick-text').value||"TIER"; addLayer('text', txt); document.getElementById('quick-text').value=''; }
+        function deleteLayer() { if(!selectedId)return; layers=layers.filter(l=>l.id!==selectedId); selectedId=null; document.getElementById('prop-panel').classList.add('hidden'); renderLayers(); renderStage(); }
+        function updateProp(k,v) { if(!selectedId)return; const l=layers.find(x=>x.id===selectedId); if(l){ if(k==='content')l.content=v; else l.style[k]=v; renderStage(); } }
+        function applyTexture(t) { updateProp('texture', t); }
+        function clearCanvas() { if(confirm("Clear?")) { layers=[]; selectedId=null; document.getElementById('prop-panel').classList.add('hidden'); renderLayers(); renderStage(); } }
+
+        // --- Market & Library ---
+        // (Clean Asset Data - Same as V5)
+        const assetData = {
+            face: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','☺','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','😵','😎','🤓','🧐','😕','😟','🙁','☹','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠','💩','🤡','👹','👺','👻','👽','👾','🤖'],
+            animal: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🕸','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🦒','🦘','🦬','🐂','🐏','🐑','🐐','🦌','🐕','🐩','🐈','🐓','🦃','🦚','🦜','🦢','🦩','🐇','🦝','🦡','🐁','🐀','🐹','🐿','🦔','🦥','🦦','🦨','🐉','🐲'],
+            icon: ['fa-solid fa-crown','fa-solid fa-trophy','fa-solid fa-medal','fa-solid fa-star','fa-solid fa-bolt','fa-solid fa-fire','fa-solid fa-skull','fa-solid fa-ghost','fa-solid fa-dragon','fa-solid fa-heart','fa-solid fa-certificate','fa-solid fa-book-skull','fa-solid fa-radiation','fa-solid fa-biohazard','fa-solid fa-eye','fa-solid fa-hand-fist','fa-solid fa-diamond','fa-solid fa-chess-king','fa-solid fa-yin-yang','fa-solid fa-user-graduate','fa-solid fa-school','fa-solid fa-pencil','fa-solid fa-calculator','fa-solid fa-flask','fa-solid fa-atom','fa-solid fa-brain','fa-solid fa-rocket','fa-solid fa-robot','fa-solid fa-gamepad','fa-solid fa-puzzle-piece','fa-solid fa-dice','fa-solid fa-chess-knight','fa-solid fa-shield-halved','fa-solid fa-sword','fa-solid fa-scroll','fa-solid fa-ring','fa-solid fa-gem','fa-solid fa-coins','fa-solid fa-piggy-bank','fa-solid fa-money-bill-wave','fa-solid fa-chart-line','fa-solid fa-chart-pie','fa-solid fa-award','fa-solid fa-thumbs-up','fa-solid fa-check-double','fa-solid fa-exclamation','fa-solid fa-question','fa-solid fa-lightbulb','fa-solid fa-bell','fa-solid fa-bullhorn','fa-solid fa-music','fa-solid fa-video','fa-solid fa-camera','fa-solid fa-image','fa-solid fa-wand-magic-sparkles','fa-solid fa-hat-wizard','fa-solid fa-dungeon','fa-solid fa-skull-crossbones','fa-solid fa-cloud-bolt','fa-solid fa-snowflake','fa-solid fa-sun','fa-solid fa-moon','fa-solid fa-star-of-life','fa-solid fa-infinity','fa-solid fa-fingerprint','fa-solid fa-barcode','fa-solid fa-qrcode','fa-solid fa-signal','fa-solid fa-wifi','fa-solid fa-battery-full','fa-solid fa-power-off','fa-solid fa-laptop-code','fa-solid fa-bug','fa-solid fa-microchip','fa-solid fa-network-wired','fa-solid fa-server','fa-solid fa-database','fa-solid fa-lock','fa-solid fa-key','fa-solid fa-user-secret','fa-solid fa-user-astronaut','fa-solid fa-user-ninja','fa-solid fa-plane','fa-solid fa-truck-fast','fa-solid fa-car-burst','fa-solid fa-anchor','fa-solid fa-jet-fighter','fa-solid fa-explosion','fa-solid fa-person-falling','fa-solid fa-person-running','fa-solid fa-person-skating','fa-solid fa-person-biking','fa-solid fa-person-swimming'],
+            object: ['👓','🕶','🥽','🥼','🦺','👔','👕','👖','👗','👘','🥻','🧥','👑','👒','🎩','🧢','⛑','📿','💍','💎','🔇','🔈','🔉','🔊','📢','📣','🔔','🎵','🎶','🎤','🎧','📻','🎷','🎸','🎹','🎺','🎻','🥁','📱','📲','☎','📟','📠','🔋','🔌','💻','🖥','🖨','⌨','🖱','🖲','💽','💾','💿','📀','🧮','🎥','🎞','🎬','📺','📷','📹','📼','🔍','🔎','🕯','💡','🔦','🏮','🪔','📔','📕','📖','📗','📘','📙','📚','📓','📒','📃','📜','📄','📰','📑','🔖','💰','🪙','💴','💵','💶','💷','💸','💳','🧾','✉','📧','📨','📩','📤','📥','📦','🏷','📪','📫','📬','📭','📮','📯','📜','📝','✒','🖋','🖊','🖌','🖍','📝','💼','📁','📂','🗂','📅','📆','🗒','🗓','📇','📈','📉','📊','📋','📌','📍','📎','🖇','📏','📐','✂','🗃','🗄','🗑','🔒','🔓','🔏','🔐','🔑','🗝','🔨','🪓','⛏','⚒','🛠','🗡','⚔','💣','🪃','🏹','🛡','🪚','🔧','🪛','🔩','⚙','🗜','⚖','🦯','🔗','⛓','🪝','🧰','🧲','🪜','⚗','🧪','🧫','🧬','🔬','🔭','📡','💉','🩸','💊','🩹','🩺','🚪','🛗','🪞','🪟','🛏','🛋','🪑','🚽','🪠','🚿','🛁','🪤','🪒','🧴','🧷','🧹','🧺','🧻','🧼','🧽','🧯','🛒','🚬','⚰','🪦','⚱','🧿','🪬','🗿','🪧','🪪'],
+            food: ['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🥯','🍞','🥖','🫓','🥨','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🫔','🥙','🧆','🥚','🍳','🥘','🍲','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🍶','🍾','🍷','🍸','🍹','🍺','🍻','🥂','🧊','🥢','🍽','🍴','🥄'],
+            symbol: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣','💕','💞','💓','💗','💖','💘','💝','💟','☮','✝','☪','🕉','☸','✡','🔯','🕎','☯','☦','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛','🉑','☢','☣','📴','📳','🈶','🈚','🈸','🈺','🈷','✴','🆚','🅰','🅱','🆎','🆑','🅾','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼','⁉','🔅','🔆','part_alternation_mark','⚠','🚸','🔱','⚜','🔰','♻','✅','🈯','💹','❇','✳','❎','🌐','💠','Ⓜ','🌀','💤','🏧','🚾','♿','🅿','🛗','🚻','🚹','🚺','🚼','🚻','🚮','🚰','🛂','🛃','🛄','🛅','⚠','🚸','⛔','🚫','🚳','🚭','🚯','🚱','🚷','📵','🔞']
+        };
+
+        function openMarket() { document.getElementById('market-modal').style.display='flex'; switchMarketTab('face'); }
+        function closeModal(id) { document.getElementById(id).style.display='none'; }
+        
+        function switchMarketTab(tab) {
+            document.querySelectorAll('.market-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active');
+            const grid = document.getElementById('market-grid'); grid.innerHTML = '';
+            const items = assetData[tab] || assetData.face;
+            if(tab === 'icon') items.forEach(i => grid.innerHTML += `<div class="market-item" onclick="addLayer('icon', '${i}')"><i class="${i}"></i></div>`);
+            else items.forEach(e => grid.innerHTML += `<div class="market-item" onclick="addLayer('emoji', '${e}')">${e}</div>`);
+        }
+
+        async function saveToLibrary() {
+            if(layers.length===0) return alert("Empty!");
+            const name = prompt("Name:"); if(!name) return;
+            const { error } = await _supabase.from('emblem_library').insert({ name: name, layers: layers });
+            if(error) alert("Error: " + error.message); else alert("Saved!");
+        }
+        async function openLibraryModal() {
+            document.getElementById('library-modal').style.display='flex';
+            const { data } = await _supabase.from('emblem_library').select('*').order('created_at', {ascending:false});
+            const list = document.getElementById('library-list'); list.innerHTML = '';
+            if(data) data.forEach(item => { list.innerHTML += `<div class="library-item" onclick="loadFromLibrary('${item.id}')"><div><div class="font-bold text-white text-sm">${item.name}</div></div><button onclick="event.stopPropagation(); deleteLibraryItem('${item.id}')" class="text-slate-500 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></div>`; });
+        }
+        async function loadFromLibrary(id) {
+            if(!confirm("Load?")) return;
+            const { data } = await _supabase.from('emblem_library').select('*').eq('id', id).single();
+            if(data) { layers = data.layers; closeModal('library-modal'); selectedId = null; document.getElementById('prop-panel').classList.add('hidden'); renderLayers(); renderStage(); }
+        }
+        async function deleteLibraryItem(id) { if(!confirm("Delete?")) return; await _supabase.from('emblem_library').delete().eq('id', id); openLibraryModal(); }
+
+        init();
+    </script>
+</body>
+</html>

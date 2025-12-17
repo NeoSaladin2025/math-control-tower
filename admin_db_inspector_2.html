@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>DB 구조 정밀 분석기 (Admin X-Ray)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #cbd5e1; font-family: 'Pretendard', sans-serif; overflow: hidden; }
+        .sidebar { background: #1e293b; border-right: 1px solid #334155; height: 100vh; overflow-y: auto; }
+        .main-content { height: 100vh; overflow-y: auto; background: #0f172a; }
+        .item-btn { text-align: left; padding: 10px 15px; border-radius: 8px; transition: 0.2s; font-size: 13px; font-family: monospace; cursor: pointer; color: #94a3b8; }
+        .item-btn:hover { background: #334155; color: white; }
+        .item-btn.active { background: #4f46e5; color: white; font-weight: bold; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.5; white-space: pre-wrap; border: 1px solid #333; }
+        .table-header { background: #334155; color: white; font-weight: bold; font-size: 12px; text-transform: uppercase; }
+        .table-cell { border-bottom: 1px solid #334155; padding: 8px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="flex">
+
+    <script src="config.js"></script>
+
+    <div class="sidebar w-80 flex flex-col shrink-0">
+        <div class="p-4 border-b border-slate-700 bg-slate-900 sticky top-0 z-10">
+            <h1 class="text-lg font-black text-red-500 flex items-center gap-2">
+                <i class="fa-solid fa-microscope"></i> DB Inspector
+            </h1>
+            <p class="text-xs text-slate-500 mt-1">Admin Only: Structure & Logic</p>
+        </div>
+        
+        <div class="p-4 space-y-6">
+            <div>
+                <h2 class="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-table"></i> Tables
+                </h2>
+                <div id="table-list" class="space-y-1">
+                    <div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin text-slate-600"></i></div>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-code"></i> RPC Functions
+                </h2>
+                <div id="func-list" class="space-y-1">
+                    <div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin text-slate-600"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content flex-1 flex flex-col">
+        <div class="h-16 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between px-6 shrink-0 sticky top-0 backdrop-blur-sm z-20">
+            <div class="flex items-center gap-3">
+                <span id="target-type" class="px-2 py-1 rounded bg-slate-800 text-xs text-slate-400 font-bold border border-slate-700">SELECT</span>
+                <h2 id="target-name" class="text-xl font-bold text-white">항목을 선택하세요</h2>
+            </div>
+            <button onclick="location.reload()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+
+        <div id="detail-view" class="p-6 flex-1">
+            <div class="text-center py-20 text-slate-600">
+                <i class="fa-solid fa-magnifying-glass text-4xl mb-4"></i><br>
+                좌측 메뉴에서 테이블이나 함수를 선택하여<br>내부 구조와 데이터를 검사하세요.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 관리자 체크 (간단)
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        // 실제 운영 시에는 RLS나 더 강력한 보안 필요, 일단 편의상 곽명용이브 체크
+        // if (!user || user.username !== '곽명용이브') { alert('접근 권한이 없습니다.'); location.href='index.html'; }
+
+        async function init() {
+            // 1. 테이블 목록 로드
+            const { data: tables, error: tErr } = await _supabase.rpc('get_admin_db_inspector', { p_type: 'tables' });
+            const tList = document.getElementById('table-list');
+            tList.innerHTML = '';
+            if (tables) {
+                tables.forEach(t => {
+                    tList.innerHTML += `<div onclick="inspectTable('${t.table_name}', this)" class="item-btn"><i class="fa-solid fa-table-cells mr-2 opacity-50"></i>${t.table_name}</div>`;
+                });
+            }
+
+            // 2. 함수 목록 로드
+            const { data: funcs, error: fErr } = await _supabase.rpc('get_admin_db_inspector', { p_type: 'functions' });
+            const fList = document.getElementById('func-list');
+            fList.innerHTML = '';
+            if (funcs) {
+                funcs.forEach(f => {
+                    fList.innerHTML += `<div onclick="inspectFunction('${f.routine_name}', this)" class="item-btn"><i class="fa-solid fa-bolt mr-2 opacity-50"></i>${f.routine_name}</div>`;
+                });
+            }
+        }
+
+        // --- 테이블 검사 ---
+        async function inspectTable(name, btn) {
+            setActive(btn);
+            document.getElementById('target-type').innerText = 'TABLE';
+            document.getElementById('target-type').className = 'px-2 py-1 rounded bg-blue-900/50 text-blue-400 text-xs font-bold border border-blue-800';
+            document.getElementById('target-name').innerText = name;
+            
+            const view = document.getElementById('detail-view');
+            view.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-2xl text-blue-500"></i></div>';
+
+            try {
+                // 1. 컬럼 정보 가져오기
+                const { data: cols } = await _supabase.rpc('get_admin_db_inspector', { p_type: 'columns', p_target: name });
+                
+                // 2. 실제 데이터 샘플 가져오기 (최신 20개)
+                const { data: rows, error } = await _supabase.from(name).select('*').limit(20).order(cols[0].column_name, { ascending: false }); // 보통 첫 컬럼이 PK일 확률 높음
+
+                if (error) throw error;
+
+                // 렌더링
+                let html = `
+                    <div class="mb-6">
+                        <h3 class="text-sm font-bold text-slate-400 mb-2">COLUMNS STRUCTURE</h3>
+                        <div class="flex gap-2 flex-wrap">
+                            ${cols.map(c => `
+                                <span class="bg-slate-800 border border-slate-700 px-3 py-1 rounded text-xs text-slate-300 font-mono">
+                                    <span class="text-indigo-400 font-bold">${c.column_name}</span> 
+                                    <span class="text-slate-500 ml-1">${c.data_type}</span>
+                                    ${c.is_nullable === 'YES' ? '<span class="text-slate-600 text-[9px] ml-1">NULL</span>' : '<span class="text-emerald-600 text-[9px] ml-1">REQ</span>'}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-400 mb-2 flex justify-between">
+                            <span>DATA PREVIEW (TOP 20)</span>
+                            <span class="text-xs font-normal text-slate-600">최신순 정렬됨</span>
+                        </h3>
+                        <div class="overflow-x-auto border border-slate-700 rounded-lg">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr>
+                                        ${cols.map(c => `<th class="table-header p-3 whitespace-nowrap">${c.column_name}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-slate-800/50">
+                                    ${rows.length > 0 ? rows.map(r => `
+                                        <tr class="hover:bg-slate-700/50 transition">
+                                            ${cols.map(c => `<td class="table-cell text-slate-300 font-mono" title="${r[c.column_name]}">${r[c.column_name] === null ? '<span class="text-slate-600">null</span>' : r[c.column_name]}</td>`).join('')}
+                                        </tr>
+                                    `).join('') : '<tr><td colspan="100" class="p-8 text-center text-slate-500">데이터가 없습니다.</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                view.innerHTML = html;
+
+            } catch(e) {
+                view.innerHTML = `<div class="bg-red-900/20 border border-red-900 p-4 rounded text-red-400">오류 발생: ${e.message}</div>`;
+            }
+        }
+
+        // --- 함수 검사 ---
+        async function inspectFunction(name, btn) {
+            setActive(btn);
+            document.getElementById('target-type').innerText = 'FUNCTION';
+            document.getElementById('target-type').className = 'px-2 py-1 rounded bg-purple-900/50 text-purple-400 text-xs font-bold border border-purple-800';
+            document.getElementById('target-name').innerText = name;
+
+            const view = document.getElementById('detail-view');
+            view.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-2xl text-purple-500"></i></div>';
+
+            try {
+                // 함수 소스코드 가져오기
+                const { data } = await _supabase.rpc('get_admin_db_inspector', { p_type: 'function_code', p_target: name });
+                
+                if (!data || !data.code) throw new Error("코드를 불러올 수 없습니다. 권한을 확인하세요.");
+
+                view.innerHTML = `
+                    <div class="h-full flex flex-col">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-sm font-bold text-slate-400">SOURCE CODE</h3>
+                            <span class="text-xs text-slate-600">PostgreSQL (PL/pgSQL)</span>
+                        </div>
+                        <div class="flex-1 overflow-hidden border border-slate-700 rounded-lg shadow-2xl">
+                            <pre class="code-block h-full overflow-auto custom-scroll"><code>${escapeHtml(data.code)}</code></pre>
+                        </div>
+                    </div>
+                `;
+
+            } catch(e) {
+                view.innerHTML = `<div class="bg-red-900/20 border border-red-900 p-4 rounded text-red-400">오류 발생: ${e.message}</div>`;
+            }
+        }
+
+        function setActive(el) {
+            document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        init();
+    </script>
+</body>
+</html>
