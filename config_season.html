@@ -6,34 +6,44 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Rubik+Glitch&family=Cinzel:wght@900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Rubik+Glitch&family=Cinzel:wght@900&family=Bangers&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; padding: 2rem; user-select: none; }
         
-        /* 탭 스타일 */
         .tab-btn { padding: 12px 24px; font-weight: 800; color: #94a3b8; border-bottom: 3px solid transparent; transition: all 0.2s; cursor: pointer; white-space: nowrap; }
         .tab-btn:hover { color: #6366f1; }
         .tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
-        
-        /* 엠블럼 렌더링 엔진 CSS (학생 페이지와 동일) */
-        .render-obj { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: all 0.3s; pointer-events: none; display: flex; align-items: center; justify-content: center; }
-        @keyframes spin-self { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes orbit { from { transform: rotate(0deg) translateX(var(--orbit-radius)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-radius)) rotate(-360deg); } }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 100% { transform: translate(0,0) rotate(0); } }
-        @keyframes glitch { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
-        
-        /* 커스텀 스크롤 */
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-        /* 미리보기 모달 (학생 카드 스타일 복제) */
+        /* V7 ENGINE CSS */
+        .emblem-stage-container { perspective: 1000px; overflow: visible !important; z-index: 20; }
+        .obj-root { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 0; height: 0; }
+        .obj-orbit, .obj-vital, .obj-fx, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
+        .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; }
+        @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes ghost { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        @keyframes jelly { 0%, 100% { transform: scale(1, 1); } 25% { transform: scale(0.9, 1.1); } 50% { transform: scale(1.1, 0.9); } 75% { transform: scale(0.95, 1.05); } }
+        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
+        @keyframes glitch { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
+        @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -5px 5px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
+        @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(150%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
+        @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 10px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
+        @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
+        @keyframes spin-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+        @keyframes spin-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
+
         #preview-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; backdrop-filter: blur(5px); justify-content: center; align-items: center; }
-        .student-card-preview { background: white; width: 400px; padding: 24px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); position: relative; overflow: hidden; }
+        .student-card-preview { background: white; width: 400px; padding: 24px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); position: relative; overflow: visible; }
         
-        /* 티어 카드 스타일 */
-        .tier-card { transition: all 0.2s; border: 2px solid #e2e8f0; background: white; }
+        .tier-card { transition: all 0.2s; border: 2px solid transparent; }
+        .tier-card:hover { transform: translateY(-2px); }
+        .tier-card.selected { border-color: #6366f1; background: #e0e7ff; }
+        .tier-card.selected .tier-icon { background: #6366f1; color: white; }
+
         .insert-zone { height: 24px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; cursor: pointer; margin: 4px 0; position: relative; }
         .insert-zone:hover { opacity: 1; }
         .insert-line { position: absolute; width: 100%; height: 2px; background: #e0e7ff; z-index: 0; }
@@ -46,7 +56,7 @@
 <body>
     <script src="config.js"></script>
 
-    <div class="max-w-6xl mx-auto">
+    <div class="max-w-7xl mx-auto">
         <div class="flex justify-between items-end mb-6">
             <div>
                 <h2 class="text-3xl font-black text-slate-800 flex items-center gap-2">
@@ -75,15 +85,15 @@
                     <h3 class="text-xl font-bold text-slate-800 mb-4">🚀 새 시즌 시작</h3>
                     <p class="text-sm text-slate-500 mb-6">전교생의 '시즌 XP'가 0으로 초기화됩니다.</p>
                     <div class="flex gap-2">
-                        <input type="text" id="new-season-name" placeholder="예: 2025 Spring Season" class="flex-1 bg-slate-50 border rounded-xl px-4 py-3 font-bold">
-                        <button onclick="startSeason()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg active:scale-95">시작</button>
+                        <input type="text" id="new-season-name" placeholder="예: 2025 Spring Season" class="flex-1 bg-slate-50 border rounded-xl px-4 py-3 font-bold focus:border-indigo-500 outline-none">
+                        <button onclick="startSeason()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg active:scale-95 transition">시작</button>
                     </div>
                 </div>
                 <div class="bg-white p-8 rounded-2xl border border-red-100 shadow-lg relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-4 opacity-10"><i class="fa-solid fa-lock text-9xl text-red-500"></i></div>
                     <h3 class="text-xl font-bold text-slate-800 mb-4">🔒 시즌 종료</h3>
                     <p class="text-sm text-slate-500 mb-6">시즌을 종료하고 데이터를 동결합니다.</p>
-                    <button onclick="endSeasonStep1()" id="btn-end-season" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg">시즌 종료 (잠금)</button>
+                    <button onclick="endSeasonStep1()" id="btn-end-season" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-4 rounded-xl font-bold shadow-lg transition">시즌 종료 (잠금)</button>
                 </div>
             </div>
         </div>
@@ -92,10 +102,10 @@
             <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center mb-8">
                     <h3 class="font-black text-slate-800 text-xl">등급별 XP 구간 설정</h3>
-                    <button onclick="verifyTiers()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-bold hover:bg-slate-200">검증</button>
+                    <button onclick="verifyTiers()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg font-bold hover:bg-slate-200 shadow-sm transition">검증</button>
                 </div>
                 <div id="tier-list-container" class="space-y-1 mb-8"></div>
-                <button onclick="saveTiers()" id="btn-save-tier" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 disabled:opacity-50" disabled>저장 및 적용</button>
+                <button onclick="saveTiers()" id="btn-save-tier" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition" disabled>검증이 필요합니다</button>
             </div>
         </div>
 
@@ -108,7 +118,6 @@
         </div>
 
         <div id="view-emblem" class="tab-view hidden">
-            
             <div class="bg-slate-900 rounded-2xl p-6 mb-6 flex justify-between items-center shadow-lg relative overflow-hidden">
                 <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
                 <div class="relative z-10">
@@ -122,38 +131,28 @@
                 </button>
             </div>
 
-            <div class="flex gap-6 h-[600px]">
+            <div class="flex gap-6 h-[700px]">
                 <div class="w-1/3 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
-                    <h4 class="font-bold text-slate-700 mb-4 border-b pb-2">1. 매칭 설정 (Match)</h4>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">적용할 티어 (Tier)</label>
-                            <select id="assign-tier-select" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold outline-none focus:border-indigo-500"></select>
-                        </div>
-                        <div class="flex items-center justify-center py-2 text-slate-300"><i class="fa-solid fa-arrow-down"></i></div>
-                        <div class="flex-1 overflow-y-auto custom-scroll bg-slate-50 rounded-xl p-2 border border-slate-200">
-                            <label class="block text-xs font-bold text-slate-500 mb-2 px-2">보관함 (Library) - 최신순</label>
-                            <div id="library-list" class="space-y-2">
-                                </div>
-                        </div>
-                    </div>
+                    <h4 class="font-bold text-slate-700 mb-4 border-b pb-2 flex items-center gap-2">
+                        <span class="bg-slate-800 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                        티어 선택 (Target Tier)
+                    </h4>
+                    <div id="tier-select-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2"><div class="text-center py-10"><div class="loader"></div></div></div>
                 </div>
 
-                <div class="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col relative">
                     <h4 class="font-bold text-slate-700 mb-4 border-b pb-2 flex justify-between items-center">
-                        <span>2. 배포 대기 목록 (Cart)</span>
-                        <span id="cart-count" class="text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">0건</span>
+                        <span class="flex items-center gap-2">
+                            <span class="bg-pink-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+                            보관함 (Repository)
+                        </span>
+                        <div id="target-indicator" class="text-xs font-bold text-slate-400">타겟 미선택</div>
                     </h4>
-                    
-                    <div id="cart-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 bg-slate-50 rounded-xl p-4 border border-slate-100 mb-4">
-                        <div class="text-center py-20 text-slate-400 text-sm">
-                            왼쪽에서 티어와 엠블럼을 선택하여<br>추가해주세요.
-                        </div>
+                    <div id="lock-screen" class="absolute inset-0 top-14 bg-white/90 z-20 flex flex-col items-center justify-center text-slate-400 backdrop-blur-sm rounded-b-2xl">
+                        <i class="fa-solid fa-arrow-left text-4xl mb-4 animate-pulse"></i>
+                        <span class="font-bold">왼쪽에서 티어를 먼저 선택하세요.</span>
                     </div>
-
-                    <button onclick="deployAll()" class="w-full py-4 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:bg-black transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-rocket"></i> 전교생에게 즉시 배포 (Deploy All)
-                    </button>
+                    <div id="library-list" class="flex-1 overflow-y-auto custom-scroll grid grid-cols-2 gap-3 pb-4"></div>
                 </div>
             </div>
         </div>
@@ -161,14 +160,12 @@
         <div id="view-event" class="tab-view hidden"><div class="bg-white p-10 rounded-2xl shadow-sm text-center">Coming Soon</div></div>
         <div id="view-notice" class="tab-view hidden"><div class="bg-white p-6 rounded-2xl shadow-sm"><textarea id="notice-content" class="w-full h-32 border rounded p-4 mb-2"></textarea><button onclick="saveNotice()" class="bg-indigo-600 text-white px-4 py-2 rounded">전송</button></div></div>
         <div id="view-award" class="tab-view hidden"><div class="bg-white p-6 rounded-2xl shadow-sm">시상식 준비중</div></div>
-
     </div>
 
     <div id="preview-modal">
         <div class="student-card-preview group">
             <button onclick="document.getElementById('preview-modal').style.display='none'" class="absolute top-4 right-4 text-slate-300 hover:text-slate-500 z-50"><i class="fa-solid fa-xmark text-xl"></i></button>
-            
-            <div class="absolute top-0 right-0 p-10 opacity-5 pointer-events-none"><i class="fa-solid fa-crown text-9xl"></i></div>
+            <div class="absolute top-0 right-0 p-10 opacity-5 pointer-events-none z-0"><i class="fa-solid fa-crown text-9xl"></i></div>
             
             <div class="flex justify-between items-start relative z-10 mb-4">
                 <div>
@@ -184,9 +181,8 @@
                 </div>
             </div>
 
-            <div class="relative w-full h-48 flex items-center justify-center my-2 z-10">
-                <div id="preview-stage" class="w-40 h-40 relative flex items-center justify-center">
-                    </div>
+            <div class="relative w-full h-48 flex items-center justify-center my-2 z-20 emblem-stage-container">
+                <div id="preview-stage" class="w-40 h-40 relative flex items-center justify-center transition-transform hover:scale-110 duration-500"></div>
             </div>
 
             <div class="relative z-10">
@@ -204,20 +200,18 @@
     <script>
         let currentSeason = null;
         let tiers = [];
-        let assignmentCart = []; // 장바구니 { tierName, emblemId, emblemData, emblemName }
+        let selectedTierName = null;
+        let libraryDataCache = [];
 
-        // 탭 전환
         function switchTab(id) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
             document.getElementById(`tab-${id}`).classList.add('active');
             document.getElementById(`view-${id}`).classList.remove('hidden');
-            
             if(id === 'emblem') loadEmblemTab();
         }
 
         async function init() {
-            // 시즌 & 티어 로드 (기존 로직)
             const { data: seasons } = await _supabase.from('seasons').select('*').eq('is_current', true).maybeSingle();
             currentSeason = seasons;
             if(seasons) document.getElementById('current-season-display').innerText = seasons.season_name;
@@ -225,195 +219,232 @@
 
             const { data: tr } = await _supabase.from('tier_rules').select('*').order('min_xp');
             tiers = tr || [];
-            renderTiers(); // 기존 티어 관리 탭용
+            renderTiers(); 
         }
 
-        // --- ★ 엠블럼 제작 & 배포 탭 로직 ★ ---
-        function openEmblemEditor() {
-            window.open('editor_emblem.html', '_blank', 'width=1400,height=900,left=100,top=50');
+        function openEmblemEditor() { window.open('editor_emblem.html', '_blank', 'width=1400,height=900,left=100,top=50'); }
+
+        // --- ★ [SAFE] Start Season Function ★ ---
+        async function startSeason() {
+            const nameInput = document.getElementById('new-season-name');
+            const seasonName = nameInput.value.trim();
+
+            if (!seasonName) return alert("시즌 이름을 입력해주세요.");
+
+            // 1. 현재 진행 중인 시즌이 있는지 확인 (안전 장치)
+            const { data: activeSeason } = await _supabase.from('seasons').select('*').eq('is_current', true).maybeSingle();
+            
+            if (activeSeason) {
+                return alert("🚫 현재 진행 중인 시즌이 있습니다!\n\n먼저 [시즌 종료]를 눌러 정산을 완료해주세요.\n(데이터 보호를 위해 진행 중인 시즌을 덮어쓸 수 없습니다)");
+            }
+
+            // 2. 휴식기일 경우에만 시작 진행
+            if (!confirm(`[${seasonName}]을(를) 시작하시겠습니까?\n\n주의: 모든 학생의 '시즌 XP'가 0으로 초기화됩니다!`)) return;
+
+            try {
+                // 새 시즌 생성
+                const { error: insertErr } = await _supabase.from('seasons').insert([{
+                    season_name: seasonName,
+                    is_current: true,
+                    status: 'active'
+                }]);
+
+                if (insertErr) throw insertErr;
+
+                // 학생 시즌 XP 초기화
+                const { error: updateErr } = await _supabase.from('users')
+                    .update({ season_xp: 0 })
+                    .eq('role', 'student');
+
+                if (updateErr) throw updateErr;
+
+                alert(`🎉 [${seasonName}]이 성공적으로 시작되었습니다!`);
+                location.reload();
+
+            } catch (e) {
+                console.error(e);
+                alert("시즌 시작 실패: " + e.message);
+            }
+        }
+
+        // --- (Other Functions Maintained) ---
+        function renderTiers() {
+            const container = document.getElementById('tier-list-container');
+            container.innerHTML = '';
+            if (tiers.length === 0) tiers.push({ tier_name: 'Bronze', min_xp: 0, max_xp: 1000 });
+
+            tiers.forEach((t, index) => {
+                container.innerHTML += getInsertBtn(index);
+                container.innerHTML += `
+                    <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm relative group hover:border-indigo-300 transition">
+                        <div class="w-8 h-8 rounded-full bg-white border flex items-center justify-center font-bold text-slate-400 shadow-sm">${index + 1}</div>
+                        <input type="text" value="${t.tier_name}" class="bg-transparent font-black text-lg w-32 outline-none border-b-2 border-transparent focus:border-indigo-500 focus:text-indigo-600 transition" onchange="updTier(${index}, 'tier_name', this.value)">
+                        <div class="flex items-center gap-2 text-sm font-bold text-slate-500">
+                            <input type="number" value="${t.min_xp}" class="xp-input" onchange="updTier(${index}, 'min_xp', this.value)">
+                            <span>~</span>
+                            <input type="number" value="${t.max_xp}" class="xp-input" onchange="updTier(${index}, 'max_xp', this.value)">
+                            <span>XP</span>
+                        </div>
+                        <button onclick="delTier(${index})" class="ml-auto text-slate-300 hover:text-red-500 transition px-2"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+            });
+            container.innerHTML += getInsertBtn(tiers.length);
+        }
+
+        function getInsertBtn(index) { return `<div class="insert-zone" onclick="addTier(${index})"><div class="insert-line"></div><div class="plus-circle">+</div></div>`; }
+
+        function addTier(index) {
+            const prevMax = index > 0 ? Number(tiers[index - 1].max_xp) : 0;
+            const newTier = { tier_name: 'New Tier', min_xp: prevMax + 1, max_xp: prevMax + 1000 };
+            tiers.splice(index, 0, newTier);
+            renderTiers();
+            disableSaveBtn();
+        }
+
+        function delTier(index) {
+            if(!confirm("이 티어를 삭제하시겠습니까?")) return;
+            tiers.splice(index, 1);
+            renderTiers();
+            disableSaveBtn();
+        }
+
+        function updTier(index, key, value) {
+            if (key === 'min_xp' || key === 'max_xp') value = Number(value);
+            tiers[index][key] = value;
+            disableSaveBtn();
+        }
+
+        function verifyTiers() {
+            let isValid = true;
+            let errorMsg = "";
+            for (let i = 0; i < tiers.length; i++) {
+                const t = tiers[i];
+                if (Number(t.min_xp) >= Number(t.max_xp)) {
+                    errorMsg = `[${i + 1}번: ${t.tier_name}] 최소값이 최대값보다 크거나 같습니다.`;
+                    isValid = false; break;
+                }
+            }
+            if (isValid) {
+                for (let i = 0; i < tiers.length - 1; i++) {
+                    const currentMax = Number(tiers[i].max_xp);
+                    const nextMin = Number(tiers[i+1].min_xp);
+                    if (currentMax >= nextMin) {
+                        errorMsg = `[구간 겹침] ${tiers[i].tier_name}와 ${tiers[i+1].tier_name} 구간 충돌.`;
+                        isValid = false; break;
+                    }
+                }
+            }
+            if (isValid) { alert("✅ 검증 완료! 저장 버튼이 활성화되었습니다."); enableSaveBtn(); } 
+            else { alert("❌ 검증 실패:\n" + errorMsg); disableSaveBtn(); }
+        }
+
+        function disableSaveBtn() { const btn = document.getElementById('btn-save-tier'); btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.innerText = "검증이 필요합니다"; }
+        function enableSaveBtn() { const btn = document.getElementById('btn-save-tier'); btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); btn.innerText = "저장 및 적용"; }
+
+        async function saveTiers() {
+            if(!confirm("티어 설정을 저장하고 적용하시겠습니까?")) return;
+            const { error: delErr } = await _supabase.from('tier_rules').delete().neq('id', 0); 
+            if(delErr) return alert("초기화 실패: " + delErr.message);
+            const payload = tiers.map((t, idx) => { const { id, created_at, ...rest } = t; return { ...rest, min_xp: Number(rest.min_xp), max_xp: Number(rest.max_xp), order_index: idx + 1 }; });
+            const { error: insErr } = await _supabase.from('tier_rules').insert(payload);
+            if(insErr) alert("저장 실패: " + insErr.message); else { alert("✅ 티어 설정 저장 완료."); location.reload(); }
         }
 
         async function loadEmblemTab() {
-            // 1. 티어 셀렉트 박스 채우기
-            const sel = document.getElementById('assign-tier-select');
-            sel.innerHTML = '<option value="">티어를 선택하세요</option>';
-            tiers.forEach(t => sel.innerHTML += `<option value="${t.tier_name}">${t.tier_name}</option>`);
-
-            // 2. 라이브러리 목록 채우기 (최신순)
-            const list = document.getElementById('library-list');
-            list.innerHTML = '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin text-slate-400"></i></div>';
-            
-            // updated_at이 있으면 그걸로, 없으면 created_at으로 정렬
-            const { data: lib, error } = await _supabase
-                .from('emblem_library')
-                .select('*')
-                .order('created_at', { ascending: false }); // 테이블에 updated_at이 있다면 그걸 쓰세요. 일단 created_at 기준.
-
-            list.innerHTML = '';
-            if(!lib || lib.length === 0) {
-                list.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">저장된 엠블럼이 없습니다.<br>제작소에서 만들어보세요.</div>';
-                return;
-            }
-
-            lib.forEach(item => {
-                // 클릭하면 장바구니 담기 시도
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-pink-500 hover:shadow-md transition group";
-                div.onclick = () => addToCart(item);
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-lg">🎨</div>
-                        <div>
-                            <div class="font-bold text-slate-700 text-sm group-hover:text-pink-600">${item.name}</div>
-                            <div class="text-[10px] text-slate-400">${new Date(item.created_at).toLocaleDateString()}</div>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-plus text-slate-300 group-hover:text-pink-500"></i>
-                `;
-                list.appendChild(div);
-            });
+            const { data: tr } = await _supabase.from('tier_rules').select('*').order('min_xp');
+            tiers = tr || [];
+            renderTierSelectList();
+            const { data: lib } = await _supabase.from('emblem_library').select('*').order('created_at', { ascending: false });
+            libraryDataCache = lib || [];
+            renderLibraryList(libraryDataCache);
         }
 
-        function addToCart(emblemItem) {
-            const tierName = document.getElementById('assign-tier-select').value;
-            if(!tierName) return alert("먼저 적용할 티어를 선택해주세요.");
-
-            // 이미 장바구니에 해당 티어가 있으면 덮어쓰기
-            const existingIdx = assignmentCart.findIndex(x => x.tierName === tierName);
-            if(existingIdx >= 0) {
-                if(!confirm(`이미 [${tierName}] 티어에 대한 설정이 장바구니에 있습니다.\n덮어씌우시겠습니까?`)) return;
-                assignmentCart[existingIdx] = { tierName, emblemId: emblemItem.id, emblemName: emblemItem.name, emblemData: emblemItem.layers };
-            } else {
-                assignmentCart.push({ tierName, emblemId: emblemItem.id, emblemName: emblemItem.name, emblemData: emblemItem.layers });
-            }
-            renderCart();
-        }
-
-        function removeFromCart(idx) {
-            assignmentCart.splice(idx, 1);
-            renderCart();
-        }
-
-        function renderCart() {
-            const container = document.getElementById('cart-list');
-            const countBadge = document.getElementById('cart-count');
-            
-            countBadge.innerText = `${assignmentCart.length}건`;
+        function renderTierSelectList() {
+            const container = document.getElementById('tier-select-list');
             container.innerHTML = '';
-
-            if(assignmentCart.length === 0) {
-                container.innerHTML = `<div class="text-center py-20 text-slate-400 text-sm">왼쪽에서 티어와 엠블럼을 선택하여<br>추가해주세요.</div>`;
-                return;
-            }
-
-            assignmentCart.forEach((item, idx) => {
-                container.innerHTML += `
-                    <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <span class="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded">${item.tierName}</span>
-                            <i class="fa-solid fa-arrow-right text-slate-300 text-xs"></i>
-                            <span class="font-bold text-indigo-600 text-sm">${item.emblemName}</span>
-                        </div>
-                        <div class="flex gap-1">
-                            <button onclick="previewCartItem(${idx})" class="w-8 h-8 rounded hover:bg-slate-100 text-slate-500 hover:text-indigo-600" title="미리보기"><i class="fa-solid fa-eye"></i></button>
-                            <button onclick="removeFromCart(${idx})" class="w-8 h-8 rounded hover:bg-slate-100 text-slate-500 hover:text-red-500" title="삭제"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
+            tiers.forEach(t => {
+                const isSelected = t.tier_name === selectedTierName;
+                const div = document.createElement('div');
+                div.className = `tier-card bg-slate-50 p-4 rounded-xl border border-slate-200 cursor-pointer flex items-center justify-between group ${isSelected ? 'selected' : ''}`;
+                div.onclick = () => selectTargetTier(t.tier_name);
+                let emblemId = `tier-preview-${t.tier_name}`;
+                div.innerHTML = `<div class="flex items-center gap-4"><div class="tier-icon w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-slate-300 shadow-sm relative overflow-hidden group-hover:scale-110 transition"><div id="${emblemId}" class="absolute inset-0 flex items-center justify-center"></div></div><div><div class="font-black text-slate-700 text-lg group-hover:text-indigo-600 transition">${t.tier_name}</div><div class="text-[10px] text-slate-400 font-bold">${t.min_xp.toLocaleString()} ~ ${t.max_xp.toLocaleString()} XP</div></div></div><div class="text-slate-300 group-hover:text-indigo-500"><i class="fa-solid fa-chevron-right"></i></div>`;
+                container.appendChild(div);
+                if(t.emblem_json && t.emblem_json.mode === 'advanced') setTimeout(() => renderEmblemV7(t.emblem_json.layers, emblemId, 0.25), 0);
+                else document.getElementById(emblemId).innerHTML = `<span class="text-[10px]">${t.tier_name[0]}</span>`;
             });
         }
 
-        // ★ 실전 미리보기 (학생 화면 복제) ★
-        function previewCartItem(idx) {
-            const item = assignmentCart[idx];
-            document.getElementById('preview-tier-name').innerText = item.tierName;
+        function selectTargetTier(tierName) {
+            selectedTierName = tierName;
+            renderTierSelectList(); 
+            document.getElementById('lock-screen').classList.add('hidden');
+            document.getElementById('target-indicator').innerHTML = `Target: <span class="text-indigo-600 font-black text-lg underline">${tierName}</span>`;
+        }
+
+        function renderLibraryList(lib) {
+            const container = document.getElementById('library-list');
+            container.innerHTML = '';
+            if(!lib || lib.length === 0) { container.innerHTML = '<div class="col-span-2 text-center py-10 text-slate-400 text-sm">보관함이 비었습니다.</div>'; return; }
+            lib.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:border-pink-300 hover:shadow-md transition flex flex-col gap-2 group";
+                const prevId = `lib-prev-${item.id}`;
+                div.innerHTML = `<div class="flex items-center gap-3"><div class="w-14 h-14 bg-slate-50 rounded-lg border border-slate-100 relative overflow-hidden flex items-center justify-center"><div id="${prevId}" class="absolute inset-0 flex items-center justify-center"></div></div><div class="flex-1 min-w-0"><div class="font-bold text-slate-700 text-sm truncate group-hover:text-pink-600">${item.name}</div><div class="text-[10px] text-slate-400">${new Date(item.created_at).toLocaleDateString()}</div></div></div><div class="flex gap-2"><button onclick="previewLibraryItem('${item.id}')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold text-xs transition" title="미리보기"><i class="fa-solid fa-eye"></i></button><button onclick="applyEmblemToTier('${item.id}')" class="flex-1 bg-slate-100 text-slate-600 hover:bg-pink-500 hover:text-white py-2 rounded-lg text-xs font-bold transition">이걸로 적용하기</button></div>`;
+                container.appendChild(div);
+                if(item.layers) setTimeout(() => renderEmblemV7(item.layers, prevId, 0.3), 0);
+            });
+        }
+
+        function previewLibraryItem(libId) {
+            const item = libraryDataCache.find(x => x.id === libId);
+            if(!item) return;
+            document.getElementById('preview-tier-name').innerText = selectedTierName || "Preview";
             document.getElementById('preview-modal').style.display = 'flex';
-            
-            // 렌더링 실행
-            renderEmblemPreview(item.emblemData);
+            renderEmblemV7(item.layers, 'preview-stage', 0.45); 
         }
 
-        function renderEmblemPreview(layers) {
-            const stage = document.getElementById('preview-stage');
+        async function applyEmblemToTier(libId) {
+            if(!selectedTierName) return alert("왼쪽에서 적용할 티어를 먼저 선택하세요.");
+            const { data: item } = await _supabase.from('emblem_library').select('*').eq('id', libId).single();
+            if(!item) return;
+            if(!confirm(`[${selectedTierName}] 티어의 엠블럼을\n'${item.name}'(으)로 즉시 교체하시겠습니까?`)) return;
+            const { error } = await _supabase.from('tier_rules').update({ emblem_json: { mode: 'advanced', layers: item.layers } }).eq('tier_name', selectedTierName);
+            if(error) alert("실패: " + error.message); else { alert(`✅ [${selectedTierName}] 업데이트 완료!`); loadEmblemTab(); }
+        }
+
+        function renderEmblemV7(layers, targetId, scaleFactor=0.4) {
+            const stage = document.getElementById(targetId);
+            if(!stage) return;
             stage.innerHTML = ''; 
-
             const sorted = [...layers].sort((a,b) => a.zIndex - b.zIndex);
-            // 학생 메인화면과 동일한 스케일 팩터 적용 (0.55)
-            const scaleFactor = 0.55; 
-
             sorted.forEach(l => {
-                const el = document.createElement('div');
-                el.className = `render-obj`;
-                
-                // Anim (에디터 코드 복붙)
-                if(l.style.anim) { // New Nested Structure Check
-                    if(l.style.anim.spin && l.style.anim.spin.on) el.style.animation = `spin-self ${l.style.anim.spin.speed || '3s'} linear infinite`;
-                    // ... (복잡한 중첩 구조는 에디터 V6 기준이면 별도 처리 필요하지만, V5 기준이면 아래 로직)
-                }
-                // V5 Simple Logic (호환성)
-                if(l.style.anim === 'spin-self') el.style.animation = 'spin-self 3s linear infinite';
-                else if(l.style.anim === 'orbit') { el.style.setProperty('--orbit-radius', '100px'); el.style.animation = 'orbit 4s linear infinite'; }
-                else if(l.style.anim !== 'none' && typeof l.style.anim === 'string') el.style.animation = `${l.style.anim} 1s infinite`;
-
-                el.style.color = l.style.color;
-                el.style.width = l.type === 'bg' ? '100%' : 'auto';
-                el.style.height = l.type === 'bg' ? '100%' : 'auto';
-                el.style.fontSize = l.type === 'text' ? `${(l.style.size/5) * scaleFactor}px` : `${(l.style.size/3) * scaleFactor}px`;
-                
-                if(l.type === 'bg') { el.style.width = '100%'; el.style.height = '100%'; el.style.borderRadius = '50%'; }
-                
-                el.style.transform = `translate(-50%, -50%) rotate(${l.style.rotate}deg) scale(${l.type==='bg'?1 : l.style.size/100})`;
-                
-                // Texture Logic
+                const root = document.createElement('div'); root.className = `obj-root`; root.style.left = '50%'; root.style.top = '50%'; 
+                const orbit = document.createElement('div'); orbit.className = 'obj-orbit';
+                if(l.anim.orbit.on) { orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius * scaleFactor}px`); orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; }
+                const vital = document.createElement('div'); vital.className = 'obj-vital';
+                if(l.anim.vital.on) { vital.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`; }
+                const fx = document.createElement('div'); fx.className = 'obj-fx';
+                if(l.anim.fx.on) { fx.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`; }
+                const spin = document.createElement('div'); spin.className = 'obj-spin';
+                if(l.anim.spin.on) { spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`; }
+                const core = document.createElement('div'); core.className = 'obj-core';
+                core.style.fontSize = `${l.style.size * scaleFactor}px`;
                 if(l.style.texture !== 'none') {
-                    el.style.color='transparent'; el.style.backgroundClip='text'; el.style.webkitBackgroundClip='text';
-                    if(l.style.texture==='gold') el.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
-                    else if(l.style.texture==='magma') el.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
-                    else if(l.style.texture==='silver') el.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
-                    else if(l.style.texture==='neon') el.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
-                } else { el.style.color = l.style.color; }
-
-                if(l.type === 'icon') el.innerHTML = `<i class="${l.content}"></i>`;
-                else if(l.type === 'text') { el.innerText = l.content; el.style.fontFamily = "'Black Han Sans', sans-serif"; }
-                else el.innerText = l.content;
-
-                stage.appendChild(el);
+                    core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
+                    if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
+                    else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
+                    else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
+                    else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
+                } else { core.style.color = l.style.color; }
+                if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; } else core.innerText = l.content;
+                spin.appendChild(core); fx.appendChild(spin); vital.appendChild(fx); orbit.appendChild(vital); root.appendChild(orbit); stage.appendChild(root);
             });
         }
 
-        async function deployAll() {
-            if(assignmentCart.length === 0) return alert("배포할 내용이 없습니다.");
-            if(!confirm(`총 ${assignmentCart.length}개의 티어 설정을 전교생에게 배포하시겠습니까?`)) return;
-
-            // 순차 업데이트 (Batch Logic)
-            try {
-                for (const item of assignmentCart) {
-                    const { error } = await _supabase.from('tier_rules')
-                        .update({ emblem_json: { mode: 'advanced', layers: item.emblemData } })
-                        .eq('tier_name', item.tierName);
-                    if(error) throw error;
-                }
-                alert("🎉 배포 완료! 모든 학생들의 화면이 갱신되었습니다.");
-                assignmentCart = [];
-                renderCart();
-                loadEmblemTab(); // 리스트 갱신
-            } catch(e) {
-                alert("배포 중 오류 발생: " + e.message);
-            }
-        }
-
-        // --- (기존 시즌/티어 관리 함수들: startSeason, saveTiers 등은 그대로 유지) ---
-        // (코드 길이상 생략하지만, 파일에는 포함되어야 함. 위쪽 코드 블록에서 기존 함수들 사용)
-        async function startSeason() { /*...*/ }
         function endSeasonStep1() { /*...*/ }
-        function renderTiers() { /*...*/ }
-        function getInsertBtn(i) { return `<div class="insert-zone" onclick="addTier(${i})"><div class="insert-line"></div><div class="plus-circle">+</div></div>`; }
-        function addTier(i) { let s=0; if(i>0) s=tiers[i-1].max_xp+1; tiers.splice(i,0,{tier_name:'New', min_xp:s, max_xp:s+1000}); renderTiers(); }
-        function delTier(i) { if(confirm("삭제?")) { tiers.splice(i,1); renderTiers(); } }
-        function updTier(i,k,v) { tiers[i][k]=k==='tier_name'?v:parseInt(v); document.getElementById('btn-save-tier').disabled=false; document.getElementById('btn-save-tier').classList.remove('opacity-50'); }
-        function verifyTiers() { alert("검증 완료"); renderTiers(); document.getElementById('btn-save-tier').disabled=false; document.getElementById('btn-save-tier').classList.remove('opacity-50'); }
-        async function saveTiers() { /* 기존 저장 로직 */ }
-        async function saveNotice() { /* ... */ }
+        async function saveNotice() { /*...*/ }
 
         init();
     </script>

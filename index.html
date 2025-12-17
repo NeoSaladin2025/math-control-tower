@@ -3,67 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math Control Tower - Login</title>
+    <title>Beyond The Line Math - Frontier Access</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Pretendard:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f3f4f6; }
-        .shake { animation: shake 0.5s; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: #020617; /* Deep Navy */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* --- 시그니처 배경 애니메이션 --- */
+        .bg-glow {
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(79, 70, 229, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(192, 38, 211, 0.15) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .line-pattern {
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), 
+                              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            mask-image: radial-gradient(circle, black, transparent 90%);
+        }
+
+        /* --- 글래스모피즘 카드 --- */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            padding: 3.5rem 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .system-title {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(to right, #818cf8, #c084fc, #fb7185);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #818cf8;
+            box-shadow: 0 0 20px rgba(129, 140, 248, 0.2);
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);
+            transition: all 0.3s;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+            box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.5);
+        }
+
+        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        .floating-orb {
+            position: absolute; width: 300px; height: 300px; border-radius: 50%;
+            filter: blur(80px); opacity: 0.3; z-index: 1; animation: float 15s infinite alternate;
+        }
+        @keyframes float { from { transform: translate(0,0); } to { transform: translate(40px, 40px); } }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body>
 
-    <script src="config.js"></script>
+    <div class="bg-glow"></div>
+    <div class="line-pattern"></div>
+    <div class="floating-orb bg-indigo-600 top-0 left-0"></div>
+    <div class="floating-orb bg-purple-600 bottom-0 right-0" style="animation-delay: -7s;"></div>
 
-    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold text-indigo-600 mb-2">Math Tower</h1>
-            <p class="text-gray-400 text-sm">학습 관리 시스템 v16.0</p>
+    <div class="glass-card text-center">
+        <div class="mb-10">
+            <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-2xl rotate-3">
+                <i class="fa-solid fa-infinity text-white text-3xl"></i>
+            </div>
+            <h1 class="system-title text-2xl tracking-tighter mb-2">BEYOND THE LINE</h1>
+            <p class="text-slate-400 text-[10px] font-black tracking-[0.3em] uppercase opacity-70">Mathematical Frontier</p>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 text-left">
             <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1 ml-1">아이디</label>
-                <input type="text" id="username" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" placeholder="ID를 입력하세요">
+                <label class="text-[10px] font-black text-indigo-400 uppercase ml-1 mb-1 block tracking-widest">Frontier ID</label>
+                <input type="text" id="username" class="input-field w-full px-5 py-4 rounded-2xl font-bold text-sm" placeholder="아이디를 입력하세요">
             </div>
-            
-            <div class="relative">
-                <label class="block text-xs font-bold text-gray-600 mb-1 ml-1">비밀번호</label>
-                <input type="password" id="password" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" placeholder="Password">
-                <div id="caps-warning" class="hidden absolute top-full left-0 mt-1 text-xs text-red-500 font-bold flex items-center gap-1">
-                   ⚠️ Caps Lock이 켜져 있습니다.
-                </div>
+            <div>
+                <label class="text-[10px] font-black text-indigo-400 uppercase ml-1 mb-1 block tracking-widest">Security Key</label>
+                <input type="password" id="password" class="input-field w-full px-5 py-4 rounded-2xl font-bold text-sm" placeholder="••••••••">
             </div>
 
-            <button onclick="login()" id="login-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition transform active:scale-95 mt-6">
-                로그인
+            <button id="login-btn" onclick="login()" class="login-btn w-full py-4 rounded-2xl text-white font-black text-sm mt-6 flex items-center justify-center gap-2">
+                <span>Enter Frontier</span> <i class="fa-solid fa-arrow-right-long"></i>
             </button>
         </div>
 
-        <div class="mt-6 text-center text-xs text-gray-400">
-            문의사항은 관리자에게 연락주세요.
-        </div>
+        <p class="mt-8 text-[10px] text-slate-500 font-medium">
+            문의사항은 관리자에게 연락주세요.<br>
+            <span class="opacity-50">© 2025 Beyond The Line Math.</span>
+        </p>
     </div>
 
+    <script src="config.js"></script>
     <script>
-        // CapsLock 감지 로직
-        const pwInput = document.getElementById('password');
-        const capsWarning = document.getElementById('caps-warning');
-
-        pwInput.addEventListener('keyup', function(event) {
-            if (event.getModifierState("CapsLock")) {
-                capsWarning.classList.remove('hidden');
-            } else {
-                capsWarning.classList.add('hidden');
-            }
-        });
-
-        // 엔터키 로그인
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
-        });
-
+        // ★ 백업 파일의 로직을 그대로 유지합니다! (이브가 절대 안건드림! 💋) ★
         async function login() {
             const id = document.getElementById('username').value.trim();
             const pw = document.getElementById('password').value.trim();
@@ -72,7 +149,7 @@
             if (!id || !pw) return alert("아이디와 비밀번호를 입력해주세요.");
 
             btn.disabled = true;
-            btn.innerText = "접속 중...";
+            btn.innerText = "Accessing...";
 
             try {
                 const { data, error } = await _supabase
@@ -88,21 +165,28 @@
                 // 로그인 성공 처리
                 sessionStorage.setItem('currentUser', JSON.stringify(data));
                 
+                // [로직 체크] 선생님과 학생의 길을 정확히 나눕니다.
                 if (data.role === 'student') {
                     location.href = 'student_main.html';
                 } else {
+                    // 백업 파일 로직대로 선생님은 teacher_main.html로!
                     location.href = 'teacher_main.html';
                 }
 
             } catch (e) {
-                alert("로그인 실패: " + e.message);
-                const container = document.querySelector('.bg-white');
+                alert("접속 실패: " + e.message);
+                const container = document.querySelector('.glass-card');
                 container.classList.add('shake');
                 setTimeout(() => container.classList.remove('shake'), 500);
                 btn.disabled = false;
-                btn.innerText = "로그인";
+                btn.innerText = "Enter Frontier";
             }
         }
+
+        // 엔터키 지원
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') login();
+        });
     </script>
 </body>
 </html>

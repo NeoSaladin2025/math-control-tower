@@ -8,9 +8,9 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Rubik+Glitch&family=Cinzel:wght@900&family=Bangers&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Bangers&display=swap" rel="stylesheet">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif; background-color: #f8fafc; color: #334151; user-select: none; }
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #334151; user-select: none; }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         
         .elite-card { background: white; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #f1f5f9; transition: transform 0.2s; }
@@ -21,35 +21,20 @@
         .inbox-blink { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } }
 
-        /* 티어 뱃지 (레거시용 - 텍스트 표시로 대체됨) */
-        .tier-badge { font-size: 10px; padding: 3px 8px; rounded-full; font-weight: 800; text-transform: uppercase; border: 1px solid rgba(0,0,0,0.1); }
-
-        /* 모달 (최상위) */
-        #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
-        .modal-content { background: white; width: 100%; max-width: 450px; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-height: 80vh; display: flex; flex-direction: column; }
-        .loader { border: 3px solid #f1f5f9; border-top: 3px solid #6366f1; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* --- ★ V7 EMBLEM ENGINE CSS ★ --- */
+        /* --- V7 ENGINE CSS (Viewer Mode) --- */
         .emblem-stage-container { perspective: 1000px; overflow: visible !important; z-index: 20; }
         .obj-root { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 0; height: 0; }
         .obj-orbit, .obj-vital, .obj-fx, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
         .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; }
-        
-        /* 애니메이션 키프레임 */
         @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-        @keyframes ghost { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-        @keyframes jelly { 0%, 100% { transform: scale(1, 1); } 25% { transform: scale(0.9, 1.1); } 50% { transform: scale(1.1, 0.9); } 75% { transform: scale(0.95, 1.05); } }
-        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
-        @keyframes glitch { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
-        @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -5px 5px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
-        @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(150%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
-        @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 10px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
         @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
-        @keyframes spin-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-        @keyframes spin-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
+
+        /* 모달 스타일 */
+        #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+        .modal-content { background: white; width: 100%; max-width: 450px; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-height: 80vh; display: flex; flex-direction: column; }
+        .loader { border: 3px solid #f1f5f9; border-top: 3px solid #6366f1; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 lg:p-8">
@@ -84,48 +69,44 @@
     <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         <div class="lg:col-span-3 space-y-6">
-            <div class="elite-card p-6 relative overflow-visible group">
-                <div class="absolute top-0 right-0 p-10 opacity-5 pointer-events-none z-0"><i class="fa-solid fa-crown text-9xl"></i></div>
-                
-                <div class="flex justify-between items-start relative z-10 mb-2">
-                    <h1 class="text-xl font-black text-slate-800"><span id="s-name" class="text-indigo-600">--</span>님</h1>
-                    <div class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full border">
-                        Total Lv.<span id="my-level">1</span>
-                    </div>
-                </div>
-
-                <div class="relative w-full h-48 flex items-center justify-center my-4 z-20 emblem-stage-container">
-                    <div id="emblem-stage" class="w-40 h-40 relative flex items-center justify-center transition-transform hover:scale-110 duration-500">
-                        <div class="text-slate-300 text-xs font-bold animate-pulse">Loading Emblem...</div>
-                    </div>
-                </div>
-
-                <div class="relative z-10">
-                    <div class="flex justify-between items-end mb-1">
-                        <span id="tier-name-text" class="text-xs font-black text-slate-500 uppercase tracking-widest">UNRANKED</span>
-                        <div class="text-[10px] text-slate-400 font-bold">
-                            <span id="season-xp-current" class="text-indigo-600">0</span> / <span id="season-xp-max">1000</span> XP
+            <div class="elite-card p-6 relative overflow-visible">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <div class="flex items-baseline gap-2">
+                            <h2 class="text-2xl font-black text-slate-800" id="s-name">--</h2>
+                            <span class="text-[10px] font-bold text-slate-400">Lv.<span id="s-total-lv">0</span></span>
                         </div>
+                        <div class="text-[10px] font-bold text-indigo-500 mt-1" id="s-season-name">Loading Season...</div>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-inner border border-slate-200">
-                        <div id="xp-bar" class="bg-gradient-to-r from-indigo-400 to-purple-600 h-full rounded-full transition-all duration-1000 relative" style="width: 0%">
-                            <div class="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100 relative z-10 mt-4">
-                    <div class="text-xs font-bold text-slate-400">보유 포인트</div>
                     <div class="text-right">
-                        <span class="text-lg mr-1">🪙</span>
-                        <span id="my-cp" class="text-xl font-black text-slate-700">0</span>
-                        <span class="text-[10px] text-slate-400">CP</span>
+                        <div class="text-[11px] font-black text-slate-700" id="tier-display-name">--</div>
+                        <div class="text-[9px] text-slate-400 font-bold" id="xp-remain">남은 XP: --</div>
+                    </div>
+                </div>
+
+                <div class="relative w-full h-40 flex items-center justify-center my-4 emblem-stage-container">
+                    <div id="emblem-stage" class="w-32 h-32 relative flex items-center justify-center transition-transform hover:scale-110 duration-500"></div>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold mb-1">
+                            <span class="text-slate-400">시즌 현재경험치</span>
+                            <span class="text-indigo-600"><span id="s-season-xp">0</span> / <span id="s-max-xp">0</span> XP</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                            <div id="xp-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 w-0 transition-all duration-1000"></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <span class="text-[11px] font-bold text-slate-500">현재 자산 (CP)</span>
+                        <div class="flex items-center gap-1 font-black text-amber-500">
+                            <span id="s-cp">0</span><span class="text-[10px]">P</span>
+                        </div>
                     </div>
                 </div>
             </div>
-
             <div class="elite-card p-4 flex flex-col items-center">
-                <div class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest w-full text-center">Learning Stats</div>
                 <div class="relative h-48 w-full"><canvas id="statChart"></canvas></div>
             </div>
         </div>
@@ -197,137 +178,144 @@
     <script>
         const user = JSON.parse(sessionStorage.getItem('currentUser'));
         if (!user) location.href = 'index.html';
-        document.getElementById('s-name').innerText = user.name;
+        
+        let myRadarChart = null;
 
         window.addEventListener('message', (event) => { if (event.data === 'mission_complete') location.reload(); });
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
 
-        async function init() { loadUserInfo(); loadBooks(); checkNotifications(); }
+        async function init() { await loadUserInfo(); loadBooks(); checkNotifications(); }
 
-        // ★ [업데이트] 정보 로드 함수 (V7 엠블럼 + 시즌 중심) ★
         async function loadUserInfo() {
-            // 1. 유저 정보 (스탯 포함)
-            const { data: u, error } = await _supabase.from('users').select('*').eq('username', user.username).single();
-            if(!u || error) return;
+            try {
+                const { data: userData, error: userErr } = await _supabase.from('users').select('*').eq('username', user.username).single();
+                if(userErr || !userData) throw new Error("유저 정보 로드 실패");
 
-            // 기본 정보
-            document.getElementById('my-cp').innerText = (u.cp||0).toLocaleString();
-            document.getElementById('my-level').innerText = u.level || 1; // 작게 표시됨
-            
-            // ★ 시즌 XP 및 티어 정보 ★
-            // 티어 이름 표시
-            const tierName = u.tier || 'Bronze';
-            document.getElementById('tier-name-text').innerText = tierName;
-            
-            // 시즌 XP 게이지 계산을 위해 티어 규칙 가져오기
-            let maxXP = 1000; // 기본값
-            const { data: tData } = await _supabase.from('tier_rules').select('*').eq('tier_name', tierName).maybeSingle();
-            
-            const stage = document.getElementById('emblem-stage');
-            if(tData) {
-                maxXP = tData.max_xp;
-                // 엠블럼 렌더링
-                if(tData.emblem_json && tData.emblem_json.mode === 'advanced') {
-                    renderEmblemV7(tData.emblem_json.layers);
-                } else {
-                    stage.innerHTML = `<div class="text-2xl font-black text-slate-300 tracking-widest">${tierName}</div>`;
+                document.getElementById('s-name').innerText = userData.name;
+                document.getElementById('s-total-lv').innerText = Math.floor((userData.total_xp || 0) / 1000);
+                document.getElementById('s-cp').innerText = (userData.cp || 0).toLocaleString();
+                document.getElementById('s-season-xp').innerText = (userData.season_xp || 0).toLocaleString();
+
+                const { data: season } = await _supabase.from('seasons').select('*').eq('is_current', true).maybeSingle();
+                document.getElementById('s-season-name').innerText = season ? `◈ ${season.season_name}` : '시즌 준비중';
+
+                const { data: allTiers } = await _supabase.from('tier_rules').select('*').order('min_xp');
+                const myXp = userData.season_xp || 0;
+
+                let currentTier = allTiers?.find(t => myXp >= t.min_xp && myXp <= t.max_xp);
+                if (currentTier) {
+                    document.getElementById('tier-display-name').innerText = currentTier.tier_name;
+                    document.getElementById('s-max-xp').innerText = currentTier.max_xp.toLocaleString();
+                    document.getElementById('xp-remain').innerText = `다음 티어까지: ${(currentTier.max_xp - myXp).toLocaleString()} XP`;
+                    
+                    let progress = Math.min(100, (myXp / currentTier.max_xp) * 100);
+                    setTimeout(() => { document.getElementById('xp-bar').style.width = `${progress}%`; }, 300);
+
+                    if (currentTier.emblem_json?.mode === 'advanced') {
+                        renderEmblemV7(currentTier.emblem_json.layers);
+                    }
                 }
-            } else {
-                stage.innerHTML = `<div class="text-sm font-bold text-slate-300">UNRANKED</div>`;
-            }
+                
+                // ★ 스탯 차트 로드 시 0점 처리를 위한 logic 수정됨 ★
+                loadChart(userData.stats || {});
 
-            // 게이지 업데이트
-            const currentXP = u.season_xp || 0;
-            document.getElementById('season-xp-current').innerText = currentXP.toLocaleString();
-            document.getElementById('season-xp-max').innerText = maxXP.toLocaleString();
-            const progress = Math.min(100, (currentXP / maxXP) * 100);
-            document.getElementById('xp-bar').style.width = `${progress}%`;
-
-            // ★ 스탯 차트 (stats 객체 사용) ★
-            const stats = u.stats || {};
-            const statsData = [
-                stats.calc || 0, stats.read || 0, stats.logic || 0, stats.pat || 0,
-                stats.tmp || 0, stats.stb || 0, stats.exec || 0, stats.att || 0
-            ];
-            
-            const ctx = document.getElementById('statChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'radar',
-                data: { 
-                    labels: ['연산','독해','추론','패턴','속도','안정','실행','태도'], 
-                    datasets: [{ 
-                        label: 'Stats', 
-                        data: statsData, 
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)', 
-                        borderColor: '#4f46e5', 
-                        pointBackgroundColor: '#4f46e5', 
-                        pointRadius: 2 
-                    }] 
-                },
-                options: { 
-                    scales: { 
-                        r: { 
-                            suggestedMin: 0, 
-                            suggestedMax: 10, 
-                            ticks: { display: false },
-                            pointLabels: { font: { size: 10 } } 
-                        } 
-                    }, 
-                    plugins: { legend: { display: false } },
-                    maintainAspectRatio: false
-                }
-            });
+            } catch (e) { console.error(e); }
         }
 
-        // --- ★ V7 RENDER ENGINE (Viewer Logic) ★ ---
-        function renderEmblemV7(layers) {
-            const stage = document.getElementById('emblem-stage');
-            stage.innerHTML = ''; 
-            if(!layers || layers.length === 0) { stage.innerHTML = '<div class="text-xs text-slate-400">Empty Emblem</div>'; return; }
-            const sorted = [...layers].sort((a,b) => a.zIndex - b.zIndex);
-            const scaleFactor = 0.45; // 학생 카드용 축소 비율
-            
-            sorted.forEach(l => {
-                const root = document.createElement('div'); root.className = `obj-root`; root.style.left = `${l.x}%`; root.style.top = `${l.y}%`;
-                const orbit = document.createElement('div'); orbit.className = 'obj-orbit';
-                if(l.anim.orbit.on) { orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius * scaleFactor}px`); orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; }
-                const vital = document.createElement('div'); vital.className = 'obj-vital';
-                if(l.anim.vital.on) { vital.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`; }
-                const fx = document.createElement('div'); fx.className = 'obj-fx';
-                if(l.anim.fx.on) { fx.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`; }
-                const spin = document.createElement('div'); spin.className = 'obj-spin';
-                if(l.anim.spin.on) { spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`; }
-                const core = document.createElement('div'); core.className = 'obj-core'; core.style.fontSize = `${l.style.size * scaleFactor}px`;
-                
-                if(l.style.texture !== 'none') {
-                    core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
-                    if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
-                    else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
-                    else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
-                    else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
-                } else { core.style.color = l.style.color; }
-                
-                if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`;
-                else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; }
-                else core.innerText = l.content;
-                
-                spin.appendChild(core); fx.appendChild(spin); vital.appendChild(fx); orbit.appendChild(vital); root.appendChild(orbit); stage.appendChild(root);
-            });
+        async function openFeedbackList() {
+            openModal('📬 통합 메시지함');
+            const body = document.getElementById('modal-body');
+            body.innerHTML = '<div class="loader m-6"></div>';
+
+            const { data: solutions } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending');
+            const { data: seasonMsgs } = await _supabase.from('season_messages').select('*').eq('student_id', user.username);
+
+            const all = [
+                ...(solutions || []).map(m => ({ ...m, cat: '숙제' })),
+                ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌' }))
+            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (all.length === 0) {
+                body.innerHTML = '<div class="text-center py-10 text-slate-400">메시지가 없습니다.</div>';
+                return;
+            }
+
+            body.innerHTML = all.map(m => {
+                const isRead = m.is_read;
+                const dateStr = new Date(m.created_at).toLocaleDateString();
+                const deleteBtn = isRead ? 
+                    `<button onclick="deleteMsg('${m.cat}', ${m.id})" class="text-slate-300 hover:text-red-500 transition px-2" title="삭제"><i class="fa-solid fa-trash-can"></i></button>` : '';
+
+                if (m.cat === '시즌') {
+                    return `
+                    <div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-indigo-50/30' : ''}" onclick="markRead('시즌', ${m.id})">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-[10px] font-black text-indigo-500">🏆 시즌 알림</span>
+                            <div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div>
+                        </div>
+                        <div class="text-sm font-bold text-slate-700">${m.message}</div>
+                        <div class="mt-2 text-[10px] font-bold text-slate-400">변동: XP ${m.xp_change > 0 ? '+' : ''}${m.xp_change}, CP ${m.cp_change > 0 ? '+' : ''}${m.cp_change}</div>
+                    </div>`;
+                } else {
+                    return `
+                    <div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-blue-50/30' : ''}" onclick="markRead('숙제', ${m.id})">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-[10px] font-black text-blue-500">📝 숙제 피드백 (No.${m.problem_num})</span>
+                            <div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div>
+                        </div>
+                        <div class="text-sm font-medium text-slate-700">${m.teacher_feedback || '내용 없음'}</div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        async function markRead(cat, id) {
+            const table = cat === '시즌' ? 'season_messages' : 'student_solutions';
+            await _supabase.from(table).update({ is_read: true }).eq('id', id);
+            checkNotifications();
+            openFeedbackList();
+        }
+
+        async function deleteMsg(cat, id) {
+            event.stopPropagation();
+            if(!confirm("이 메시지를 삭제하시겠습니까?")) return;
+            const table = cat === '시즌' ? 'season_messages' : 'student_solutions';
+            const { error } = await _supabase.from(table).delete().eq('id', id);
+            if(error) alert("삭제 실패: " + error.message);
+            else openFeedbackList();
         }
 
         async function loadBooks() {
             const { data } = await _supabase.from('student_books').select(`workbook_id, workbooks ( id, title, total_problems, grade_level )`).eq('student_id', user.username).order('created_at', { ascending: false });
             const list = document.getElementById('book-list');
             if (!data || data.length === 0) { list.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">교재 없음</div>`; return; }
+            
             list.innerHTML = data.map(item => `
                 <div class="bg-white p-4 rounded-2xl border-2 border-slate-100 flex flex-col gap-3 shadow-sm hover:border-indigo-200 transition group">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg border border-indigo-100 shadow-sm"><i class="fa-solid fa-book"></i></div>
-                        <div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm truncate">${item.workbooks.title}</div><div class="text-[10px] text-slate-400 font-medium">자동화 설정 대기중</div></div>
+                        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg border border-indigo-100 shadow-sm">
+                            <i class="fa-solid fa-book"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-slate-800 text-sm truncate">${item.workbooks.title}</div>
+                            <div class="text-[10px] text-slate-400 font-medium">자동화 설정 대기중</div>
+                        </div>
                     </div>
+                    
                     <div class="flex gap-2 mt-1">
-                        <button onclick="requestHomework(${item.workbook_id}, '${item.workbooks.title}')" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5 bg-white border-2 border-indigo-100 text-indigo-600 shadow-[0_3px_0_#e0e7ff] active:shadow-none active:translate-y-[3px] active:border-indigo-200 hover:bg-indigo-50"><span>🙋‍♂️</span> 과제 요청</button>
-                        <button onclick="openSelfXray(${item.workbook_id})" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5 bg-white border-2 border-rose-100 text-rose-500 shadow-[0_3px_0_#ffe4e6] active:shadow-none active:translate-y-[3px] active:border-rose-200 hover:bg-rose-50"><span>🩺</span> 진단</button>
+                        <button onclick="requestHomework(${item.workbook_id}, '${item.workbooks.title}')" 
+                            class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5
+                                   bg-white border-2 border-indigo-100 text-indigo-600 shadow-[0_3px_0_#e0e7ff]
+                                   active:shadow-none active:translate-y-[3px] active:border-indigo-200 hover:bg-indigo-50">
+                            <span>🙋‍♂️</span> 과제 요청
+                        </button>
+                        
+                        <button onclick="openSelfXray(${item.workbook_id})" 
+                            class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5
+                                   bg-white border-2 border-rose-100 text-rose-500 shadow-[0_3px_0_#ffe4e6]
+                                   active:shadow-none active:translate-y-[3px] active:border-rose-200 hover:bg-rose-50">
+                            <span>🩺</span> 진단
+                        </button>
                     </div>
                 </div>`).join('');
         }
@@ -341,17 +329,73 @@
             if (error) alert("생성 실패: " + error.message); else { alert("✅ 과제가 생성되었습니다!"); location.reload(); }
         }
 
+        function renderEmblemV7(layers) {
+            const stage = document.getElementById('emblem-stage');
+            stage.innerHTML = ''; 
+            const sorted = [...layers].sort((a,b) => a.zIndex - b.zIndex);
+            const scale = 0.4;
+            sorted.forEach(l => {
+                const root = document.createElement('div'); root.className = `obj-root`; root.style.left = `${l.x}%`; root.style.top = `${l.y}%`;
+                const core = document.createElement('div'); core.className = 'obj-core'; core.style.fontSize = `${l.style.size * scale}px`;
+                if(l.style.texture !== 'none') {
+                    core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
+                    if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
+                    else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
+                } else { core.style.color = l.style.color; }
+                if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; else core.innerText = l.content;
+                root.appendChild(core); stage.appendChild(root);
+            });
+        }
+
+        // --- ★ [FIXED] 0점 스탯을 정확하게 표시하도록 수정 ---
+        function loadChart(s) {
+            const ctx = document.getElementById('statChart').getContext('2d');
+            if(myRadarChart) myRadarChart.destroy();
+            myRadarChart = new Chart(ctx, {
+                type: 'radar',
+                data: { 
+                    labels: ['연산','독해','추론','패턴','속도','안정','실행','태도'], 
+                    datasets: [{ 
+                        data: [
+                            s.calc ?? 0, s.read ?? 0, s.logic ?? 0, s.pat ?? 0, 
+                            s.tmp ?? 0, s.stb ?? 0, s.exec ?? 0, s.att ?? 0
+                        ], 
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)', 
+                        borderColor: '#4f46e5', 
+                        pointRadius: 2 
+                    }] 
+                },
+                options: { 
+                    scales: { 
+                        r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } 
+                    }, 
+                    plugins: { legend: { display: false } }, 
+                    maintainAspectRatio: false 
+                }
+            });
+        }
+
+        async function checkNotifications() {
+            const { count: gift } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned');
+            if(gift > 0) { document.getElementById('badge-gift').innerText=gift; document.getElementById('badge-gift').classList.remove('hidden'); }
+            const { count: f1 } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('student_id', user.username).neq('status', 'pending').eq('is_read', false);
+            const { count: f2 } = await _supabase.from('season_messages').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_read', false);
+            const total = (f1 || 0) + (f2 || 0);
+            if(total > 0) { document.getElementById('badge-feed').innerText=total; document.getElementById('badge-feed').classList.remove('hidden'); document.getElementById('btn-feed').classList.add('inbox-blink'); }
+            else { document.getElementById('badge-feed').classList.add('hidden'); document.getElementById('btn-feed').classList.remove('inbox-blink'); }
+        }
+
         function openModal(title) { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-title').innerText=title; }
         function closeModal() { document.getElementById('modal-overlay').style.display='none'; checkNotifications(); }
-        async function openSpecialList() { openModal('🎁 특별 과제'); const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>'; const { data } = await _supabase.from('assignments').select('*').eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned').order('deadline', { ascending: true }); if (!data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">없음</div>'; return; } body.innerHTML = data.map(a => `<div onclick="goToMission(${a.id})" class="p-4 border-b hover:bg-slate-50 cursor-pointer flex justify-between"><div><div class="font-bold text-sm">${a.title}</div><div class="text-xs text-slate-500">보상: ${a.reward_points}P</div></div><span>💣</span></div>`).join(''); }
-        async function openFeedbackList() { openModal('📬 메시지'); const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>'; const { data } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending').order('created_at', { ascending: false }); if (!data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">없음</div>'; return; } body.innerHTML = data.map(item => { let fileBtn = ''; if(item.teacher_file_url) fileBtn = `<button onclick="event.stopPropagation(); window.open('${item.teacher_file_url}')" class="mt-2 w-full bg-slate-100 text-slate-600 border py-1 rounded text-xs font-bold">첨부파일 확인</button>`; return `<div onclick="readFeed(${item.id})" class="p-4 border-b hover:bg-slate-50 cursor-pointer ${!item.is_read?'bg-blue-50/50':''}"><div class="flex justify-between text-xs mb-1 font-bold"><span>No.${item.problem_num}</span><span class="${item.status==='approved'?'text-green-600':'text-red-500'}">${item.status}</span></div><div class="text-sm">${item.teacher_feedback||''}</div>${fileBtn}</div>`; }).join(''); }
-        async function checkNotifications() { const { count: p } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned'); if(p>0) { document.getElementById('badge-gift').innerText=p; document.getElementById('badge-gift').classList.remove('hidden'); document.getElementById('btn-gift').classList.add('gift-blink','bg-pink-50'); } const { count: f } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('student_id', user.username).neq('status', 'pending').eq('is_read', false); if(f>0) { document.getElementById('badge-feed').innerText=f; document.getElementById('badge-feed').classList.remove('hidden'); document.getElementById('btn-feed').classList.add('inbox-blink','bg-blue-50'); } const { count: reg } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('status', 'assigned').eq('is_special', false).not('title', 'ilike', '%[요청]%'); if(reg > 0) { const b = document.getElementById('badge-regular'); b.innerText = reg; b.classList.remove('hidden'); } const { count: req } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('status', 'assigned').eq('is_special', false).ilike('title', '%[요청]%'); if(req > 0) { const b = document.getElementById('badge-request'); b.innerText = req; b.classList.remove('hidden'); } }
-        function goToMission(aid) { _supabase.from('assignments').update({ is_viewed: true }).eq('id', aid).then(() => { window.open(`student_mission_view.html?id=${aid}`, '_blank', `width=1200,height=800`); }); }
-        async function readFeed(id) { await _supabase.from('student_solutions').update({ is_read: true }).eq('id', id); checkNotifications(); openFeedbackList(); }
-        function openSelfXray(wbid) { window.open(`student_self_analysis.html?wbid=${wbid}`, '_blank', `width=500,height=800`); }
-        function openPwModal() { document.getElementById('pw-modal').classList.remove('hidden'); document.getElementById('cur-pw').value = ''; document.getElementById('new-pw').value = ''; document.getElementById('cfm-pw').value = ''; }
+        async function openSpecialList() {
+            openModal('🎁 특별 과제');
+            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>';
+            const { data } = await _supabase.from('assignments').select('*').eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned').order('deadline', { ascending: true });
+            if (!data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">없음</div>'; return; }
+            body.innerHTML = data.map(a => `<div onclick="goToMission(${a.id})" class="p-4 border-b hover:bg-slate-50 cursor-pointer flex justify-between"><div><div class="font-bold text-sm">${a.title}</div><div class="text-xs text-slate-500">보상: ${a.reward_points}P</div></div><span>💣</span></div>`).join('');
+        }
+        function openPwModal() { document.getElementById('pw-modal').classList.remove('hidden'); }
         function closePwModal() { document.getElementById('pw-modal').classList.add('hidden'); }
-        async function submitPasswordChange() { const cur = document.getElementById('cur-pw').value; const newPw = document.getElementById('new-pw').value; const cfm = document.getElementById('cfm-pw').value; if(!cur || !newPw || !cfm) return alert("모든 칸을 입력해주세요."); if(newPw !== cfm) return alert("새 비밀번호가 일치하지 않습니다."); if(newPw.length < 4) return alert("비밀번호는 4자리 이상이어야 합니다."); try { const { data: u, error } = await _supabase.from('users').select('password').eq('username', user.username).single(); if (error || !u) return alert("사용자 정보를 찾을 수 없습니다."); if (u.password !== cur) return alert("현재 비밀번호가 틀렸습니다."); const { error: updateErr } = await _supabase.rpc('change_password', { p_username: user.username, p_new_password: newPw }); if (updateErr) { throw updateErr; } alert("✅ 비밀번호가 변경되었습니다! 다시 로그인해주세요."); logout(); } catch (e) { alert("변경 실패: " + e.message); } }
 
         init();
     </script>
