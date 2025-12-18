@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 1.5rem; }
+        .day-column { background: rgba(255,255,255,0.4); border-radius: 20px; border: 1px solid #e2e8f0; min-height: 600px; display: flex; flex-direction: column; padding: 12px; gap: 8px; }
+        .memo-blink { animation: blink 1.5s infinite; cursor: pointer; }
+        @keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+    </style>
+</head>
+<body>
+    <script src="config.js"></script>
+
+    <div class="grid grid-cols-7 gap-3">
+        <div class="text-center font-black text-slate-400 text-xs mb-2">MON</div>
+        <div class="text-center font-black text-slate-400 text-xs mb-2">TUE</div>
+        <div class="text-center font-black text-slate-400 text-xs mb-2">WED</div>
+        <div class="text-center font-black text-slate-400 text-xs mb-2">THU</div>
+        <div class="text-center font-black text-slate-400 text-xs mb-2">FRI</div>
+        <div class="text-center font-black text-blue-400 text-xs mb-2">SAT</div>
+        <div class="text-center font-black text-red-400 text-xs mb-2">SUN</div>
+        
+        <div id="col-월요일" class="day-column"></div>
+        <div id="col-화요일" class="day-column"></div>
+        <div id="col-수요일" class="day-column"></div>
+        <div id="col-목요일" class="day-column"></div>
+        <div id="col-금요일" class="day-column"></div>
+        <div id="col-토요일" class="day-column"></div>
+        <div id="col-일요일" class="day-column"></div>
+    </div>
+
+    <div id="memo-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex justify-center items-center backdrop-blur-sm">
+        <div class="bg-amber-100 w-[350px] rounded-2xl p-6 shadow-2xl border-t-8 border-amber-400 transform -rotate-1 relative">
+            <button onclick="closeMemo()" class="absolute -top-10 right-0 text-white text-3xl">×</button>
+            <div id="memo-view-list" class="space-y-3">
+                <h3 class="font-black text-slate-800 mb-4 border-b border-amber-200 pb-2">📌 포스트잇</h3>
+                <div id="memo-items" class="max-h-[300px] overflow-y-auto custom-scroll space-y-2"></div>
+                <button onclick="showEditor()" class="w-full bg-amber-400 text-white font-bold py-3 rounded-xl mt-4">새 메모 쓰기</button>
+            </div>
+            <div id="memo-editor" class="hidden space-y-4">
+                <input type="text" id="m-title" placeholder="제목" class="w-full bg-transparent border-b border-amber-300 font-bold outline-none">
+                <textarea id="m-content" rows="5" placeholder="내용..." class="w-full bg-transparent text-sm outline-none resize-none"></textarea>
+                <div class="flex gap-2">
+                    <button onclick="saveMemo()" class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs">저장</button>
+                    <button onclick="hideEditor()" class="flex-1 bg-slate-200 text-slate-600 font-bold py-2 rounded-lg text-xs">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let classes = [], currentCid = null;
+
+        async function init() {
+            const { data: c } = await _supabase.from('classes').select('*');
+            const { data: m } = await _supabase.from('class_memos').select('class_id');
+            classes = c || [];
+            
+            const days = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
+            days.forEach(day => {
+                const col = document.getElementById(`col-${day}`);
+                col.innerHTML = classes.filter(cls => cls.day_of_week === day).map(cls => {
+                    const hasMemo = m.some(memo => memo.class_id === cls.id);
+                    return `
+                        <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 relative group">
+                            <div class="text-[9px] font-bold text-indigo-500">${cls.time_slot}</div>
+                            <div class="text-xs font-black text-slate-700 truncate">${cls.name}</div>
+                            ${hasMemo ? `<div onclick="openMemo(${cls.id})" class="memo-blink absolute -top-1 -right-1 bg-amber-400 text-white w-6 h-6 rounded-lg shadow-md flex items-center justify-center"><i class="fa-solid fa-note-sticky text-[10px]"></i></div>` : 
+                                       `<div onclick="openMemo(${cls.id})" class="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 bg-slate-200 text-slate-400 w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer transition"><i class="fa-solid fa-plus text-[10px]"></i></div>`}
+                        </div>`;
+                }).join('');
+            });
+        }
+
+        async function openMemo(cid) {
+            currentCid = cid;
+            const { data } = await _supabase.from('class_memos').select('*').eq('class_id', cid).order('created_at', {ascending: false});
+            const container = document.getElementById('memo-items');
+            container.innerHTML = data.length ? data.map(m => `
+                <div class="bg-white/50 p-3 rounded-xl border border-amber-200">
+                    <div class="flex justify-between items-start">
+                        <div class="font-bold text-slate-800 text-xs">${m.title}</div>
+                        <button onclick="deleteMemo(${m.id})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                    </div>
+                    <div class="text-[10px] text-slate-600 mt-1 whitespace-pre-wrap">${m.content}</div>
+                </div>
+            `).join('') : '<div class="text-center py-6 text-slate-400 text-[10px]">메모가 없습니다.</div>';
+            
+            document.getElementById('memo-view-list').classList.remove('hidden');
+            document.getElementById('memo-editor').classList.add('hidden');
+            document.getElementById('memo-modal').classList.remove('hidden');
+        }
+
+        function showEditor() { document.getElementById('memo-view-list').classList.add('hidden'); document.getElementById('memo-editor').classList.remove('hidden'); }
+        function hideEditor() { document.getElementById('memo-view-list').classList.remove('hidden'); document.getElementById('memo-editor').classList.add('hidden'); }
+        function closeMemo() { document.getElementById('memo-modal').classList.add('hidden'); }
+
+        async function saveMemo() {
+            const title = document.getElementById('m-title').value;
+            const content = document.getElementById('m-content').value;
+            if(!title) return;
+            await _supabase.from('class_memos').insert({ class_id: currentCid, title, content });
+            document.getElementById('m-title').value = ''; document.getElementById('m-content').value = '';
+            openMemo(currentCid); init();
+        }
+
+        async function deleteMemo(id) {
+            if(confirm("찢어버릴까요?")) { await _supabase.from('class_memos').delete().eq('id', id); openMemo(currentCid); init(); }
+        }
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>수업 개설 및 배정 센터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 1.5rem; user-select: none; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        
+        /* 쫀득한 학년 버튼 */
+        .grade-btn {
+            min-width: 65px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 13px; 
+            background: white; border: 2px solid #e2e8f0; color: #64748b; 
+            box-shadow: 0 4px 0 #cbd5e1; transition: all 0.1s; cursor: pointer; text-align: center;
+        }
+        .grade-btn:active { transform: translateY(4px); box-shadow: none; }
+        .grade-btn.active {
+            background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #3730a3; color: white; box-shadow: 0 4px 0 #312e81;
+        }
+
+        /* 구글 드라이브 뱃지 */
+        .drive-badge { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; }
+    </style>
+</head>
+<body>
+    <script src="config.js"></script>
+
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h2 class="text-2xl font-black text-slate-800 flex items-center gap-3">
+                    <i class="fa-solid fa-screwdriver-wrench text-indigo-500"></i> 수업 마스터 컨트롤
+                </h2>
+                <p class="text-slate-400 text-xs font-bold mt-1 uppercase tracking-tighter">Class Creation & Student Assignment</p>
+            </div>
+            <button onclick="openEditModal('create')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> 새 수업 개설
+            </button>
+        </div>
+
+        <div id="class-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full py-20 text-center text-slate-300 animate-pulse font-bold">수업 데이터를 불러오는 중~</div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center">
+        <div class="bg-white w-[420px] rounded-[32px] shadow-2xl p-8 transform transition-all scale-100 border border-slate-100">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-xl font-black text-slate-800" id="modal-title-text">수업 정보</h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Class Configuration</p>
+                </div>
+                <button onclick="closeModal('edit-modal')" class="text-slate-300 hover:text-slate-500 text-2xl">×</button>
+            </div>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-[11px] font-black text-slate-400 mb-1 ml-1 uppercase">수업 명칭</label>
+                    <input type="text" id="cls-name" placeholder="예: 미적분 심화 A반" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold text-slate-700 transition">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-black text-slate-400 mb-1 ml-1 uppercase">요일 선택</label>
+                        <select id="cls-day" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700">
+                            <option>월요일</option><option>화요일</option><option>수요일</option>
+                            <option>목요일</option><option>금요일</option><option>토요일</option><option>일요일</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-black text-slate-400 mb-1 ml-1 uppercase">시간대 선택</label>
+                        <select id="cls-slot" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700">
+                            <option>앞타임</option><option>뒷타임</option>
+                            <option>오전반</option><option>오후반</option><option>저녁반</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-indigo-50 p-5 rounded-[24px] border border-indigo-100">
+                    <label class="flex items-center gap-2 text-[11px] font-black text-indigo-600 mb-2 uppercase">
+                        <i class="fa-brands fa-google-drive text-sm"></i> 구글 드라이브 연동 (링크 복붙!)
+                    </label>
+                    <input type="text" id="cls-google-id" oninput="extractFolderId(this)" placeholder="여기에 폴더 링크를 붙여넣으세요" class="w-full bg-white border border-white p-4 rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 font-mono text-[11px] shadow-sm text-slate-600">
+                    <div class="mt-3 text-[10px] text-indigo-400 leading-relaxed font-medium italic">
+                        "여기에 공유를 하면 자료실에 연동됩니다"
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button onclick="closeModal('edit-modal')" class="flex-1 bg-slate-100 text-slate-400 font-black py-4 rounded-2xl hover:bg-slate-200 transition">CANCEL</button>
+                <button onclick="saveClass()" id="btn-save" class="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition">SAVE CLASS</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="assign-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center">
+        <div class="bg-white w-[550px] h-[780px] rounded-[40px] shadow-2xl p-8 flex flex-col border border-slate-100">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h3 class="text-2xl font-black text-slate-800" id="assign-modal-title">학생 배정</h3>
+                </div>
+                <button onclick="closeModal('assign-modal')" class="text-slate-300 hover:text-slate-500 text-3xl">×</button>
+            </div>
+            
+            <div class="flex gap-2 overflow-x-auto pb-4 mb-2 shrink-0 scrollbar-hide" id="grade-tabs">
+                <button onclick="filterGrade('all')" id="tab-all" class="grade-btn active">전체</button>
+                <button onclick="filterGrade('중1')" id="tab-중1" class="grade-btn">중1</button>
+                <button onclick="filterGrade('중2')" id="tab-중2" class="grade-btn">중2</button>
+                <button onclick="filterGrade('중3')" id="tab-중3" class="grade-btn">중3</button>
+                <button onclick="filterGrade('고1')" id="tab-고1" class="grade-btn">고1</button>
+                <button onclick="filterGrade('고2')" id="tab-고2" class="grade-btn">고2</button>
+                <button onclick="filterGrade('고3')" id="tab-고3" class="grade-btn">고3</button>
+            </div>
+
+            <div class="relative mb-4 shrink-0">
+                <i class="fa-solid fa-search absolute left-4 top-4 text-slate-300"></i>
+                <input type="text" id="member-search" oninput="renderStudentPool()" placeholder="이름 검색..." class="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-indigo-500 transition">
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2" id="student-pool"></div>
+            <button onclick="closeModal('assign-modal')" class="mt-6 w-full bg-slate-800 text-white font-black py-5 rounded-[24px]">설정 완료</button>
+        </div>
+    </div>
+
+    <script>
+        let classes = [], students = [], currentClassId = null, currentGrade = 'all', currentMemberSet = new Set();
+
+        async function init() {
+            try {
+                const { data: c } = await _supabase.from('classes').select('*').order('id', {ascending: false});
+                const { data: s } = await _supabase.from('users').select('username, name, grade').eq('role', 'student').order('name');
+                classes = c || []; students = s || [];
+                renderGrid();
+            } catch(e) { console.error("이브 에러!", e); }
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('class-grid');
+            grid.innerHTML = classes.map(c => `
+                <div class="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all group relative">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase">${c.day_of_week} / ${c.time_slot}</span>
+                        ${c.google_folder_id ? `<span class="drive-badge"><i class="fa-brands fa-google-drive mr-1"></i>Link Active</span>` : ''}
+                    </div>
+                    <h4 class="text-lg font-black text-slate-800 mb-6 group-hover:text-indigo-600 transition-colors">${c.name}</h4>
+                    <div class="flex justify-between items-center">
+                        <button onclick="openAssign(${c.id})" class="text-xs font-black text-indigo-600 bg-indigo-50 px-5 py-2.5 rounded-xl hover:bg-indigo-600 hover:text-white transition transform active:scale-95">배정 관리</button>
+                        <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
+                            <button onclick="openEditModal('update', ${c.id})" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-600 flex items-center justify-center transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteClass(${c.id})" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                </div>`).join('') || '<div class="col-span-full py-20 text-center text-slate-400">데이터가 없습니다.</div>';
+        }
+
+        function extractFolderId(el) {
+            const val = el.value.trim();
+            if (val.includes('drive.google.com') && val.includes('/folders/')) {
+                const match = val.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+                if (match && match[1]) {
+                    el.value = match[1];
+                    el.style.backgroundColor = '#ecfdf5';
+                    setTimeout(() => el.style.backgroundColor = '', 800);
+                }
+            }
+        }
+
+        async function openEditModal(mode, id = null) {
+            currentClassId = id;
+            const modal = document.getElementById('edit-modal');
+            const title = document.getElementById('modal-title-text');
+            
+            if(mode === 'update') {
+                const c = classes.find(x => x.id === id);
+                title.innerText = "수업 정보 수정";
+                document.getElementById('cls-name').value = c.name;
+                document.getElementById('cls-day').value = c.day_of_week;
+                document.getElementById('cls-slot').value = c.time_slot;
+                document.getElementById('cls-google-id').value = c.google_folder_id || '';
+            } else {
+                title.innerText = "신규 수업 개설";
+                document.getElementById('cls-name').value = '';
+                document.getElementById('cls-google-id').value = '';
+            }
+            modal.classList.remove('hidden');
+        }
+
+        async function saveClass() {
+            const name = document.getElementById('cls-name').value.trim();
+            const googleId = document.getElementById('cls-google-id').value.trim();
+            if(!name) return alert("이름 필수!");
+
+            const payload = { 
+                name, 
+                day_of_week: document.getElementById('cls-day').value, 
+                time_slot: document.getElementById('cls-slot').value, 
+                google_folder_id: googleId 
+            };
+
+            if(currentClassId) await _supabase.from('classes').update(payload).eq('id', currentClassId);
+            else await _supabase.from('classes').insert([payload]);
+            
+            closeModal('edit-modal');
+            init();
+        }
+
+        async function openAssign(cid) {
+            currentClassId = cid;
+            const cls = classes.find(c => c.id === cid);
+            document.getElementById('assign-modal-title').innerText = `[${cls.name}] 배정`;
+            const { data } = await _supabase.from('class_members').select('student_id').eq('class_id', cid);
+            currentMemberSet = new Set(data ? data.map(m => m.student_id) : []);
+            filterGrade('all');
+            document.getElementById('assign-modal').classList.remove('hidden');
+        }
+
+        function filterGrade(grade) {
+            currentGrade = grade;
+            document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${grade}`).classList.add('active');
+            renderStudentPool();
+        }
+
+        function renderStudentPool() {
+            const pool = document.getElementById('student-pool');
+            const search = document.getElementById('member-search').value.toLowerCase();
+            let filtered = students;
+            if(currentGrade !== 'all') filtered = students.filter(s => s.grade === currentGrade);
+            if(search) filtered = filtered.filter(s => s.name.toLowerCase().includes(search));
+
+            pool.innerHTML = filtered.map(s => {
+                const isMember = currentMemberSet.has(s.username);
+                return `
+                <div class="flex justify-between items-center p-4 rounded-2xl border ${isMember ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'}">
+                    <span class="text-sm font-black text-slate-700">${s.name} <small class="text-indigo-400 ml-1">${s.grade}</small></span>
+                    <button onclick="toggleMembership('${s.username}', this)" class="text-3xl">
+                        ${isMember ? '<i class="fa-solid fa-circle-check text-indigo-600"></i>' : '<i class="fa-solid fa-circle-plus text-slate-200"></i>'}
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        async function toggleMembership(sid, btn) {
+            if(currentMemberSet.has(sid)) {
+                await _supabase.from('class_members').delete().match({class_id:currentClassId, student_id:sid});
+                currentMemberSet.delete(sid);
+            } else {
+                await _supabase.from('class_members').insert({class_id:currentClassId, student_id:sid});
+                currentMemberSet.add(sid);
+            }
+            renderStudentPool();
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        async function deleteClass(id) { if(confirm("삭제?")) { await _supabase.from('classes').delete().eq('id', id); init(); } }
+        init();
+    </script>
+</body>
+</html>

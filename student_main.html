@@ -98,11 +98,15 @@
                             <div id="xp-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 w-0 transition-all duration-1000"></div>
                         </div>
                     </div>
+                    
                     <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                        <span class="text-[11px] font-bold text-slate-500">현재 자산 (CP)</span>
-                        <div class="flex items-center gap-1 font-black text-amber-500">
-                            <span id="s-cp">0</span><span class="text-[10px]">P</span>
+                        <div>
+                            <span class="text-[11px] font-bold text-slate-500 block">현재 자산 (CP)</span>
+                            <div class="flex items-center gap-1 font-black text-amber-500">
+                                <span id="s-cp">0</span><span class="text-[10px]">P</span>
+                            </div>
                         </div>
+                        <button onclick="openWithdrawModal()" class="bg-indigo-600 text-white text-[10px] font-black px-3 py-2 rounded-lg hover:bg-indigo-500 transition shadow-sm">출금 신청</button>
                     </div>
                 </div>
             </div>
@@ -175,11 +179,29 @@
         </div>
     </div>
 
+    <div id="withdraw-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex justify-center items-center p-6">
+        <div class="bg-white w-full max-w-[320px] rounded-[32px] p-8 text-center shadow-2xl">
+            <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            <h3 class="text-xl font-black text-slate-800">CP 출금 신청</h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-tight">100원 단위로 신청 가능</p>
+            <div class="mt-6 space-y-4 text-left">
+                <div class="bg-slate-50 p-4 rounded-2xl">
+                    <label class="text-[10px] text-slate-400 font-bold block mb-1">WITHDRAWAL AMOUNT</label>
+                    <input type="number" id="withdraw-input" placeholder="0" class="w-full bg-transparent border-b-2 border-slate-200 py-2 text-lg font-black text-slate-800 outline-none focus:border-amber-500">
+                </div>
+                <button id="btn-check" onclick="checkWithdraw()" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-sm transition">금액 확인</button>
+                <button id="btn-send" onclick="sendWithdraw()" disabled class="w-full bg-amber-500 text-white font-black py-4 rounded-2xl text-sm hidden">신청 전송하기</button>
+            </div>
+            <button onclick="closeWithdrawModal()" class="mt-6 text-slate-300 font-bold text-xs underline">창 닫기</button>
+        </div>
+    </div>
+
     <script>
         const user = JSON.parse(sessionStorage.getItem('currentUser'));
         if (!user) location.href = 'index.html';
         
         let myRadarChart = null;
+        let currentUserData = null; // ★ 유저 정보를 저장할 전역 변수
 
         window.addEventListener('message', (event) => { if (event.data === 'mission_complete') location.reload(); });
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
@@ -190,6 +212,8 @@
             try {
                 const { data: userData, error: userErr } = await _supabase.from('users').select('*').eq('username', user.username).single();
                 if(userErr || !userData) throw new Error("유저 정보 로드 실패");
+
+                currentUserData = userData; // ★ 데이터 저장 (출금 로직에서 사용)
 
                 document.getElementById('s-name').innerText = userData.name;
                 document.getElementById('s-total-lv').innerText = Math.floor((userData.total_xp || 0) / 1000);
@@ -216,10 +240,70 @@
                     }
                 }
                 
-                // ★ 스탯 차트 로드 시 0점 처리를 위한 logic 수정됨 ★
                 loadChart(userData.stats || {});
 
             } catch (e) { console.error(e); }
+        }
+
+        // --- ★ [추가됨] 출금 신청 로직 (100원 단위 & 이중 확인) ★ ---
+        function openWithdrawModal() { document.getElementById('withdraw-modal').classList.remove('hidden'); resetWithdraw(); }
+        function closeWithdrawModal() { document.getElementById('withdraw-modal').classList.add('hidden'); }
+        function resetWithdraw() {
+            const input = document.getElementById('withdraw-input');
+            input.value = ''; input.disabled = false;
+            document.getElementById('btn-check').classList.remove('hidden');
+            document.getElementById('btn-send').classList.add('hidden');
+        }
+        function checkWithdraw() {
+            const val = parseInt(document.getElementById('withdraw-input').value);
+            if(!val || val <= 0) return alert("금액을 입력하세요.");
+            
+            // 전역 변수 currentUserData 사용
+            if(currentUserData && val > currentUserData.cp) return alert(`잔액이 부족합니다. (보유: ${currentUserData.cp} CP)`);
+            if(val % 100 !== 0) return alert("100원 단위로만 신청 가능합니다. (십원/일원 단위 불가)");
+            
+            document.getElementById('withdraw-input').disabled = true;
+            document.getElementById('btn-check').classList.add('hidden');
+            const btnSend = document.getElementById('btn-send');
+            btnSend.classList.remove('hidden'); btnSend.disabled = false;
+            alert("확인 완료! 전송 버튼을 눌러주세요. ❤️");
+        }
+        async function sendWithdraw() {
+            const amount = parseInt(document.getElementById('withdraw-input').value);
+        
+        // 1. [선차감] 즉시 CP를 깎습니다. (RPC 함수 사용)
+        const { error: deductErr } = await _supabase.rpc('give_points', {
+            p_student_id: user.username,
+            p_xp: 0,
+            p_cp: -amount, // 마이너스로 차감!
+            p_rule_name: '💳 CP 출금 신청 (선차감)'
+        });
+
+        if (deductErr) {
+            return alert("잔액 차감 중 오류가 발생했습니다: " + deductErr.message);
+        }
+
+        // 2. [신청서 제출] 차감이 성공하면 내역을 저장합니다.
+        const { error: insertErr } = await _supabase.from('cp_withdrawals').insert([{
+            student_id: user.username,
+            amount: amount,
+            status: 'pending'
+        }]);
+
+        if (insertErr) {
+            // 혹시라도 신청서 저장이 실패하면 깎은 돈을 다시 돌려줘야 합니다 (롤백)
+            await _supabase.rpc('give_points', {
+                p_student_id: user.username,
+                p_xp: 0,
+                p_cp: amount,
+                p_rule_name: '시스템 오류 자동 환불'
+            });
+            return alert("신청서 제출 실패! CP는 다시 환불되었습니다.");
+        }
+
+        alert("신청 완료! CP가 즉시 차감되었습니다. 선생님 승인을 기다리세요! ❤️");
+        closeWithdrawModal();
+        loadUserInfo(); // 잔액 갱신
         }
 
         async function openFeedbackList() {
@@ -347,7 +431,6 @@
             });
         }
 
-        // --- ★ [FIXED] 0점 스탯을 정확하게 표시하도록 수정 ---
         function loadChart(s) {
             const ctx = document.getElementById('statChart').getContext('2d');
             if(myRadarChart) myRadarChart.destroy();

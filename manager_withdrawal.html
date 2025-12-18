@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CP 출금 승인 센터 & 카드 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background: #f1f5f9; overflow: hidden; height: 100vh; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .lock-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; opacity: 0.6; }
+        .grade-tab.active { background: #4f46e5; color: white; border-color: #4f46e5; }
+        .history-tab.active { background: #059669; color: white; border-color: #059669; }
+    </style>
+</head>
+<body class="flex flex-col h-full">
+    <script src="config.js"></script>
+
+    <header class="bg-white border-b px-8 py-4 flex justify-between items-center shrink-0 shadow-sm z-10">
+        <div class="flex items-center gap-4">
+            <div>
+                <h2 class="text-xl font-black text-slate-800">💰 금융 조교 시스템</h2>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Withdrawal & Card Control</p>
+            </div>
+            <div class="h-8 w-px bg-slate-200 mx-2"></div>
+            <div class="flex gap-2">
+                <button onclick="toggleCardManager()" class="bg-indigo-50 text-indigo-600 font-black px-4 py-2 rounded-xl text-xs hover:bg-indigo-100 transition flex items-center gap-2 border border-indigo-100">
+                    <i class="fa-solid fa-credit-card"></i> 카드 번호 관리
+                </button>
+                <button onclick="toggleHistoryManager()" class="bg-emerald-50 text-emerald-600 font-black px-4 py-2 rounded-xl text-xs hover:bg-emerald-100 transition flex items-center gap-2 border border-emerald-100">
+                    <i class="fa-solid fa-clock-rotate-left"></i> 승인 내역 조회
+                </button>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-db-save" disabled onclick="saveToDatabase()" class="lock-btn bg-slate-900 text-white font-black px-6 py-3 rounded-xl text-sm transition shadow-lg">최종 데이터 저장</button>
+            <button id="btn-excel-down" disabled onclick="exportToExcel()" class="lock-btn bg-emerald-600 text-white font-black px-6 py-3 rounded-xl text-sm transition shadow-lg">엑셀 다운로드</button>
+        </div>
+    </header>
+
+    <div id="card-manager-panel" class="hidden bg-white border-b shadow-inner p-6 overflow-hidden transition-all absolute top-[85px] left-0 right-0 z-20">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-black text-indigo-600 text-sm"><i class="fa-solid fa-credit-card mr-2"></i>학년별 카드번호 관리</h3>
+                <button onclick="toggleCardManager()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="flex gap-2 mb-4">
+                <button onclick="loadCardStudents('중1')" class="grade-tab active px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">중1</button>
+                <button onclick="loadCardStudents('중2')" class="grade-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">중2</button>
+                <button onclick="loadCardStudents('중3')" class="grade-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">중3</button>
+                <button onclick="loadCardStudents('고1')" class="grade-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">고1</button>
+                <button onclick="loadCardStudents('고2')" class="grade-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">고2</button>
+                <button onclick="loadCardStudents('고3')" class="grade-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">고3</button>
+            </div>
+            <div id="student-card-list" class="flex gap-4 overflow-x-auto pb-4 custom-scroll"></div>
+        </div>
+    </div>
+
+    <div id="history-manager-panel" class="hidden bg-white border-b shadow-inner p-6 overflow-hidden transition-all absolute top-[85px] left-0 right-0 z-20">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-black text-emerald-600 text-sm"><i class="fa-solid fa-list-check mr-2"></i>승인 완료 내역 (최근 100건)</h3>
+                <button onclick="toggleHistoryManager()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="flex gap-2 mb-4">
+                <button onclick="loadHistory('중1')" class="history-tab active px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">중1</button>
+                <button onclick="loadHistory('중2')" class="history-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">중2</button>
+                <button onclick="loadHistory('중3')" class="history-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">중3</button>
+                <button onclick="loadHistory('고1')" class="history-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">고1</button>
+                <button onclick="loadHistory('고2')" class="history-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">고2</button>
+                <button onclick="loadHistory('고3')" class="history-tab px-4 py-2 rounded-lg text-xs font-bold border border-slate-200 transition">고3</button>
+            </div>
+            <div id="history-list" class="grid grid-cols-4 gap-4 overflow-y-auto max-h-[300px] custom-scroll p-1"></div>
+        </div>
+    </div>
+
+    <main class="flex-1 flex overflow-hidden p-6 gap-6 pt-6">
+        <section class="flex-1 flex flex-col bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b bg-slate-50/50 flex justify-between items-center">
+                <h3 class="font-black text-slate-700 flex items-center gap-2"><i class="fa-solid fa-hourglass-half text-amber-500"></i> 대기 리스트</h3>
+                <span id="cnt-pending" class="bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-[10px] font-black">0</span>
+            </div>
+            <div id="list-pending" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-3"></div>
+        </section>
+
+        <section class="w-[450px] flex flex-col bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b bg-indigo-50/30 flex justify-between items-center">
+                <h3 class="font-black text-indigo-700 flex items-center gap-2"><i class="fa-solid fa-cart-shopping"></i> 승인 장바구니</h3>
+                <span id="cnt-cart" class="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black">0</span>
+            </div>
+            <div id="list-cart" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-3 bg-indigo-50/10"></div>
+            <div class="p-6 border-t bg-slate-50 space-y-4">
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="check-1" onchange="validateLocks()" class="w-5 h-5 rounded text-indigo-600"><span class="text-sm font-bold text-slate-600">1차 확인: 명단 및 금액 확인</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" id="check-2" disabled onchange="validateLocks()" class="w-5 h-5 rounded text-indigo-600"><span id="text-check-2" class="text-sm font-bold text-slate-400">최종 확인: 데이터 처리 동의</span>
+                </label>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let pendingData = [], cartData = [], allStudents = [], lastApprovedData = [];
+
+        async function init() {
+            const { data } = await _supabase.from('cp_withdrawals').select(`id, amount, student_id, users(name, grade, crabit_card_number)`).eq('status', 'pending').order('created_at', { ascending: true });
+            pendingData = data || [];
+            const { data: s } = await _supabase.from('users').select('username, name, grade, crabit_card_number').eq('role', 'student');
+            allStudents = s || [];
+            renderAll();
+            loadCardStudents('중1'); 
+        }
+
+        function toggleCardManager() { document.getElementById('history-manager-panel').classList.add('hidden'); document.getElementById('card-manager-panel').classList.toggle('hidden'); }
+        function toggleHistoryManager() { document.getElementById('card-manager-panel').classList.add('hidden'); document.getElementById('history-manager-panel').classList.toggle('hidden'); loadHistory('중1'); }
+
+        function loadCardStudents(grade) {
+            document.querySelectorAll('.grade-tab').forEach(b => b.classList.toggle('active', b.innerText===grade));
+            const filtered = allStudents.filter(s => s.grade === grade);
+            document.getElementById('student-card-list').innerHTML = filtered.map(s => `
+                <div class="min-w-[180px] bg-slate-50 p-4 rounded-2xl border border-slate-200 shrink-0">
+                    <div class="text-xs font-black text-slate-800 mb-2">${s.name}</div>
+                    <input type="text" id="card-${s.username}" value="${s.crabit_card_number || ''}" placeholder="번호 입력" class="w-full text-[11px] p-2 rounded-lg border outline-none focus:border-indigo-500 mb-2">
+                    <button onclick="updateCardNumber('${s.username}')" class="w-full bg-slate-800 text-white text-[10px] py-1.5 rounded-lg hover:bg-indigo-600 transition">저장</button>
+                </div>`).join('') || '<div class="text-slate-400 text-xs py-4">학생 없음</div>';
+        }
+        async function updateCardNumber(sid) {
+            const num = document.getElementById(`card-${sid}`).value;
+            await _supabase.from('users').update({ crabit_card_number: num }).eq('username', sid);
+            alert("저장 완료!");
+        }
+
+        async function loadHistory(grade) {
+            document.querySelectorAll('.history-tab').forEach(b => b.classList.toggle('active', b.innerText===grade));
+            const { data } = await _supabase.from('cp_withdrawals').select(`id, amount, approved_at, users!inner(name, grade)`).eq('status', 'approved').eq('users.grade', grade).order('approved_at', { ascending: false }).limit(100);
+            document.getElementById('history-list').innerHTML = (data && data.length) ? data.map(i => `
+                <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl flex justify-between items-center">
+                    <div><div class="text-[10px] text-emerald-600 font-bold mb-0.5">${new Date(i.approved_at).toLocaleDateString()}</div><div class="text-sm font-black text-slate-700">${i.users.name} | ${i.amount.toLocaleString()} P</div></div>
+                    <button onclick="deleteHistoryItem(${i.id}, '${grade}')" class="text-slate-300 hover:text-red-500 transition px-2"><i class="fa-solid fa-trash-can"></i></button>
+                </div>`).join('') : '<div class="col-span-4 text-center py-10 text-slate-400 text-xs">내역 없음</div>';
+        }
+        async function deleteHistoryItem(id, g) { if(confirm("기록 삭제?")) { await _supabase.from('cp_withdrawals').delete().eq('id', id); loadHistory(g); } }
+
+        function renderAll() { renderPending(); renderCart(); validateLocks(); }
+        function renderPending() {
+            const list = document.getElementById('list-pending');
+            document.getElementById('cnt-pending').innerText = pendingData.length;
+            list.innerHTML = pendingData.length ? pendingData.map(i => `
+                <div class="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm flex justify-between items-center hover:shadow-md transition">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs">${i.users.name[0]}</div>
+                        <div><div class="text-sm font-black text-slate-800">${i.users.name} <span class="text-[10px] text-slate-400">${i.student_id}</span></div><div class="text-[10px] text-indigo-500 font-bold mt-1">💳 ${i.users.crabit_card_number || '미등록'}</div></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-right font-black text-slate-700 text-sm mr-2">${i.amount.toLocaleString()} CP</div>
+                        <button onclick="rejectRequest(this, ${i.id})" class="bg-slate-100 text-slate-400 text-[11px] font-black px-3 py-2 rounded-lg hover:bg-red-50 hover:text-red-500 transition">거절</button>
+                        <button onclick="moveToCart(${i.id})" class="bg-indigo-600 text-white text-[11px] font-black px-3 py-2 rounded-lg hover:bg-indigo-500 transition">승인 예정</button>
+                    </div>
+                </div>`).join('') : '<div class="text-center py-10 text-slate-400 text-xs">대기 중인 요청이 없습니다.</div>';
+        }
+        function renderCart() {
+            const list = document.getElementById('list-cart');
+            document.getElementById('cnt-cart').innerText = cartData.length;
+            list.innerHTML = cartData.map(i => `
+                <div class="bg-indigo-600 p-4 rounded-2xl shadow-md flex justify-between items-center animate-pulse-once">
+                    <div class="text-sm font-black text-white">${i.users.name} / ${i.amount.toLocaleString()} CP</div>
+                    <button onclick="removeFromCart(${i.id})" class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/40"><i class="fa-solid fa-circle-minus"></i></button>
+                </div>`).join('') || '<div class="text-center py-20 text-indigo-300 text-xs font-bold">장바구니가 비어 있습니다.</div>';
+        }
+        function moveToCart(id) { const idx = pendingData.findIndex(x => x.id === id); if(idx > -1) { cartData.push(pendingData[idx]); pendingData.splice(idx, 1); renderAll(); } }
+        function removeFromCart(id) { const idx = cartData.findIndex(x => x.id === id); if(idx > -1) { pendingData.push(cartData[idx]); cartData.splice(idx, 1); renderAll(); } }
+
+        // --- ★ [수정됨] 거절 시 환불 + 리스트 삭제 + 메시지 전송 ★ ---
+        async function rejectRequest(btn, id) {
+            if(btn) { btn.disabled = true; btn.innerText = "..."; }
+            const reason = prompt("반려 사유를 입력하세요 (학생에게 전송됩니다):", "정보 불일치");
+            if (!reason) { if(btn) { btn.disabled = false; btn.innerText = "거절"; } return; }
+
+            const item = pendingData.find(x => x.id === id);
+            try {
+                // 1. 환불
+                const { error: rErr } = await _supabase.rpc('give_points', { p_student_id: item.student_id, p_xp: 0, p_cp: item.amount, p_rule_name: '💳 출금 반려' });
+                if(rErr) throw new Error("환불 실패: " + rErr.message);
+
+                // 2. 상태 업데이트 (여기서 reject_reason 컬럼 필요!)
+                const { error: uErr } = await _supabase.from('cp_withdrawals').update({ status: 'rejected', reject_reason: reason }).eq('id', id);
+                if(uErr) throw new Error("DB 업데이트 실패: " + uErr.message);
+
+                // 3. 메시지 전송
+                await _supabase.from('season_messages').insert([{
+                    student_id: item.student_id,
+                    message: `[출금 반려] ${item.amount.toLocaleString()} CP 출금 요청이 반려되었습니다. (사유: ${reason})`,
+                    is_read: false, xp_change: 0, cp_change: item.amount
+                }]);
+
+                alert("반려 및 환불 완료!");
+                pendingData = pendingData.filter(x => x.id !== id); // 리스트에서 즉시 제거
+                renderAll();
+            } catch(e) {
+                alert("오류: " + e.message + "\n(DB에 reject_reason 컬럼을 추가했는지 확인해주세요!)");
+                if(btn) { btn.disabled = false; btn.innerText = "거절"; }
+            }
+        }
+
+        function validateLocks() {
+            const c1 = document.getElementById('check-1'), c2 = document.getElementById('check-2'), btn = document.getElementById('btn-db-save');
+            if (cartData.length === 0) { c1.checked=false; c2.checked=false; c1.disabled=true; c2.disabled=true; btn.disabled=true; }
+            else { c1.disabled=false; c2.disabled=!c1.checked; btn.disabled=!c2.checked; }
+            document.getElementById('text-check-2').className = c1.checked ? "text-sm font-bold text-slate-800" : "text-sm font-bold text-slate-400";
+        }
+
+        async function saveToDatabase() {
+            if(!confirm("승인 확정 하시겠습니까?")) return;
+            const btn = document.getElementById('btn-db-save'); btn.disabled=true;
+            try {
+                lastApprovedData = [...cartData];
+                for(let item of cartData) {
+                    await _supabase.from('cp_withdrawals').update({ status: 'approved', approved_at: new Date() }).eq('id', item.id);
+                    await _supabase.from('season_messages').insert([{
+                        student_id: item.student_id, message: `[출금 승인] ${item.amount.toLocaleString()} CP 출금 승인 완료.`, is_read: false, xp_change: 0, cp_change: 0
+                    }]);
+                }
+                alert("승인 완료!"); document.getElementById('btn-excel-down').disabled = false;
+                cartData = []; document.getElementById('check-1').checked=false; document.getElementById('check-2').checked=false;
+                init();
+            } catch(e) { alert(e.message); } finally { btn.disabled=false; }
+        }
+
+        function exportToExcel() {
+            const t = cartData.length ? cartData : lastApprovedData;
+            if(!t.length) return alert("데이터 없음");
+            const d = t.map(i => ({ "이름": i.users.name, "카드": i.users.crabit_card_number, "금액": i.amount }));
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d), "Withdrawal");
+            XLSX.writeFile(wb, `출금_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        init();
+    </script>
+</body>
+</html>
