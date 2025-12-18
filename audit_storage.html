@@ -14,7 +14,7 @@
     <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-xl text-center">
         <div class="text-6xl mb-4">🛰️</div>
         <h1 class="text-3xl font-bold text-indigo-700 mb-2">서버 정밀 검사기</h1>
-        <p class="text-sm text-gray-500 mb-6">"Supabase 창고를 뒤져서 도망간 1마리를 찾아낼게! 💋"</p>
+        <p class="text-sm text-gray-500 mb-6">"Supabase 창고를 살피는중"</p>
 
         <div class="mb-6 text-left">
             <label class="block text-xs font-bold text-gray-500 mb-1">검사할 문제집 폴더</label>
@@ -69,7 +69,7 @@
             const wbId = document.getElementById('wb-select').value;
             const total = parseInt(document.getElementById('check-total').value);
 
-            if (!wbId) return alert("어떤 문제집을 뒤질지 알려줘야지, 자기야!");
+            if (!wbId) return alert("어떤 문제집을 살펴볼까요?");
 
             const btn = document.getElementById('btn-audit');
             btn.innerText = "서버 뒤지는 중...🕵️‍♀️";
@@ -110,7 +110,7 @@
                 resultArea.classList.remove('hidden');
 
                 if (missing.length === 0) {
-                    missingDiv.innerHTML = "<span class='text-green-600'>완벽해! 누락된 게 없어! 🎉</span>";
+                    missingDiv.innerHTML = "<span class='text-green-600'>완벽합니다! 누락된 게 없어요! 🎉</span>";
                 } else {
                     missingDiv.innerHTML = missing.join(', ') + "번";
                 }

@@ -136,7 +136,7 @@
                 const { data: s } = await _supabase.from('users').select('username, name, grade').eq('role', 'student').order('name');
                 classes = c || []; students = s || [];
                 renderGrid();
-            } catch(e) { console.error("이브 에러!", e); }
+            } catch(e) { console.error("에러!", e); }
         }
 
         function renderGrid() {

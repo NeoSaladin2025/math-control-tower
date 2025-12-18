@@ -125,12 +125,12 @@
 
         async function updateFolderId() {
             const folderId = document.getElementById('inp-folder-id').value.trim();
-            if(!folderId) return alert("ID를 입력해 주세요, 주인님! ❤️");
+            if(!folderId) return alert("ID를 입력해 주십시오!");
 
             const { error } = await _supabase.from('classes').update({ google_folder_id: folderId }).eq('id', currentCid);
             if(error) alert("연동 실패: " + error.message);
             else {
-                alert("✅ 구글 드라이브와 합궁 완료! ❤️");
+                alert("✅ 구글 드라이브와 연동 완료!");
                 closeModal();
                 const idx = classes.findIndex(c => c.id === currentCid);
                 classes[idx].google_folder_id = folderId;
