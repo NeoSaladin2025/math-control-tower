@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통합 진단평가 관리 센터 - Beyond The Line Math</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 주인님의 섹시한 다크 인디고 테마 */
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #0f172a; overflow: hidden; height: 100vh; width: 100vw; display: flex; }
+        
+        /* 사이드바 글래스모피즘 */
+        .sidebar { 
+            width: 280px; 
+            background: rgba(15, 23, 42, 0.8); 
+            backdrop-blur: 20px; 
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 50;
+        }
+
+        /* 메뉴 아이템 스타일 */
+        .menu-item {
+            display: flex; 
+            align-items: center; 
+            gap: 14px; 
+            padding: 16px 24px;
+            color: #94a3b8; 
+            font-weight: 800; 
+            font-size: 14px; 
+            border-radius: 16px; 
+            margin-bottom: 6px;
+            cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .menu-item:hover { 
+            background-color: rgba(99, 102, 241, 0.1); 
+            color: #f8fafc;
+            border-color: rgba(99, 102, 241, 0.2);
+            transform: translateX(4px);
+        }
+        .menu-item.active { 
+            background: linear-gradient(135deg, #6366f1, #4338ca); 
+            color: white; 
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        .menu-item i { width: 20px; text-align: center; font-size: 16px; }
+
+        /* 메인 컨텐츠 영역 */
+        .main-content { flex-1; position: relative; background-color: #020617; }
+        iframe { width: 100%; height: 100%; border: none; transition: opacity 0.3s; }
+
+        /* 스크롤바 커스텀 */
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        .text-glow { text-shadow: 0 0 10px rgba(99, 102, 241, 0.6); }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar p-6">
+        <div class="mb-10 px-2">
+            <div class="text-indigo-500 font-black text-[10px] uppercase tracking-[0.3em] mb-1">Diagnostic Admin</div>
+            <h1 class="text-2xl font-black text-white tracking-tighter text-glow flex items-center gap-2">
+                <i class="fa-solid fa-microscope text-indigo-400"></i> 진단센터
+            </h1>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto custom-scroll pr-1">
+            <div class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4 px-4">Evaluation Control</div>
+            
+            <div onclick="loadModule('test_category_maker.html', this)" class="menu-item active">
+                <i class="fa-solid fa-folder-plus"></i><span>진단평가 종류 제작</span>
+            </div>
+            
+            <div onclick="loadModule('test_settings.html', this)" class="menu-item">
+                <i class="fa-solid fa-gears"></i><span>진단평가 세부 설정</span>
+            </div>
+            
+            <div onclick="loadModule('test_editor.html', this)" class="menu-item">
+                <i class="fa-solid fa-file-pen"></i><span>진단평가 시험지 작성</span>
+            </div>
+            
+            <div onclick="loadModule('test_assign.html', this)" class="menu-item">
+                <i class="fa-solid fa-user-check"></i><span>진단평가 배정</span>
+            </div>
+
+            <div class="h-px bg-slate-800 my-6 mx-4"></div>
+
+            <div class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4 px-4">Live Insights</div>
+            
+            <div onclick="loadModule('test_report.html', this)" class="menu-item">
+                <i class="fa-solid fa-chart-line"></i><span>결과 분석 리포트</span>
+            </div>
+            
+            <div onclick="loadModule('test_monitor.html', this)" class="menu-item">
+                <i class="fa-solid fa-satellite-dish"></i><span>실시간 응시 현황</span>
+            </div>
+        </nav>
+
+        <div class="pt-6 border-t border-slate-800">
+            <button onclick="location.href='teacher_main.html'" class="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-2xl text-xs font-black transition flex items-center justify-center gap-2 border border-slate-700">
+                <i class="fa-solid fa-arrow-left"></i> 대시보드로 돌아가기
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content flex-1">
+        <iframe id="test-module-frame" src="test_category_maker.html" name="module_frame"></iframe>
+    </main>
+
+    <script>
+        /**
+         * @description 사이드바 메뉴 클릭 시 해당 HTML 모듈을 iframe에 로드
+         * @param {string} url - 로드할 모듈 파일명
+         * @param {HTMLElement} el - 클릭된 메뉴 요소
+         */
+        function loadModule(url, el) {
+            // 모든 메뉴 아이템의 활성화 클래스 제거
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            // 클릭된 아이템만 활성화
+            el.classList.add('active');
+            
+            const frame = document.getElementById('test-module-frame');
+            
+            // 시각적 효과를 위해 잠깐 투명하게 처리
+            frame.style.opacity = '0';
+            
+            setTimeout(() => {
+                frame.src = url;
+                frame.onload = () => {
+                    frame.style.opacity = '1';
+                };
+            }, 100);
+        }
+
+        // 초기 모듈 로드 확인 (maker 기본값)
+        window.onload = () => {
+            console.log("Master Evaluation Center Initialized.");
+        };
+    </script>
+</body>
+</html>

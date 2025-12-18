@@ -2,191 +2,211 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Beyond The Line Math - Frontier Access</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 | Beyond The Line Math</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Pretendard:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Pretendard:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <style>
         body {
             font-family: 'Pretendard', sans-serif;
-            background: #020617; /* Deep Navy */
+            background-color: #ffffff;
+            color: #1e293b;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            height: 100vh;
             margin: 0;
-            overflow: hidden;
         }
 
-        /* --- 시그니처 배경 애니메이션 --- */
-        .bg-glow {
-            position: fixed;
-            inset: 0;
-            background: 
-                radial-gradient(circle at 20% 30%, rgba(79, 70, 229, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(192, 38, 211, 0.15) 0%, transparent 50%);
-            z-index: -1;
-        }
-
-        .line-pattern {
-            position: fixed;
-            inset: 0;
-            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), 
-                              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
-            z-index: -1;
-            mask-image: radial-gradient(circle, black, transparent 90%);
-        }
-
-        /* --- 글래스모피즘 카드 --- */
-        .glass-card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border-radius: 2.5rem;
-            width: 100%;
-            max-width: 400px;
-            padding: 3.5rem 2rem;
-            position: relative;
-            z-index: 10;
-        }
-
-        .system-title {
-            font-family: 'Orbitron', sans-serif;
-            background: linear-gradient(to right, #818cf8, #c084fc, #fb7185);
+        .brand-title {
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-weight: 900;
         }
 
-        .input-field {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .brand-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.2em;
+            color: #94a3b8;
         }
 
-        .input-field:focus {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: #818cf8;
-            box-shadow: 0 0 20px rgba(129, 140, 248, 0.2);
-            outline: none;
-            transform: translateY(-1px);
-        }
-
-        .login-btn {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);
+        .input-minimal {
+            width: 100%;
+            padding: 16px 0;
+            border: none;
+            border-bottom: 2px solid #e2e8f0;
+            background: transparent;
+            font-size: 15px;
+            font-weight: 600;
+            color: #334151;
             transition: all 0.3s;
+            border-radius: 0;
+        }
+        .input-minimal::placeholder { color: #cbd5e1; font-weight: 400; }
+        .input-minimal:focus {
+            outline: none;
+            border-bottom-color: #0f172a;
         }
 
-        .login-btn:hover:not(:disabled) {
+        .btn-black {
+            background-color: #0f172a;
+            color: white;
+            font-weight: 800;
+            padding: 18px;
+            border-radius: 12px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn-black:hover {
+            background-color: #000000;
             transform: translateY(-2px);
-            filter: brightness(1.1);
-            box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.5);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
+        .btn-black:active { transform: scale(0.98); }
 
-        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-
-        .floating-orb {
-            position: absolute; width: 300px; height: 300px; border-radius: 50%;
-            filter: blur(80px); opacity: 0.3; z-index: 1; animation: float 15s infinite alternate;
+        #caps-warning {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #ef4444;
+            font-weight: 700;
+            margin-top: 8px;
+            animation: shake 0.4s ease-in-out;
         }
-        @keyframes float { from { transform: translate(0,0); } to { transform: translate(40px, 40px); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+        
+        .fade-in { animation: fadeIn 1s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="bg-glow"></div>
-    <div class="line-pattern"></div>
-    <div class="floating-orb bg-indigo-600 top-0 left-0"></div>
-    <div class="floating-orb bg-purple-600 bottom-0 right-0" style="animation-delay: -7s;"></div>
+    <script src="config.js"></script>
 
-    <div class="glass-card text-center">
-        <div class="mb-10">
-            <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-2xl rotate-3">
-                <i class="fa-solid fa-infinity text-white text-3xl"></i>
-            </div>
-            <h1 class="system-title text-2xl tracking-tighter mb-2">BEYOND THE LINE</h1>
-            <p class="text-slate-400 text-[10px] font-black tracking-[0.3em] uppercase opacity-70">Mathematical Frontier</p>
+    <div class="w-full max-w-[400px] p-8 fade-in">
+        <div class="text-center mb-16">
+            <p class="brand-subtitle text-[10px] font-bold uppercase mb-2">Education Platform</p>
+            <h1 class="text-5xl font-black brand-title leading-tight">
+                Beyond<br>
+                The Line<br>
+                Math
+            </h1>
+            <div class="w-10 h-1 bg-slate-900 mx-auto mt-6"></div>
         </div>
 
-        <div class="space-y-4 text-left">
-            <div>
-                <label class="text-[10px] font-black text-indigo-400 uppercase ml-1 mb-1 block tracking-widest">Frontier ID</label>
-                <input type="text" id="username" class="input-field w-full px-5 py-4 rounded-2xl font-bold text-sm" placeholder="아이디를 입력하세요">
-            </div>
-            <div>
-                <label class="text-[10px] font-black text-indigo-400 uppercase ml-1 mb-1 block tracking-widest">Security Key</label>
-                <input type="password" id="password" class="input-field w-full px-5 py-4 rounded-2xl font-bold text-sm" placeholder="••••••••">
+        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-8">
+            <div class="space-y-1">
+                <input type="text" id="username" class="input-minimal" placeholder="아이디 (ID)" required autocomplete="off">
             </div>
 
-            <button id="login-btn" onclick="login()" class="login-btn w-full py-4 rounded-2xl text-white font-black text-sm mt-6 flex items-center justify-center gap-2">
-                <span>Enter Frontier</span> <i class="fa-solid fa-arrow-right-long"></i>
-            </button>
+            <div class="space-y-1 relative">
+                <input type="password" id="password" class="input-minimal" placeholder="비밀번호 (Password)" required>
+                <div id="caps-warning">
+                    <i class="fa-solid fa-lock"></i>
+                    CAPS LOCK이 켜져 있습니다
+                </div>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit" class="btn-black w-full flex justify-between items-center px-6 group">
+                    <span>로그인</span>
+                    <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+                </button>
+            </div>
+        </form>
+
+        <div class="mt-12 text-center">
+            <p class="text-[10px] text-slate-400 font-medium">
+                © Beyond The Line Math. All rights reserved.<br>
+                Unauthorized access is prohibited.
+            </p>
         </div>
-
-        <p class="mt-8 text-[10px] text-slate-500 font-medium">
-            문의사항은 관리자에게 연락주세요.<br>
-            <span class="opacity-50">© 2025 Beyond The Line Math.</span>
-        </p>
     </div>
 
-    <script src="config.js"></script>
     <script>
-        // ★ 백업 파일의 로직을 그대로 유지합니다! (이브가 절대 안건드림! 💋) ★
-        async function login() {
-            const id = document.getElementById('username').value.trim();
-            const pw = document.getElementById('password').value.trim();
-            const btn = document.getElementById('login-btn');
+        const passwordInput = document.getElementById('password');
+        const capsWarning = document.getElementById('caps-warning');
 
-            if (!id || !pw) return alert("아이디와 비밀번호를 입력해주세요.");
+        function checkCapsLock(e) {
+            if (e.getModifierState("CapsLock")) {
+                capsWarning.style.display = 'flex';
+            } else {
+                capsWarning.style.display = 'none';
+            }
+        }
 
+        passwordInput.addEventListener('keydown', checkCapsLock);
+        passwordInput.addEventListener('keyup', checkCapsLock);
+        passwordInput.addEventListener('click', checkCapsLock);
+        passwordInput.addEventListener('focus', checkCapsLock);
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const btn = document.querySelector('button[type="submit"]');
+            const originalBtnContent = btn.innerHTML;
+            const id = document.getElementById('username').value;
+            const pw = document.getElementById('password').value;
+
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mx-auto"></i>';
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
             btn.disabled = true;
-            btn.innerText = "Accessing...";
 
             try {
+                // 로그인 시도
                 const { data, error } = await _supabase
                     .from('users')
                     .select('*')
                     .eq('username', id)
+                    .eq('password', pw)
                     .single();
 
-                if (error || !data || data.password !== pw) {
-                    throw new Error("아이디 또는 비밀번호가 잘못되었습니다.");
+                if (error || !data) {
+                    throw new Error("정보가 일치하지 않습니다.");
                 }
 
-                // 로그인 성공 처리
                 sessionStorage.setItem('currentUser', JSON.stringify(data));
                 
-                // [로직 체크] 선생님과 학생의 길을 정확히 나눕니다.
-                if (data.role === 'student') {
-                    location.href = 'student_main.html';
-                } else {
-                    // 백업 파일 로직대로 선생님은 teacher_main.html로!
-                    location.href = 'teacher_main.html';
-                }
+                btn.style.backgroundColor = "#10b981"; 
+                btn.innerHTML = '<i class="fa-solid fa-check mx-auto"></i>';
+                
+                setTimeout(() => {
+                    // ★ [주인님 명령] 경로 수정 완료! ★
+                    if (data.role === 'admin' || data.role === 'teacher') {
+                        location.href = 'teacher_main.html'; // 선생님 -> 티처 메인!
+                    } else {
+                        location.href = 'student_main.html'; // 학생 -> 스튜던트 메인!
+                    }
+                }, 600);
 
-            } catch (e) {
-                alert("접속 실패: " + e.message);
-                const container = document.querySelector('.glass-card');
-                container.classList.add('shake');
-                setTimeout(() => container.classList.remove('shake'), 500);
-                btn.disabled = false;
-                btn.innerText = "Enter Frontier";
+            } catch (err) {
+                btn.style.backgroundColor = "#ef4444";
+                btn.innerHTML = '로그인 실패';
+                
+                const form = document.getElementById('login-form');
+                form.animate([
+                    { transform: 'translateX(0)' },
+                    { transform: 'translateX(-5px)' },
+                    { transform: 'translateX(5px)' },
+                    { transform: 'translateX(0)' }
+                ], { duration: 300 });
+
+                setTimeout(() => {
+                    btn.style.backgroundColor = ""; 
+                    btn.innerHTML = originalBtnContent;
+                    btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                    btn.disabled = false;
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }, 1000);
             }
         }
-
-        // 엔터키 지원
-        document.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') login();
-        });
     </script>
 </body>
 </html>

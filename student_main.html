@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Bangers&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Rubik+Glitch&family=Bangers&family=Exo+2:ital,wght@1,900&family=Nosifer&family=Creepster&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #334151; user-select: none; }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -21,14 +21,68 @@
         .inbox-blink { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } }
 
-        /* --- V7 ENGINE CSS (Viewer Mode) --- */
+        /* --- ★ V13.5 CHAOS ENGINE CSS (Ported for Student View) ★ --- */
         .emblem-stage-container { perspective: 1000px; overflow: visible !important; z-index: 20; }
+        
+        /* Layer & Effects Stacking System */
         .obj-root { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 0; height: 0; }
-        .obj-orbit, .obj-vital, .obj-fx, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
-        .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; }
+        .effect-wrapper { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform, filter; width: 0; height: 0; }
+        .obj-orbit, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform; }
+        
+        /* Core Element Support (Blend & Backdrop) */
+        .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; mix-blend-mode: normal; }
+        .obj-core img { max-width: none; pointer-events: none; }
+
+        /* V13.5 Animation Library */
+        @keyframes heartbeat { 0% {transform: scale(1);} 14% {transform: scale(1.3);} 28% {transform: scale(1);} 42% {transform: scale(1.3);} 70% {transform: scale(1);} }
+        @keyframes rubberBand { 0% {transform: scale3d(1,1,1);} 30% {transform: scale3d(1.25,0.75,1);} 40% {transform: scale3d(0.75,1.25,1);} 50% {transform: scale3d(1.15,0.85,1);} 65% {transform: scale3d(0.95,1.05,1);} 75% {transform: scale3d(1.05,0.95,1);} 100% {transform: scale3d(1,1,1);} }
+        @keyframes swing { 20% {transform: rotate3d(0,0,1,15deg);} 40% {transform: rotate3d(0,0,1,-10deg);} 60% {transform: rotate3d(0,0,1,5deg);} 80% {transform: rotate3d(0,0,1,-5deg);} 100% {transform: rotate3d(0,0,1,0deg);} }
+        @keyframes tada { 0% {transform: scale3d(1,1,1);} 10%, 20% {transform: scale3d(0.9,0.9,0.9) rotate3d(0,0,1,-3deg);} 30%, 50%, 70%, 90% {transform: scale3d(1.1,1.1,1.1) rotate3d(0,0,1,3deg);} 40%, 60%, 80% {transform: scale3d(1.1,1.1,1.1) rotate3d(0,0,1,-3deg);} 100% {transform: scale3d(1,1,1);} }
+        @keyframes wobble { 0% {transform: none} 15% {transform: translate3d(-25%,0,0) rotate3d(0,0,1,-5deg)} 30% {transform: translate3d(20%,0,0) rotate3d(0,0,1,3deg)} 45% {transform: translate3d(-15%,0,0) rotate3d(0,0,1,-3deg)} 60% {transform: translate3d(10%,0,0) rotate3d(0,0,1,2deg)} 75% {transform: translate3d(-5%,0,0) rotate3d(0,0,1,-1deg)} 100% {transform: none} }
+        @keyframes jello { 0%,11.1%,to {transform:translateZ(0)} 22.2% {transform:skewX(-12.5deg) skewY(-12.5deg)} 33.3% {transform:skewX(6.25deg) skewY(6.25deg)} 44.4% {transform:skewX(-3.125deg) skewY(-3.125deg)} 55.5% {transform:skewX(1.5625deg) skewY(1.5625deg)} 66.6% {transform:skewX(-.78125deg) skewY(-.78125deg)} 77.7% {transform:skewX(.390625deg) skewY(.390625deg)} 88.8% {transform:skewX(-.1953125deg) skewY(-.1953125deg)} }
+        @keyframes bounce { 0%, 20%, 53%, 80%, 100% {transform: translate3d(0,0,0);} 40%, 43% {transform: translate3d(0, -30px, 0);} 70% {transform: translate3d(0, -15px, 0);} 90% {transform: translate3d(0,-4px,0);} }
+        @keyframes flip { from {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, -360deg);} 40%, 50% {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, -190deg);} 80% {transform: perspective(400px) scale3d(0.95, 0.95, 0.95) translate3d(0, 0, 0) rotate3d(0, 1, 0, 0deg);} 100% {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, 0deg);} }
+        @keyframes zoomInOut { 0% {transform: scale(1);} 50% {transform: scale(1.5);} 100% {transform: scale(1);} }
+        @keyframes panic { 0% {transform: translate(0,0) rotate(0deg);} 25% {transform: translate(5px,5px) rotate(5deg);} 50% {transform: translate(0,0) rotate(0eg);} 75% {transform: translate(-5px,5px) rotate(-5deg);} 100% {transform: translate(0,0) rotate(0deg);} }
+        @keyframes breath { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
+        @keyframes barrel { 0% {transform: rotateX(0deg);} 100% {transform: rotateX(360deg);} }
+        @keyframes compress { 0% {transform: scaleY(1);} 50% {transform: scaleY(0.5);} 100% {transform: scaleY(1);} }
+        @keyframes blackHole { 0% {transform: scale(1) rotate(0deg);} 50% {transform: scale(0.1) rotate(180deg); opacity: 0.5;} 100% {transform: scale(1) rotate(360deg); opacity: 1;} }
+        @keyframes tornado { 0% {transform: translateX(-50px) rotateY(0deg);} 50% {transform: translateX(50px) rotateY(180deg) scale(1.2);} 100% {transform: translateX(-50px) rotateY(360deg);} }
+        @keyframes teleport { 0% {opacity:1; transform: scale(1);} 49% {opacity:1; transform: scale(0.1);} 50% {opacity:0; transform: scale(0.1);} 51% {opacity:0; transform: scale(1.5);} 52% {opacity:1; transform: scale(1);} 100% {opacity:1;} }
+        @keyframes orbit3d { 0% {transform: rotate3d(1,1,1,0deg);} 100% {transform: rotate3d(1,1,1,360deg);} }
+        @keyframes glitch-skew { 0% {transform: skew(0deg);} 20% {transform: skew(-10deg);} 40% {transform: skew(10deg);} 60% {transform: skew(-5deg);} 80% {transform: skew(5deg);} 100% {transform: skew(0deg);} }
+        @keyframes vibrate { 0% {transform: translate(0);} 20% {transform: translate(-2px, 2px);} 40% {transform: translate(-2px, -2px);} 60% {transform: translate(2px, 2px);} 80% {transform: translate(2px, -2px);} 100% {transform: translate(0);} }
+        @keyframes float-h { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-20px); } }
+        @keyframes pendulum { 0% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
+
+        /* FX */
+        @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -5px 5px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
+        @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(150%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
+        @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 10px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
+        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
+        @keyframes glitch-filter { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
+        @keyframes rainbow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+        @keyframes blurPulse { 0% { filter: blur(0px); } 50% { filter: blur(4px); } 100% { filter: blur(0px); } }
+        @keyframes invertFlash { 0% { filter: invert(0%); } 50% { filter: invert(100%); } 100% { filter: invert(0%); } }
+        @keyframes sepiaDream { 0% { filter: sepia(0%); } 50% { filter: sepia(100%); } 100% { filter: sepia(0%); } }
+        @keyframes brightnessFlash { 0% { filter: brightness(1); } 50% { filter: brightness(3) drop-shadow(0 0 10px white); } 100% { filter: brightness(1); } }
+        @keyframes grayscalePulse { 0% { filter: grayscale(0%); } 50% { filter: grayscale(100%); } 100% { filter: grayscale(0%); } }
+        @keyframes radioactive { 0% { filter: drop-shadow(0 0 2px lime); } 50% { filter: drop-shadow(0 0 10px #0f0) hue-rotate(90deg); } 100% { filter: drop-shadow(0 0 2px lime); } }
+        @keyframes ice { 0% { filter: drop-shadow(0 0 2px cyan) hue-rotate(180deg) brightness(1.2); } 100% { filter: drop-shadow(0 0 5px white) hue-rotate(180deg) brightness(1.2); } }
+        @keyframes shadowClone { 0% { filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.5)); } 50% { filter: drop-shadow(-5px -5px 0px rgba(255,0,0,0.5)); } 100% { filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.5)); } }
+        @keyframes midas { 0% { filter: sepia(1) saturate(5) brightness(1); } 50% { filter: sepia(1) saturate(5) brightness(1.5) drop-shadow(0 0 5px gold); } 100% { filter: sepia(1) saturate(5) brightness(1); } }
+        @keyframes matrix { 0% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } 50% { filter: drop-shadow(0 0 5px #0f0) hue-rotate(20deg) contrast(2); } 100% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } }
+        @keyframes thermal { 0% { filter: contrast(1.5) hue-rotate(0deg); } 50% { filter: contrast(2) hue-rotate(180deg) invert(1); } 100% { filter: contrast(1.5) hue-rotate(360deg); } }
+        @keyframes hologram { 0% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } 20% { filter: drop-shadow(2px 0 5px cyan) opacity(0.6) blur(1px); } 40% { filter: drop-shadow(-2px 0 5px cyan) opacity(0.8); } 100% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } }
+        @keyframes noir { 0% { filter: grayscale(1) contrast(1.5) brightness(0.8); } 100% { filter: grayscale(1) contrast(2) brightness(0.6); } }
+        @keyframes pixelate { 0% { filter: contrast(1); } 50% { filter: contrast(3) brightness(1.2); } 100% { filter: contrast(1); } }
+        @keyframes underwater { 0% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } 50% { filter: blur(2px) hue-rotate(200deg) brightness(1); } 100% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } }
+
         @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
         @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
+        @keyframes spin-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+        @keyframes spin-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
 
         /* 모달 스타일 */
         #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
@@ -201,7 +255,7 @@
         if (!user) location.href = 'index.html';
         
         let myRadarChart = null;
-        let currentUserData = null; // ★ 유저 정보를 저장할 전역 변수
+        let currentUserData = null;
 
         window.addEventListener('message', (event) => { if (event.data === 'mission_complete') location.reload(); });
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
@@ -213,7 +267,7 @@
                 const { data: userData, error: userErr } = await _supabase.from('users').select('*').eq('username', user.username).single();
                 if(userErr || !userData) throw new Error("유저 정보 로드 실패");
 
-                currentUserData = userData; // ★ 데이터 저장 (출금 로직에서 사용)
+                currentUserData = userData;
 
                 document.getElementById('s-name').innerText = userData.name;
                 document.getElementById('s-total-lv').innerText = Math.floor((userData.total_xp || 0) / 1000);
@@ -235,8 +289,9 @@
                     let progress = Math.min(100, (myXp / currentTier.max_xp) * 100);
                     setTimeout(() => { document.getElementById('xp-bar').style.width = `${progress}%`; }, 300);
 
-                    if (currentTier.emblem_json?.mode === 'advanced') {
-                        renderEmblemV7(currentTier.emblem_json.layers);
+                    // ★ V13.5 Engine Call (Replaced V7)
+                    if (currentTier.emblem_json && currentTier.emblem_json.layers) {
+                        renderEmblem(currentTier.emblem_json.layers, 0.4);
                     }
                 }
                 
@@ -245,7 +300,96 @@
             } catch (e) { console.error(e); }
         }
 
-        // --- ★ [추가됨] 출금 신청 로직 (100원 단위 & 이중 확인) ★ ---
+        // --- ★ [CORE] V13.5 CHAOS ENGINE RENDERER (Ported) ★ ---
+        function renderEmblem(layers, scaleFactor=0.4) {
+            const stage = document.getElementById('emblem-stage');
+            stage.innerHTML = ''; 
+            
+            // Sort layers by Z-index (default array order)
+            const sorted = [...layers].sort((a,b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+            sorted.forEach(l => {
+                const root = document.createElement('div');
+                root.className = 'obj-root';
+                // Centering fix for viewer
+                root.style.left = '50%'; root.style.top = '50%'; 
+
+                // 1. Orbit
+                const orbit = document.createElement('div'); orbit.className = 'obj-orbit';
+                if(l.anim.orbit.on) { 
+                    orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius * scaleFactor}px`); 
+                    orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; 
+                }
+
+                // 2. Vital Stack (Multi-Layer Support)
+                let currentContainer = orbit;
+                if(l.anim.vital && l.anim.vital.length > 0) {
+                    // Compatibility for old format (string array) vs new (object array)
+                    let vitals = typeof l.anim.vital[0] === 'string' ? l.anim.vital.map(t=>({type:t, speed:10})) : l.anim.vital;
+                    vitals.forEach(e => {
+                        const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                        const speed = (21 - (e.speed || 10)) / 10;
+                        wrapper.style.animation = `${e.type} ${speed}s infinite ease-in-out`;
+                        currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                    });
+                } else if(l.anim.vital && l.anim.vital.on) { // V7 Legacy Support
+                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                     wrapper.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`;
+                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                }
+
+                // 3. FX Stack
+                if(l.anim.fx && l.anim.fx.length > 0) {
+                    let fxs = typeof l.anim.fx[0] === 'string' ? l.anim.fx.map(t=>({type:t, speed:10})) : l.anim.fx;
+                    fxs.forEach(e => {
+                        const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                        const speed = (21 - (e.speed || 10)) / 10;
+                        wrapper.style.animation = `${e.type} ${speed}s infinite`;
+                        currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                    });
+                } else if(l.anim.fx && l.anim.fx.on) { // V7 Legacy Support
+                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                     wrapper.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`;
+                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                }
+
+                // 4. Spin
+                const spin = document.createElement('div'); spin.className = 'obj-spin';
+                if(l.anim.spin.on) { spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`; }
+                currentContainer.appendChild(spin);
+
+                // 5. Core Element & Blend Modes
+                const core = document.createElement('div'); core.className = 'obj-core';
+                
+                // ★ V13.5 Features
+                if(l.style.blendMode) core.style.mixBlendMode = l.style.blendMode;
+                if(l.style.opacity !== undefined) core.style.opacity = l.style.opacity;
+                if(l.style.backdropFilter && l.style.backdropFilter !== 'none') core.style.backdropFilter = l.style.backdropFilter;
+
+                if (l.type === 'image') {
+                    const img = document.createElement('img'); img.src = l.content;
+                    img.style.width = `${l.style.size * scaleFactor}px`; img.style.height = 'auto';
+                    core.appendChild(img);
+                } else {
+                    core.style.fontSize = `${l.style.size * scaleFactor}px`;
+                    if(l.style.texture !== 'none') {
+                        core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
+                        if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
+                        else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
+                        else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
+                        else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
+                    } else { core.style.color = l.style.color; }
+                    
+                    if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; 
+                    else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; } 
+                    else core.innerText = l.content;
+                }
+                
+                spin.appendChild(core); root.appendChild(orbit); stage.appendChild(root);
+            });
+        }
+
+        // --- Withdraw Logic ---
         function openWithdrawModal() { document.getElementById('withdraw-modal').classList.remove('hidden'); resetWithdraw(); }
         function closeWithdrawModal() { document.getElementById('withdraw-modal').classList.add('hidden'); }
         function resetWithdraw() {
@@ -257,11 +401,8 @@
         function checkWithdraw() {
             const val = parseInt(document.getElementById('withdraw-input').value);
             if(!val || val <= 0) return alert("금액을 입력하세요.");
-            
-            // 전역 변수 currentUserData 사용
             if(currentUserData && val > currentUserData.cp) return alert(`잔액이 부족합니다. (보유: ${currentUserData.cp} CP)`);
-            if(val % 100 !== 0) return alert("100원 단위로만 신청 가능합니다. (십원/일원 단위 불가)");
-            
+            if(val % 100 !== 0) return alert("100원 단위로만 신청 가능합니다.");
             document.getElementById('withdraw-input').disabled = true;
             document.getElementById('btn-check').classList.add('hidden');
             const btnSend = document.getElementById('btn-send');
@@ -270,192 +411,47 @@
         }
         async function sendWithdraw() {
             const amount = parseInt(document.getElementById('withdraw-input').value);
-        
-        // 1. [선차감] 즉시 CP를 깎습니다. (RPC 함수 사용)
-        const { error: deductErr } = await _supabase.rpc('give_points', {
-            p_student_id: user.username,
-            p_xp: 0,
-            p_cp: -amount, // 마이너스로 차감!
-            p_rule_name: '💳 CP 출금 신청 (선차감)'
-        });
-
-        if (deductErr) {
-            return alert("잔액 차감 중 오류가 발생했습니다: " + deductErr.message);
-        }
-
-        // 2. [신청서 제출] 차감이 성공하면 내역을 저장합니다.
-        const { error: insertErr } = await _supabase.from('cp_withdrawals').insert([{
-            student_id: user.username,
-            amount: amount,
-            status: 'pending'
-        }]);
-
-        if (insertErr) {
-            // 혹시라도 신청서 저장이 실패하면 깎은 돈을 다시 돌려줘야 합니다 (롤백)
-            await _supabase.rpc('give_points', {
-                p_student_id: user.username,
-                p_xp: 0,
-                p_cp: amount,
-                p_rule_name: '시스템 오류 자동 환불'
-            });
-            return alert("신청서 제출 실패! CP는 다시 환불되었습니다.");
-        }
-
-        alert("신청 완료! CP가 즉시 차감되었습니다. 선생님 승인을 기다리세요! ❤️");
-        closeWithdrawModal();
-        loadUserInfo(); // 잔액 갱신
+            const { error: deductErr } = await _supabase.rpc('give_points', { p_student_id: user.username, p_xp: 0, p_cp: -amount, p_rule_name: '💳 CP 출금 신청 (선차감)' });
+            if (deductErr) return alert("오류: " + deductErr.message);
+            const { error: insertErr } = await _supabase.from('cp_withdrawals').insert([{ student_id: user.username, amount: amount, status: 'pending' }]);
+            if (insertErr) { await _supabase.rpc('give_points', { p_student_id: user.username, p_xp: 0, p_cp: amount, p_rule_name: '시스템 오류 자동 환불' }); return alert("실패! CP 자동 환불됨."); }
+            alert("신청 완료! 선생님 승인을 기다리세요.");
+            closeWithdrawModal(); loadUserInfo();
         }
 
         async function openFeedbackList() {
             openModal('📬 통합 메시지함');
-            const body = document.getElementById('modal-body');
-            body.innerHTML = '<div class="loader m-6"></div>';
-
+            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>';
             const { data: solutions } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending');
             const { data: seasonMsgs } = await _supabase.from('season_messages').select('*').eq('student_id', user.username);
-
-            const all = [
-                ...(solutions || []).map(m => ({ ...m, cat: '숙제' })),
-                ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌' }))
-            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-            if (all.length === 0) {
-                body.innerHTML = '<div class="text-center py-10 text-slate-400">메시지가 없습니다.</div>';
-                return;
-            }
-
+            const all = [ ...(solutions || []).map(m => ({ ...m, cat: '숙제' })), ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌' })) ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            if (all.length === 0) { body.innerHTML = '<div class="text-center py-10 text-slate-400">메시지가 없습니다.</div>'; return; }
             body.innerHTML = all.map(m => {
-                const isRead = m.is_read;
-                const dateStr = new Date(m.created_at).toLocaleDateString();
-                const deleteBtn = isRead ? 
-                    `<button onclick="deleteMsg('${m.cat}', ${m.id})" class="text-slate-300 hover:text-red-500 transition px-2" title="삭제"><i class="fa-solid fa-trash-can"></i></button>` : '';
-
-                if (m.cat === '시즌') {
-                    return `
-                    <div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-indigo-50/30' : ''}" onclick="markRead('시즌', ${m.id})">
-                        <div class="flex justify-between items-start mb-1">
-                            <span class="text-[10px] font-black text-indigo-500">🏆 시즌 알림</span>
-                            <div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div>
-                        </div>
-                        <div class="text-sm font-bold text-slate-700">${m.message}</div>
-                        <div class="mt-2 text-[10px] font-bold text-slate-400">변동: XP ${m.xp_change > 0 ? '+' : ''}${m.xp_change}, CP ${m.cp_change > 0 ? '+' : ''}${m.cp_change}</div>
-                    </div>`;
-                } else {
-                    return `
-                    <div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-blue-50/30' : ''}" onclick="markRead('숙제', ${m.id})">
-                        <div class="flex justify-between items-start mb-1">
-                            <span class="text-[10px] font-black text-blue-500">📝 숙제 피드백 (No.${m.problem_num})</span>
-                            <div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div>
-                        </div>
-                        <div class="text-sm font-medium text-slate-700">${m.teacher_feedback || '내용 없음'}</div>
-                    </div>`;
-                }
+                const isRead = m.is_read; const dateStr = new Date(m.created_at).toLocaleDateString();
+                const deleteBtn = isRead ? `<button onclick="deleteMsg('${m.cat}', ${m.id})" class="text-slate-300 hover:text-red-500 transition px-2"><i class="fa-solid fa-trash-can"></i></button>` : '';
+                if (m.cat === '시즌') return `<div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-indigo-50/30' : ''}" onclick="markRead('시즌', ${m.id})"><div class="flex justify-between items-start mb-1"><span class="text-[10px] font-black text-indigo-500">🏆 시즌 알림</span><div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div></div><div class="text-sm font-bold text-slate-700">${m.message}</div><div class="mt-2 text-[10px] font-bold text-slate-400">XP ${m.xp_change}, CP ${m.cp_change}</div></div>`;
+                else return `<div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-blue-50/30' : ''}" onclick="markRead('숙제', ${m.id})"><div class="flex justify-between items-start mb-1"><span class="text-[10px] font-black text-blue-500">📝 피드백 (No.${m.problem_num})</span><div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div></div><div class="text-sm font-medium text-slate-700">${m.teacher_feedback || '내용 없음'}</div></div>`;
             }).join('');
         }
-
-        async function markRead(cat, id) {
-            const table = cat === '시즌' ? 'season_messages' : 'student_solutions';
-            await _supabase.from(table).update({ is_read: true }).eq('id', id);
-            checkNotifications();
-            openFeedbackList();
-        }
-
-        async function deleteMsg(cat, id) {
-            event.stopPropagation();
-            if(!confirm("이 메시지를 삭제하시겠습니까?")) return;
-            const table = cat === '시즌' ? 'season_messages' : 'student_solutions';
-            const { error } = await _supabase.from(table).delete().eq('id', id);
-            if(error) alert("삭제 실패: " + error.message);
-            else openFeedbackList();
-        }
+        async function markRead(cat, id) { await _supabase.from(cat === '시즌' ? 'season_messages' : 'student_solutions').update({ is_read: true }).eq('id', id); checkNotifications(); openFeedbackList(); }
+        async function deleteMsg(cat, id) { event.stopPropagation(); if(!confirm("삭제하시겠습니까?")) return; const { error } = await _supabase.from(cat === '시즌' ? 'season_messages' : 'student_solutions').delete().eq('id', id); if(error) alert(error.message); else openFeedbackList(); }
 
         async function loadBooks() {
             const { data } = await _supabase.from('student_books').select(`workbook_id, workbooks ( id, title, total_problems, grade_level )`).eq('student_id', user.username).order('created_at', { ascending: false });
-            const list = document.getElementById('book-list');
-            if (!data || data.length === 0) { list.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">교재 없음</div>`; return; }
-            
-            list.innerHTML = data.map(item => `
-                <div class="bg-white p-4 rounded-2xl border-2 border-slate-100 flex flex-col gap-3 shadow-sm hover:border-indigo-200 transition group">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg border border-indigo-100 shadow-sm">
-                            <i class="fa-solid fa-book"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-slate-800 text-sm truncate">${item.workbooks.title}</div>
-                            <div class="text-[10px] text-slate-400 font-medium">자동화 설정 대기중</div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-2 mt-1">
-                        <button onclick="requestHomework(${item.workbook_id}, '${item.workbooks.title}')" 
-                            class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5
-                                   bg-white border-2 border-indigo-100 text-indigo-600 shadow-[0_3px_0_#e0e7ff]
-                                   active:shadow-none active:translate-y-[3px] active:border-indigo-200 hover:bg-indigo-50">
-                            <span>🙋‍♂️</span> 과제 요청
-                        </button>
-                        
-                        <button onclick="openSelfXray(${item.workbook_id})" 
-                            class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5
-                                   bg-white border-2 border-rose-100 text-rose-500 shadow-[0_3px_0_#ffe4e6]
-                                   active:shadow-none active:translate-y-[3px] active:border-rose-200 hover:bg-rose-50">
-                            <span>🩺</span> 진단
-                        </button>
-                    </div>
-                </div>`).join('');
+            const list = document.getElementById('book-list'); if (!data || data.length === 0) { list.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">교재 없음</div>`; return; }
+            list.innerHTML = data.map(item => `<div class="bg-white p-4 rounded-2xl border-2 border-slate-100 flex flex-col gap-3 shadow-sm hover:border-indigo-200 transition group"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg border border-indigo-100 shadow-sm"><i class="fa-solid fa-book"></i></div><div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm truncate">${item.workbooks.title}</div><div class="text-[10px] text-slate-400 font-medium">자동화 설정 대기중</div></div></div><div class="flex gap-2 mt-1"><button onclick="requestHomework(${item.workbook_id}, '${item.workbooks.title}')" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5 bg-white border-2 border-indigo-100 text-indigo-600 shadow-[0_3px_0_#e0e7ff] active:shadow-none active:translate-y-[3px] active:border-indigo-200 hover:bg-indigo-50"><span>🙋‍♂️</span> 과제 요청</button><button onclick="openSelfXray(${item.workbook_id})" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5 bg-white border-2 border-rose-100 text-rose-500 shadow-[0_3px_0_#ffe4e6] active:shadow-none active:translate-y-[3px] active:border-rose-200 hover:bg-rose-50"><span>🩺</span> 진단</button></div></div>`).join('');
         }
-
         async function requestHomework(wbId, wbTitle) {
-            if (!confirm(`[${wbTitle}] 문제집에서 과제를 생성하시겠습니까?`)) return;
+            if (!confirm(`[${wbTitle}] 과제 생성?`)) return;
             const { data: config } = await _supabase.from('auto_homework_config').select('*').eq('student_id', user.username).eq('workbook_id', wbId).single();
             const amount = config ? config.amount_per_time : 20; 
-            const problemList = Array.from({length: amount}, (_, i) => i + 1);
-            const { error } = await _supabase.rpc('request_assignment_student', { p_student_id: user.username, p_workbook_id: wbId, p_title: `[요청] ${wbTitle} 자율학습`, p_problem_list: problemList });
-            if (error) alert("생성 실패: " + error.message); else { alert("✅ 과제가 생성되었습니다!"); location.reload(); }
-        }
-
-        function renderEmblemV7(layers) {
-            const stage = document.getElementById('emblem-stage');
-            stage.innerHTML = ''; 
-            const sorted = [...layers].sort((a,b) => a.zIndex - b.zIndex);
-            const scale = 0.4;
-            sorted.forEach(l => {
-                const root = document.createElement('div'); root.className = `obj-root`; root.style.left = `${l.x}%`; root.style.top = `${l.y}%`;
-                const core = document.createElement('div'); core.className = 'obj-core'; core.style.fontSize = `${l.style.size * scale}px`;
-                if(l.style.texture !== 'none') {
-                    core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
-                    if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
-                    else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
-                } else { core.style.color = l.style.color; }
-                if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; else core.innerText = l.content;
-                root.appendChild(core); stage.appendChild(root);
-            });
+            const { error } = await _supabase.rpc('request_assignment_student', { p_student_id: user.username, p_workbook_id: wbId, p_title: `[요청] ${wbTitle}`, p_problem_list: Array.from({length: amount}, (_, i) => i + 1) });
+            if (error) alert("실패: " + error.message); else { alert("✅ 생성 완료!"); location.reload(); }
         }
 
         function loadChart(s) {
-            const ctx = document.getElementById('statChart').getContext('2d');
-            if(myRadarChart) myRadarChart.destroy();
-            myRadarChart = new Chart(ctx, {
-                type: 'radar',
-                data: { 
-                    labels: ['연산','독해','추론','패턴','속도','안정','실행','태도'], 
-                    datasets: [{ 
-                        data: [
-                            s.calc ?? 0, s.read ?? 0, s.logic ?? 0, s.pat ?? 0, 
-                            s.tmp ?? 0, s.stb ?? 0, s.exec ?? 0, s.att ?? 0
-                        ], 
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)', 
-                        borderColor: '#4f46e5', 
-                        pointRadius: 2 
-                    }] 
-                },
-                options: { 
-                    scales: { 
-                        r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } 
-                    }, 
-                    plugins: { legend: { display: false } }, 
-                    maintainAspectRatio: false 
-                }
-            });
+            const ctx = document.getElementById('statChart').getContext('2d'); if(myRadarChart) myRadarChart.destroy();
+            myRadarChart = new Chart(ctx, { type: 'radar', data: { labels: ['연산','독해','추론','패턴','속도','안정','실행','태도'], datasets: [{ data: [s.calc||0, s.read||0, s.logic||0, s.pat||0, s.tmp||0, s.stb||0, s.exec||0, s.att||0], backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#4f46e5', pointRadius: 2 }] }, options: { scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, plugins: { legend: { display: false } }, maintainAspectRatio: false } });
         }
 
         async function checkNotifications() {
@@ -471,8 +467,7 @@
         function openModal(title) { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-title').innerText=title; }
         function closeModal() { document.getElementById('modal-overlay').style.display='none'; checkNotifications(); }
         async function openSpecialList() {
-            openModal('🎁 특별 과제');
-            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>';
+            openModal('🎁 특별 과제'); const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>';
             const { data } = await _supabase.from('assignments').select('*').eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned').order('deadline', { ascending: true });
             if (!data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">없음</div>'; return; }
             body.innerHTML = data.map(a => `<div onclick="goToMission(${a.id})" class="p-4 border-b hover:bg-slate-50 cursor-pointer flex justify-between"><div><div class="font-bold text-sm">${a.title}</div><div class="text-xs text-slate-500">보상: ${a.reward_points}P</div></div><span>💣</span></div>`).join('');

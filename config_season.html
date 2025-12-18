@@ -17,21 +17,63 @@
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-        /* V7 ENGINE CSS */
+        /* --- ★ V13.5 CHAOS ENGINE CSS (Viewer Port) ★ --- */
         .emblem-stage-container { perspective: 1000px; overflow: visible !important; z-index: 20; }
+        
+        /* Layer & Effects Stacking System */
         .obj-root { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 0; height: 0; }
-        .obj-orbit, .obj-vital, .obj-fx, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
-        .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; }
-        @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-        @keyframes ghost { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-        @keyframes jelly { 0%, 100% { transform: scale(1, 1); } 25% { transform: scale(0.9, 1.1); } 50% { transform: scale(1.1, 0.9); } 75% { transform: scale(0.95, 1.05); } }
-        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
-        @keyframes glitch { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
+        .effect-wrapper { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform, filter; width: 0; height: 0; }
+        .obj-orbit, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform; }
+        .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; mix-blend-mode: normal; }
+        .obj-core img { max-width: none; pointer-events: none; }
+
+        /* V13.5 Animation Library */
+        @keyframes heartbeat { 0% {transform: scale(1);} 14% {transform: scale(1.3);} 28% {transform: scale(1);} 42% {transform: scale(1.3);} 70% {transform: scale(1);} }
+        @keyframes rubberBand { 0% {transform: scale3d(1,1,1);} 30% {transform: scale3d(1.25,0.75,1);} 40% {transform: scale3d(0.75,1.25,1);} 50% {transform: scale3d(1.15,0.85,1);} 65% {transform: scale3d(0.95,1.05,1);} 75% {transform: scale3d(1.05,0.95,1);} 100% {transform: scale3d(1,1,1);} }
+        @keyframes swing { 20% {transform: rotate3d(0,0,1,15deg);} 40% {transform: rotate3d(0,0,1,-10deg);} 60% {transform: rotate3d(0,0,1,5deg);} 80% {transform: rotate3d(0,0,1,-5deg);} 100% {transform: rotate3d(0,0,1,0deg);} }
+        @keyframes tada { 0% {transform: scale3d(1,1,1);} 10%, 20% {transform: scale3d(0.9,0.9,0.9) rotate3d(0,0,1,-3deg);} 30%, 50%, 70%, 90% {transform: scale3d(1.1,1.1,1.1) rotate3d(0,0,1,3deg);} 40%, 60%, 80% {transform: scale3d(1.1,1.1,1.1) rotate3d(0,0,1,-3deg);} 100% {transform: scale3d(1,1,1);} }
+        @keyframes wobble { 0% {transform: none} 15% {transform: translate3d(-25%,0,0) rotate3d(0,0,1,-5deg)} 30% {transform: translate3d(20%,0,0) rotate3d(0,0,1,3deg)} 45% {transform: translate3d(-15%,0,0) rotate3d(0,0,1,-3deg)} 60% {transform: translate3d(10%,0,0) rotate3d(0,0,1,2deg)} 75% {transform: translate3d(-5%,0,0) rotate3d(0,0,1,-1deg)} 100% {transform: none} }
+        @keyframes jello { 0%,11.1%,to {transform:translateZ(0)} 22.2% {transform:skewX(-12.5deg) skewY(-12.5deg)} 33.3% {transform:skewX(6.25deg) skewY(6.25deg)} 44.4% {transform:skewX(-3.125deg) skewY(-3.125deg)} 55.5% {transform:skewX(1.5625deg) skewY(1.5625deg)} 66.6% {transform:skewX(-.78125deg) skewY(-.78125deg)} 77.7% {transform:skewX(.390625deg) skewY(.390625deg)} 88.8% {transform:skewX(-.1953125deg) skewY(-.1953125deg)} }
+        @keyframes bounce { 0%, 20%, 53%, 80%, 100% {transform: translate3d(0,0,0);} 40%, 43% {transform: translate3d(0, -30px, 0);} 70% {transform: translate3d(0, -15px, 0);} 90% {transform: translate3d(0,-4px,0);} }
+        @keyframes flip { from {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, -360deg);} 40%, 50% {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, -190deg);} 80% {transform: perspective(400px) scale3d(0.95, 0.95, 0.95) translate3d(0, 0, 0) rotate3d(0, 1, 0, 0deg);} 100% {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, 0deg);} }
+        @keyframes zoomInOut { 0% {transform: scale(1);} 50% {transform: scale(1.5);} 100% {transform: scale(1);} }
+        @keyframes panic { 0% {transform: translate(0,0) rotate(0deg);} 25% {transform: translate(5px,5px) rotate(5deg);} 50% {transform: translate(0,0) rotate(0eg);} 75% {transform: translate(-5px,5px) rotate(-5deg);} 100% {transform: translate(0,0) rotate(0deg);} }
+        @keyframes breath { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
+        @keyframes barrel { 0% {transform: rotateX(0deg);} 100% {transform: rotateX(360deg);} }
+        @keyframes compress { 0% {transform: scaleY(1);} 50% {transform: scaleY(0.5);} 100% {transform: scaleY(1);} }
+        @keyframes blackHole { 0% {transform: scale(1) rotate(0deg);} 50% {transform: scale(0.1) rotate(180deg); opacity: 0.5;} 100% {transform: scale(1) rotate(360deg); opacity: 1;} }
+        @keyframes tornado { 0% {transform: translateX(-50px) rotateY(0deg);} 50% {transform: translateX(50px) rotateY(180deg) scale(1.2);} 100% {transform: translateX(-50px) rotateY(360deg);} }
+        @keyframes teleport { 0% {opacity:1; transform: scale(1);} 49% {opacity:1; transform: scale(0.1);} 50% {opacity:0; transform: scale(0.1);} 51% {opacity:0; transform: scale(1.5);} 52% {opacity:1; transform: scale(1);} 100% {opacity:1;} }
+        @keyframes orbit3d { 0% {transform: rotate3d(1,1,1,0deg);} 100% {transform: rotate3d(1,1,1,360deg);} }
+        @keyframes glitch-skew { 0% {transform: skew(0deg);} 20% {transform: skew(-10deg);} 40% {transform: skew(10deg);} 60% {transform: skew(-5deg);} 80% {transform: skew(5deg);} 100% {transform: skew(0deg);} }
+        @keyframes vibrate { 0% {transform: translate(0);} 20% {transform: translate(-2px, 2px);} 40% {transform: translate(-2px, -2px);} 60% {transform: translate(2px, 2px);} 80% {transform: translate(2px, -2px);} 100% {transform: translate(0);} }
+        @keyframes float-h { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-20px); } }
+        @keyframes pendulum { 0% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
+
+        /* FX */
         @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -5px 5px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
         @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(150%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
         @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 10px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
+        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
+        @keyframes glitch-filter { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
+        @keyframes rainbow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+        @keyframes blurPulse { 0% { filter: blur(0px); } 50% { filter: blur(4px); } 100% { filter: blur(0px); } }
+        @keyframes invertFlash { 0% { filter: invert(0%); } 50% { filter: invert(100%); } 100% { filter: invert(0%); } }
+        @keyframes sepiaDream { 0% { filter: sepia(0%); } 50% { filter: sepia(100%); } 100% { filter: sepia(0%); } }
+        @keyframes brightnessFlash { 0% { filter: brightness(1); } 50% { filter: brightness(3) drop-shadow(0 0 10px white); } 100% { filter: brightness(1); } }
+        @keyframes grayscalePulse { 0% { filter: grayscale(0%); } 50% { filter: grayscale(100%); } 100% { filter: grayscale(0%); } }
+        @keyframes radioactive { 0% { filter: drop-shadow(0 0 2px lime); } 50% { filter: drop-shadow(0 0 10px #0f0) hue-rotate(90deg); } 100% { filter: drop-shadow(0 0 2px lime); } }
+        @keyframes ice { 0% { filter: drop-shadow(0 0 2px cyan) hue-rotate(180deg) brightness(1.2); } 100% { filter: drop-shadow(0 0 5px white) hue-rotate(180deg) brightness(1.2); } }
+        @keyframes shadowClone { 0% { filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.5)); } 50% { filter: drop-shadow(-5px -5px 0px rgba(255,0,0,0.5)); } 100% { filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.5)); } }
+        @keyframes midas { 0% { filter: sepia(1) saturate(5) brightness(1); } 50% { filter: sepia(1) saturate(5) brightness(1.5) drop-shadow(0 0 5px gold); } 100% { filter: sepia(1) saturate(5) brightness(1); } }
+        @keyframes matrix { 0% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } 50% { filter: drop-shadow(0 0 5px #0f0) hue-rotate(20deg) contrast(2); } 100% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } }
+        @keyframes thermal { 0% { filter: contrast(1.5) hue-rotate(0deg); } 50% { filter: contrast(2) hue-rotate(180deg) invert(1); } 100% { filter: contrast(1.5) hue-rotate(360deg); } }
+        @keyframes hologram { 0% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } 20% { filter: drop-shadow(2px 0 5px cyan) opacity(0.6) blur(1px); } 40% { filter: drop-shadow(-2px 0 5px cyan) opacity(0.8); } 100% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } }
+        @keyframes noir { 0% { filter: grayscale(1) contrast(1.5) brightness(0.8); } 100% { filter: grayscale(1) contrast(2) brightness(0.6); } }
+        @keyframes pixelate { 0% { filter: contrast(1); } 50% { filter: contrast(3) brightness(1.2); } 100% { filter: contrast(1); } }
+        @keyframes underwater { 0% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } 50% { filter: blur(2px) hue-rotate(200deg) brightness(1); } 100% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } }
+
+        @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
         @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
         @keyframes spin-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
         @keyframes spin-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
@@ -224,124 +266,46 @@
 
         function openEmblemEditor() { window.open('editor_emblem.html', '_blank', 'width=1400,height=900,left=100,top=50'); }
 
-        // --- ★ [SAFE] Start Season Function ★ ---
         async function startSeason() {
             const nameInput = document.getElementById('new-season-name');
             const seasonName = nameInput.value.trim();
-
             if (!seasonName) return alert("시즌 이름을 입력해주세요.");
-
-            // 1. 현재 진행 중인 시즌이 있는지 확인 (안전 장치)
             const { data: activeSeason } = await _supabase.from('seasons').select('*').eq('is_current', true).maybeSingle();
-            
-            if (activeSeason) {
-                return alert("🚫 현재 진행 중인 시즌이 있습니다!\n\n먼저 [시즌 종료]를 눌러 정산을 완료해주세요.\n(데이터 보호를 위해 진행 중인 시즌을 덮어쓸 수 없습니다)");
-            }
-
-            // 2. 휴식기일 경우에만 시작 진행
+            if (activeSeason) return alert("🚫 현재 진행 중인 시즌이 있습니다!\n\n먼저 [시즌 종료]를 눌러 정산을 완료해주세요.");
             if (!confirm(`[${seasonName}]을(를) 시작하시겠습니까?\n\n주의: 모든 학생의 '시즌 XP'가 0으로 초기화됩니다!`)) return;
-
             try {
-                // 새 시즌 생성
-                const { error: insertErr } = await _supabase.from('seasons').insert([{
-                    season_name: seasonName,
-                    is_current: true,
-                    status: 'active'
-                }]);
-
+                const { error: insertErr } = await _supabase.from('seasons').insert([{ season_name: seasonName, is_current: true, status: 'active' }]);
                 if (insertErr) throw insertErr;
-
-                // 학생 시즌 XP 초기화
-                const { error: updateErr } = await _supabase.from('users')
-                    .update({ season_xp: 0 })
-                    .eq('role', 'student');
-
+                const { error: updateErr } = await _supabase.from('users').update({ season_xp: 0 }).eq('role', 'student');
                 if (updateErr) throw updateErr;
-
                 alert(`🎉 [${seasonName}]이 성공적으로 시작되었습니다!`);
                 location.reload();
-
-            } catch (e) {
-                console.error(e);
-                alert("시즌 시작 실패: " + e.message);
-            }
+            } catch (e) { console.error(e); alert("시즌 시작 실패: " + e.message); }
         }
 
-        // --- (Other Functions Maintained) ---
         function renderTiers() {
             const container = document.getElementById('tier-list-container');
             container.innerHTML = '';
             if (tiers.length === 0) tiers.push({ tier_name: 'Bronze', min_xp: 0, max_xp: 1000 });
-
             tiers.forEach((t, index) => {
                 container.innerHTML += getInsertBtn(index);
-                container.innerHTML += `
-                    <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm relative group hover:border-indigo-300 transition">
-                        <div class="w-8 h-8 rounded-full bg-white border flex items-center justify-center font-bold text-slate-400 shadow-sm">${index + 1}</div>
-                        <input type="text" value="${t.tier_name}" class="bg-transparent font-black text-lg w-32 outline-none border-b-2 border-transparent focus:border-indigo-500 focus:text-indigo-600 transition" onchange="updTier(${index}, 'tier_name', this.value)">
-                        <div class="flex items-center gap-2 text-sm font-bold text-slate-500">
-                            <input type="number" value="${t.min_xp}" class="xp-input" onchange="updTier(${index}, 'min_xp', this.value)">
-                            <span>~</span>
-                            <input type="number" value="${t.max_xp}" class="xp-input" onchange="updTier(${index}, 'max_xp', this.value)">
-                            <span>XP</span>
-                        </div>
-                        <button onclick="delTier(${index})" class="ml-auto text-slate-300 hover:text-red-500 transition px-2"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                `;
+                container.innerHTML += `<div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm relative group hover:border-indigo-300 transition"><div class="w-8 h-8 rounded-full bg-white border flex items-center justify-center font-bold text-slate-400 shadow-sm">${index + 1}</div><input type="text" value="${t.tier_name}" class="bg-transparent font-black text-lg w-32 outline-none border-b-2 border-transparent focus:border-indigo-500 focus:text-indigo-600 transition" onchange="updTier(${index}, 'tier_name', this.value)"><div class="flex items-center gap-2 text-sm font-bold text-slate-500"><input type="number" value="${t.min_xp}" class="xp-input" onchange="updTier(${index}, 'min_xp', this.value)"><span>~</span><input type="number" value="${t.max_xp}" class="xp-input" onchange="updTier(${index}, 'max_xp', this.value)"><span>XP</span></div><button onclick="delTier(${index})" class="ml-auto text-slate-300 hover:text-red-500 transition px-2"><i class="fa-solid fa-trash"></i></button></div>`;
             });
             container.innerHTML += getInsertBtn(tiers.length);
         }
 
         function getInsertBtn(index) { return `<div class="insert-zone" onclick="addTier(${index})"><div class="insert-line"></div><div class="plus-circle">+</div></div>`; }
-
-        function addTier(index) {
-            const prevMax = index > 0 ? Number(tiers[index - 1].max_xp) : 0;
-            const newTier = { tier_name: 'New Tier', min_xp: prevMax + 1, max_xp: prevMax + 1000 };
-            tiers.splice(index, 0, newTier);
-            renderTiers();
-            disableSaveBtn();
-        }
-
-        function delTier(index) {
-            if(!confirm("이 티어를 삭제하시겠습니까?")) return;
-            tiers.splice(index, 1);
-            renderTiers();
-            disableSaveBtn();
-        }
-
-        function updTier(index, key, value) {
-            if (key === 'min_xp' || key === 'max_xp') value = Number(value);
-            tiers[index][key] = value;
-            disableSaveBtn();
-        }
-
+        function addTier(index) { const prevMax = index > 0 ? Number(tiers[index - 1].max_xp) : 0; const newTier = { tier_name: 'New Tier', min_xp: prevMax + 1, max_xp: prevMax + 1000 }; tiers.splice(index, 0, newTier); renderTiers(); disableSaveBtn(); }
+        function delTier(index) { if(!confirm("이 티어를 삭제하시겠습니까?")) return; tiers.splice(index, 1); renderTiers(); disableSaveBtn(); }
+        function updTier(index, key, value) { if (key === 'min_xp' || key === 'max_xp') value = Number(value); tiers[index][key] = value; disableSaveBtn(); }
         function verifyTiers() {
-            let isValid = true;
-            let errorMsg = "";
-            for (let i = 0; i < tiers.length; i++) {
-                const t = tiers[i];
-                if (Number(t.min_xp) >= Number(t.max_xp)) {
-                    errorMsg = `[${i + 1}번: ${t.tier_name}] 최소값이 최대값보다 크거나 같습니다.`;
-                    isValid = false; break;
-                }
-            }
-            if (isValid) {
-                for (let i = 0; i < tiers.length - 1; i++) {
-                    const currentMax = Number(tiers[i].max_xp);
-                    const nextMin = Number(tiers[i+1].min_xp);
-                    if (currentMax >= nextMin) {
-                        errorMsg = `[구간 겹침] ${tiers[i].tier_name}와 ${tiers[i+1].tier_name} 구간 충돌.`;
-                        isValid = false; break;
-                    }
-                }
-            }
-            if (isValid) { alert("✅ 검증 완료! 저장 버튼이 활성화되었습니다."); enableSaveBtn(); } 
-            else { alert("❌ 검증 실패:\n" + errorMsg); disableSaveBtn(); }
+            let isValid = true; let errorMsg = "";
+            for (let i = 0; i < tiers.length; i++) { const t = tiers[i]; if (Number(t.min_xp) >= Number(t.max_xp)) { errorMsg = `[${i + 1}번: ${t.tier_name}] 최소값이 최대값보다 크거나 같습니다.`; isValid = false; break; } }
+            if (isValid) { for (let i = 0; i < tiers.length - 1; i++) { const currentMax = Number(tiers[i].max_xp); const nextMin = Number(tiers[i+1].min_xp); if (currentMax >= nextMin) { errorMsg = `[구간 겹침] ${tiers[i].tier_name}와 ${tiers[i+1].tier_name} 구간 충돌.`; isValid = false; break; } } }
+            if (isValid) { alert("✅ 검증 완료! 저장 버튼이 활성화되었습니다."); enableSaveBtn(); } else { alert("❌ 검증 실패:\n" + errorMsg); disableSaveBtn(); }
         }
-
         function disableSaveBtn() { const btn = document.getElementById('btn-save-tier'); btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.innerText = "검증이 필요합니다"; }
         function enableSaveBtn() { const btn = document.getElementById('btn-save-tier'); btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); btn.innerText = "저장 및 적용"; }
-
         async function saveTiers() {
             if(!confirm("티어 설정을 저장하고 적용하시겠습니까?")) return;
             const { error: delErr } = await _supabase.from('tier_rules').delete().neq('id', 0); 
@@ -371,7 +335,8 @@
                 let emblemId = `tier-preview-${t.tier_name}`;
                 div.innerHTML = `<div class="flex items-center gap-4"><div class="tier-icon w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-slate-300 shadow-sm relative overflow-hidden group-hover:scale-110 transition"><div id="${emblemId}" class="absolute inset-0 flex items-center justify-center"></div></div><div><div class="font-black text-slate-700 text-lg group-hover:text-indigo-600 transition">${t.tier_name}</div><div class="text-[10px] text-slate-400 font-bold">${t.min_xp.toLocaleString()} ~ ${t.max_xp.toLocaleString()} XP</div></div></div><div class="text-slate-300 group-hover:text-indigo-500"><i class="fa-solid fa-chevron-right"></i></div>`;
                 container.appendChild(div);
-                if(t.emblem_json && t.emblem_json.mode === 'advanced') setTimeout(() => renderEmblemV7(t.emblem_json.layers, emblemId, 0.25), 0);
+                // ★ V13.5 Render Call
+                if(t.emblem_json && t.emblem_json.layers) setTimeout(() => renderEmblem(emblemId, t.emblem_json.layers, 0.25), 0);
                 else document.getElementById(emblemId).innerHTML = `<span class="text-[10px]">${t.tier_name[0]}</span>`;
             });
         }
@@ -393,7 +358,8 @@
                 const prevId = `lib-prev-${item.id}`;
                 div.innerHTML = `<div class="flex items-center gap-3"><div class="w-14 h-14 bg-slate-50 rounded-lg border border-slate-100 relative overflow-hidden flex items-center justify-center"><div id="${prevId}" class="absolute inset-0 flex items-center justify-center"></div></div><div class="flex-1 min-w-0"><div class="font-bold text-slate-700 text-sm truncate group-hover:text-pink-600">${item.name}</div><div class="text-[10px] text-slate-400">${new Date(item.created_at).toLocaleDateString()}</div></div></div><div class="flex gap-2"><button onclick="previewLibraryItem('${item.id}')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 font-bold text-xs transition" title="미리보기"><i class="fa-solid fa-eye"></i></button><button onclick="applyEmblemToTier('${item.id}')" class="flex-1 bg-slate-100 text-slate-600 hover:bg-pink-500 hover:text-white py-2 rounded-lg text-xs font-bold transition">이걸로 적용하기</button></div>`;
                 container.appendChild(div);
-                if(item.layers) setTimeout(() => renderEmblemV7(item.layers, prevId, 0.3), 0);
+                // ★ V13.5 Render Call
+                if(item.layers) setTimeout(() => renderEmblem(prevId, item.layers, 0.3), 0);
             });
         }
 
@@ -402,7 +368,8 @@
             if(!item) return;
             document.getElementById('preview-tier-name').innerText = selectedTierName || "Preview";
             document.getElementById('preview-modal').style.display = 'flex';
-            renderEmblemV7(item.layers, 'preview-stage', 0.45); 
+            // ★ V13.5 Render Call
+            renderEmblem('preview-stage', item.layers, 0.45); 
         }
 
         async function applyEmblemToTier(libId) {
@@ -410,36 +377,96 @@
             const { data: item } = await _supabase.from('emblem_library').select('*').eq('id', libId).single();
             if(!item) return;
             if(!confirm(`[${selectedTierName}] 티어의 엠블럼을\n'${item.name}'(으)로 즉시 교체하시겠습니까?`)) return;
-            const { error } = await _supabase.from('tier_rules').update({ emblem_json: { mode: 'advanced', layers: item.layers } }).eq('tier_name', selectedTierName);
+            // V13.5 호환 데이터 구조 저장
+            const { error } = await _supabase.from('tier_rules').update({ emblem_json: { mode: 'v13.5', layers: item.layers } }).eq('tier_name', selectedTierName);
             if(error) alert("실패: " + error.message); else { alert(`✅ [${selectedTierName}] 업데이트 완료!`); loadEmblemTab(); }
         }
 
-        function renderEmblemV7(layers, targetId, scaleFactor=0.4) {
-            const stage = document.getElementById(targetId);
+        // --- ★ [V13.5 CORE] CHAOS ALCHEMIST RENDERER ★ ---
+        // V7 렌더러 폐기 -> V13.5 렌더러 이식 완료
+        function renderEmblem(containerId, layers, scaleFactor=0.4) {
+            const stage = document.getElementById(containerId);
             if(!stage) return;
             stage.innerHTML = ''; 
-            const sorted = [...layers].sort((a,b) => a.zIndex - b.zIndex);
-            sorted.forEach(l => {
-                const root = document.createElement('div'); root.className = `obj-root`; root.style.left = '50%'; root.style.top = '50%'; 
+            
+            // 레이어 순서대로 렌더링 (DOM Order = Z-Index)
+            layers.forEach(l => {
+                const root = document.createElement('div');
+                root.className = 'obj-root';
+                root.style.left = '50%'; root.style.top = '50%'; // 중앙 정렬 보정
+
+                // 1. Orbit
                 const orbit = document.createElement('div'); orbit.className = 'obj-orbit';
-                if(l.anim.orbit.on) { orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius * scaleFactor}px`); orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; }
-                const vital = document.createElement('div'); vital.className = 'obj-vital';
-                if(l.anim.vital.on) { vital.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`; }
-                const fx = document.createElement('div'); fx.className = 'obj-fx';
-                if(l.anim.fx.on) { fx.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`; }
+                if(l.anim.orbit.on) { 
+                    orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius * scaleFactor}px`); 
+                    orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; 
+                }
+
+                // 2. Vital Stack (다중 효과 지원)
+                let currentContainer = orbit;
+                if(l.anim.vital && l.anim.vital.length > 0) {
+                    // 구형 데이터(문자열 배열) 호환 처리
+                    let vitals = typeof l.anim.vital[0] === 'string' ? l.anim.vital.map(t=>({type:t, speed:10})) : l.anim.vital;
+                    vitals.forEach(e => {
+                        const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                        const speed = (21 - (e.speed || 10)) / 10;
+                        wrapper.style.animation = `${e.type} ${speed}s infinite ease-in-out`;
+                        currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                    });
+                } else if(l.anim.vital && l.anim.vital.on) { // V7 데이터 호환
+                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                     wrapper.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`;
+                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                }
+
+                // 3. FX Stack (다중 효과 지원)
+                if(l.anim.fx && l.anim.fx.length > 0) {
+                    let fxs = typeof l.anim.fx[0] === 'string' ? l.anim.fx.map(t=>({type:t, speed:10})) : l.anim.fx;
+                    fxs.forEach(e => {
+                        const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                        const speed = (21 - (e.speed || 10)) / 10;
+                        wrapper.style.animation = `${e.type} ${speed}s infinite`;
+                        currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                    });
+                } else if(l.anim.fx && l.anim.fx.on) { // V7 데이터 호환
+                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
+                     wrapper.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`;
+                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
+                }
+
+                // 4. Spin
                 const spin = document.createElement('div'); spin.className = 'obj-spin';
                 if(l.anim.spin.on) { spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`; }
+                currentContainer.appendChild(spin);
+
+                // 5. Core
                 const core = document.createElement('div'); core.className = 'obj-core';
-                core.style.fontSize = `${l.style.size * scaleFactor}px`;
-                if(l.style.texture !== 'none') {
-                    core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
-                    if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
-                    else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
-                    else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
-                    else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
-                } else { core.style.color = l.style.color; }
-                if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; } else core.innerText = l.content;
-                spin.appendChild(core); fx.appendChild(spin); vital.appendChild(fx); orbit.appendChild(vital); root.appendChild(orbit); stage.appendChild(root);
+                
+                // ★ V13.5 Features: Blend, Opacity, Backdrop
+                if(l.style.blendMode) core.style.mixBlendMode = l.style.blendMode;
+                if(l.style.opacity !== undefined) core.style.opacity = l.style.opacity;
+                if(l.style.backdropFilter && l.style.backdropFilter !== 'none') core.style.backdropFilter = l.style.backdropFilter;
+
+                if (l.type === 'image') {
+                    const img = document.createElement('img'); img.src = l.content;
+                    img.style.width = `${l.style.size * scaleFactor}px`; img.style.height = 'auto';
+                    core.appendChild(img);
+                } else {
+                    core.style.fontSize = `${l.style.size * scaleFactor}px`;
+                    if(l.style.texture !== 'none') {
+                        core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
+                        if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
+                        else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
+                        else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
+                        else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
+                    } else { core.style.color = l.style.color; }
+                    
+                    if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; 
+                    else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; } 
+                    else core.innerText = l.content;
+                }
+                
+                spin.appendChild(core); root.appendChild(orbit); stage.appendChild(root);
             });
         }
 

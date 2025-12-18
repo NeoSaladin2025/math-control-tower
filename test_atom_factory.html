@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>원자 속성 제작소 - Infrastructure Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 시스템 메인 테마: 다크 네이비 & 인디고 */
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #020617; color: #f8fafc; padding: 40px; overflow-x: hidden; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-blur: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* 입력창 디자인 */
+        input, select { 
+            background: rgba(15, 23, 42, 0.9) !important; 
+            border: 1px solid #334155 !important; 
+            color: white !important; 
+            outline: none !important; 
+            user-select: text !important; 
+            transition: all 0.3s;
+        }
+        input:focus { border-color: #6366f1 !important; box-shadow: 0 0 15px rgba(99, 102, 241, 0.2); }
+        
+        /* 버튼 디자인 */
+        .btn-atom { 
+            background: linear-gradient(135deg, #6366f1, #4338ca); 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .btn-atom:hover:not(:disabled) { 
+            transform: translateY(-2px); 
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.4); 
+            filter: brightness(1.1);
+        }
+        .btn-atom:active { transform: scale(0.98); }
+        
+        .text-glow { text-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <script src="config.js"></script>
+
+    <div class="w-full max-w-md">
+        <header class="text-center mb-10">
+            <div class="text-indigo-500 font-black text-[10px] uppercase tracking-[0.4em] mb-2 italic">Atomic Infrastructure</div>
+            <h1 class="text-3xl font-black text-white tracking-tighter italic text-glow">원자 속성 제작소</h1>
+            <p class="text-[10px] text-slate-500 font-bold mt-2 uppercase tracking-widest">가장 기초가 되는 설정 단위를 생성합니다</p>
+        </header>
+
+        <div class="glass-panel p-10 rounded-[40px] border-t border-indigo-500/20 shadow-2xl space-y-7">
+            
+            <div class="space-y-3">
+                <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">
+                    <i class="fa-solid fa-id-card text-indigo-500 mr-1"></i> 원자 고유 ID (이름)
+                </label>
+                <input type="text" id="atom-id" placeholder="예: 숫자박스, 이상, 분" class="w-full px-6 py-5 rounded-2xl font-black text-lg">
+            </div>
+
+            <div class="space-y-3">
+                <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">
+                    <i class="fa-solid fa-display text-indigo-500 mr-1"></i> 화면 표시 명칭 (Label)
+                </label>
+                <input type="text" id="atom-display" placeholder="예: 수치입력, >=, min" class="w-full px-6 py-5 rounded-2xl font-black text-lg">
+            </div>
+
+            <div class="space-y-3">
+                <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">
+                    <i class="fa-solid fa-layer-group text-indigo-500 mr-1"></i> 원자 성격 분류 (Type)
+                </label>
+                <select id="atom-type" class="w-full px-6 py-5 rounded-2xl font-black text-lg appearance-none cursor-pointer">
+                    <option value="input">데이터 입력용 (Input)</option>
+                    <option value="logic">논리 연산용 (Logic)</option>
+                    <option value="unit">단위/라벨 표시용 (Unit)</option>
+                </select>
+            </div>
+
+            <div class="space-y-3">
+                <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">
+                    <i class="fa-solid fa-code text-indigo-500 mr-1"></i> 실제 연산자 (Operator - 선택)
+                </label>
+                <input type="text" id="atom-logic" placeholder="예: >=, <=, ==" class="w-full px-6 py-5 rounded-2xl font-black text-lg">
+            </div>
+
+            <div class="pt-6 border-t border-slate-800">
+                <button onclick="createAtom()" class="w-full btn-atom py-6 rounded-[28px] font-black text-sm tracking-[0.2em] shadow-xl flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-plus-circle"></i> 새로운 원자 창조
+                </button>
+            </div>
+        </div>
+
+        <p class="text-center text-[9px] text-slate-600 mt-8 font-bold italic uppercase tracking-[0.3em]">
+            Precision Engineering by Master Logic
+        </p>
+    </div>
+
+    <script>
+        /**
+         * @description 사용자가 입력한 데이터를 기반으로 고유 ID를 가진 원자를 데이터베이스에 등록
+         */
+        async function createAtom() {
+            const id = document.getElementById('atom-id').value.trim();
+            const display = document.getElementById('atom-display').value.trim();
+            const type = document.getElementById('atom-type').value;
+            const logic = document.getElementById('atom-logic').value.trim();
+
+            if (!id || !display) {
+                alert("입력 누락: 원자의 고유 ID와 표시 명칭은 필수 항목입니다.");
+                return;
+            }
+
+            const btn = document.querySelector('button');
+            btn.disabled = true;
+            btn.innerText = "데이터 통신 중...";
+
+            try {
+                // atom_id를 Primary Key로 사용하여 test_property_atom 테이블에 삽입
+                const { error } = await _supabase
+                    .from('test_property_atom')
+                    .insert({
+                        atom_id: id,
+                        display_name: display,
+                        atom_type: type,
+                        logic_operator: logic || null
+                    });
+
+                if (error) {
+                    if(error.code === '23505') throw new Error("이미 등록된 원자 ID입니다.");
+                    throw error;
+                }
+
+                alert(`성공: [${id}] 원자가 시스템 인프라에 등록되었습니다.`);
+                
+                // 팝업 창을 닫기 전 사용자 확인을 위한 지연
+                setTimeout(() => {
+                    window.close();
+                }, 500);
+
+            } catch (e) {
+                alert("작업 실패: " + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus-circle"></i> 새로운 원자 창조';
+            }
+        }
+    </script>
+</body>
+</html>

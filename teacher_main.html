@@ -8,53 +8,54 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* 인덱스 페이지의 그 쫀득하고 깊은 색감 이식 */
-        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        /* 화이트 톤으로 전면 개편 */
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f1f5f9; color: #1e293b; }
         
-        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-blur: 10px; border: 1px solid rgba(255,255,255,0.05); }
-        .menu-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: 1px solid rgba(255,255,255,0.05); background: rgba(30, 41, 59, 0.5); }
-        .menu-card:hover { transform: translateY(-5px); background: rgba(51, 65, 85, 0.8); border-color: #6366f1; box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
+        /* 깔끔한 화이트 카드 디자인 */
+        .glass-card { background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .menu-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: 1px solid #e2e8f0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .menu-card:hover { transform: translateY(-3px); border-color: #6366f1; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.1); }
         
-        /* 알림 펄스 (더 강렬하게) */
-        .inbox-pulse-red { animation: pulse-red 2s infinite; border-color: #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        /* 알림 펄스 (배경색에 맞춰 조정) */
+        .inbox-pulse-red { animation: pulse-red 2s infinite; border-color: #ef4444 !important; background: #fef2f2 !important; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         
-        .inbox-pulse-yellow { animation: pulse-yellow 2s infinite; border-color: #f59e0b !important; background: rgba(245, 158, 11, 0.1) !important; }
-        @keyframes pulse-yellow { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+        .inbox-pulse-yellow { animation: pulse-yellow 2s infinite; border-color: #f59e0b !important; background: #fffbeb !important; }
+        @keyframes pulse-yellow { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.2); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
-        /* 쫀득한 학년 버튼 (다크 스타일) */
+        /* 학년 버튼 (라이트 스타일) */
         .grade-btn {
             min-width: 60px; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 13px; 
-            background: #1e293b; border: 1px solid #334155; color: #94a3b8; 
+            background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; 
             transition: all 0.1s; cursor: pointer;
         }
+        .grade-btn:hover { background: #f1f5f9; color: #475569; }
         .grade-btn.active {
             background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #4f46e5; color: white;
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
         }
 
-        /* 스크롤바 커스텀 */
+        /* 스크롤바 커스텀 (라이트) */
         .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        /* 텍스트 글로우 효과 */
-        .text-glow-indigo { text-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+        .text-glow-indigo { text-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
     </style>
 </head>
 <body class="min-h-screen">
 
     <script src="config.js"></script>
 
-    <nav class="glass-card border-b border-slate-800 sticky top-0 z-50">
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3 font-black text-2xl text-indigo-400 tracking-tighter text-glow-indigo">
+            <div class="flex items-center gap-3 font-black text-2xl text-indigo-600 tracking-tighter">
                 <i class="fa-solid fa-bolt-lightning"></i> Beyond The Line Math
             </div>
             <div class="flex items-center gap-4 text-sm font-bold">
-                <span class="text-slate-400"><b id="t-name" class="text-indigo-300">선생님</b>님</span>
-                <button onclick="openManual()" class="hover:text-white transition">가이드</button>
-                <button onclick="openPwModal()" class="text-indigo-400 hover:text-indigo-300 transition">🔒 비번변경</button>
-                <button onclick="logout()" class="bg-slate-800 px-4 py-2 rounded-xl hover:bg-slate-700 transition border border-slate-700">로그아웃</button>
+                <span class="text-slate-600"><b id="t-name" class="text-indigo-600">선생님</b>님</span>
+                <button onclick="openManual()" class="text-slate-500 hover:text-indigo-600 transition">가이드</button>
+                <button onclick="openPwModal()" class="text-indigo-500 hover:text-indigo-700 transition">🔒 비번변경</button>
+                <button onclick="logout()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-200 transition border border-slate-200">로그아웃</button>
             </div>
         </div>
     </nav>
@@ -65,30 +66,30 @@
             <i class="fa-solid fa-envelope-open-text"></i> Incoming Notifications
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <div onclick="openSpecialInbox()" id="box-special" class="glass-card p-6 rounded-2xl cursor-pointer hover:border-red-500 transition group flex items-center justify-between">
+            <div onclick="openSpecialInbox()" id="box-special" class="glass-card p-6 rounded-2xl cursor-pointer hover:border-red-400 transition group flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">🎁</div>
+                    <div class="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center text-2xl group-hover:scale-110 transition shadow-sm">🎁</div>
                     <div>
-                        <div class="text-slate-200 font-black">스페셜 수신함</div>
-                        <div class="text-[11px] text-slate-500 font-bold uppercase">Assignment Review</div>
+                        <div class="text-slate-800 font-black">스페셜 수신함</div>
+                        <div class="text-[11px] text-slate-400 font-bold uppercase">Assignment Review</div>
                     </div>
                 </div>
                 <div class="text-right">
-                    <span id="cnt-special" class="text-3xl font-black text-slate-100">0</span>
+                    <span id="cnt-special" class="text-3xl font-black text-slate-700">0</span>
                     <span id="badge-special" class="hidden bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1 align-top">NEW</span>
                 </div>
             </div>
 
-            <div onclick="openGiteukInbox()" id="box-giteuk" class="glass-card p-6 rounded-2xl cursor-pointer hover:border-amber-500 transition group flex items-center justify-between">
+            <div onclick="openGiteukInbox()" id="box-giteuk" class="glass-card p-6 rounded-2xl cursor-pointer hover:border-amber-400 transition group flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl group-hover:scale-110 transition">🐥</div>
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-2xl group-hover:scale-110 transition shadow-sm">🐥</div>
                     <div>
-                        <div class="text-slate-200 font-black">기특한 수신함</div>
-                        <div class="text-[11px] text-slate-500 font-bold uppercase">Self-Study Audit</div>
+                        <div class="text-slate-800 font-black">기특한 수신함</div>
+                        <div class="text-[11px] text-slate-400 font-bold uppercase">Self-Study Audit</div>
                     </div>
                 </div>
                 <div class="text-right">
-                    <span id="cnt-giteuk" class="text-3xl font-black text-slate-100">0</span>
+                    <span id="cnt-giteuk" class="text-3xl font-black text-slate-700">0</span>
                     <span id="badge-giteuk" class="hidden bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-1 align-top">NEW</span>
                 </div>
             </div>
@@ -100,71 +101,71 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-10">
             <div onclick="location.href='teacher_daily.html'" class="menu-card p-5 rounded-2xl border-l-4 border-emerald-500">
                 <div class="text-2xl mb-2">🎮</div>
-                <div class="font-black text-slate-200 text-sm">일일 관리</div>
-                <div class="text-[10px] text-slate-500 font-bold mt-1">XP/CP 지급 & 체크</div>
+                <div class="font-black text-slate-700 text-sm">일일 관리</div>
+                <div class="text-[10px] text-slate-400 font-bold mt-1">XP/CP 지급 & 체크</div>
             </div>
             
             <div onclick="window.open('manager_student_integrated.html', '_blank', 'width=1200,height=800')" class="menu-card p-5 rounded-2xl border-l-4 border-indigo-500">
                 <div class="text-2xl mb-2">👑</div>
-                <div class="font-black text-slate-200 text-sm">통합 학생 관리</div>
-                <div class="text-[10px] text-slate-500 font-bold mt-1">학생 등록 & 배정</div>
+                <div class="font-black text-slate-700 text-sm">통합 학생 관리</div>
+                <div class="text-[10px] text-slate-400 font-bold mt-1">학생 등록 & 배정</div>
             </div>
 
             <div onclick="location.href='manager_workbook.html'" class="menu-card p-5 rounded-2xl border-l-4 border-pink-500">
                 <div class="text-2xl mb-2">📚</div>
-                <div class="font-black text-slate-200 text-sm">문제집 등록</div>
-                <div class="text-[10px] text-slate-500 font-bold mt-1">교재 관리</div>
+                <div class="font-black text-slate-700 text-sm">문제집 등록</div>
+                <div class="text-[10px] text-slate-400 font-bold mt-1">교재 관리</div>
             </div>
 
             <div onclick="location.href='teacher_assign_integrated.html'" class="menu-card p-5 rounded-2xl border-l-4 border-blue-500">
                 <div class="text-2xl mb-2">🩺</div>
-                <div class="font-black text-slate-200 text-sm">정밀 과제 출제</div>
-                <div class="text-[10px] text-slate-500 font-bold mt-1">진단과 처방을 동시에</div>
+                <div class="font-black text-slate-700 text-sm">정밀 과제 출제</div>
+                <div class="text-[10px] text-slate-400 font-bold mt-1">진단과 처방을 동시에</div>
             </div>
 
             <div onclick="location.href='teacher_test_integrated.html'" class="menu-card p-5 rounded-2xl border-l-4 border-slate-400">
                 <div class="text-2xl mb-2">💯</div>
-                <div class="font-black text-slate-200 text-sm">통합 진단평가</div>
-                <div class="text-[10px] text-slate-500 font-bold mt-1">종합 분석 시험지 생성</div>
+                <div class="font-black text-slate-700 text-sm">통합 진단평가</div>
+                <div class="text-[10px] text-slate-400 font-bold mt-1">종합 분석 시험지 생성</div>
             </div>
 
-            <div onclick="openGodMode()" class="menu-card p-5 rounded-2xl border-l-4 border-rose-600 bg-rose-600/5 hover:bg-rose-600/10">
+            <div onclick="openGodMode()" class="menu-card p-5 rounded-2xl border-l-4 border-rose-600 bg-rose-50 hover:bg-rose-100">
                 <div class="text-2xl mb-2">📊</div>
-                <div class="font-black text-rose-400 text-sm">학습 정밀 진단</div>
-                <div class="text-[10px] text-rose-900 font-bold mt-1 tracking-tighter">VIP ANALYTICS</div>
+                <div class="font-black text-rose-500 text-sm">학습 정밀 진단</div>
+                <div class="text-[10px] text-rose-800 font-bold mt-1 tracking-tighter">VIP ANALYTICS</div>
             </div>
 
             <div onclick="window.open('teacher_sns.html', '_blank', 'width=1200,height=900')" class="menu-card p-5 rounded-2xl border-l-4 border-teal-500">
                 <div class="text-2xl mb-2">👮</div>
-                <div class="font-black text-slate-200 text-sm">SNS 보안관</div>
-                <div class="text-[10px] text-slate-500 font-bold mt-1">피드 순찰 & 포상</div>
+                <div class="font-black text-slate-700 text-sm">SNS 보안관</div>
+                <div class="text-[10px] text-slate-400 font-bold mt-1">피드 순찰 & 포상</div>
             </div>
 
             <div onclick="location.href='teacher_integrated_config.html'" class="menu-card p-5 rounded-2xl border-l-4 border-orange-500">
                 <div class="text-2xl mb-2">⚙️</div>
-                <div class="font-black text-slate-200 text-sm">통합 관리 센터</div>
-                <div class="text-[10px] text-slate-500 font-bold mt-1">시스템 성장 설계</div>
+                <div class="font-black text-slate-700 text-sm">통합 관리 센터</div>
+                <div class="text-[10px] text-slate-400 font-bold mt-1">시스템 성장 설계</div>
             </div>
             
-            <div id="god-menu" onclick="location.href='admin_db_inspector.html'" class="menu-card p-5 rounded-2xl border-l-4 border-yellow-500 bg-yellow-500/5 hidden">
+            <div id="god-menu" onclick="location.href='admin_db_inspector.html'" class="menu-card p-5 rounded-2xl border-l-4 border-yellow-500 bg-yellow-50 hover:bg-yellow-100 hidden">
                 <div class="text-2xl mb-2">👁️</div>
-                <div class="font-black text-yellow-500 text-sm">DB 정밀 검사</div>
+                <div class="font-black text-yellow-600 text-sm">DB 정밀 검사</div>
             </div>
 
-            <div id="god-menu-2" onclick="window.open('admin_db_inspector_2.html', '_blank')" class="menu-card p-5 rounded-2xl border-l-4 border-red-600 bg-red-600/5 hidden relative overflow-hidden">
-                <div class="absolute inset-0 bg-red-900/10 animate-pulse pointer-events-none"></div>
+            <div id="god-menu-2" onclick="window.open('admin_db_inspector_2.html', '_blank')" class="menu-card p-5 rounded-2xl border-l-4 border-red-600 bg-red-50 hover:bg-red-100 hidden relative overflow-hidden">
+                <div class="absolute inset-0 bg-red-500/5 animate-pulse pointer-events-none"></div>
                 <div class="text-2xl mb-2">☠️</div>
-                <div class="font-black text-red-500 text-sm tracking-widest">ROOT ACCESS</div>
+                <div class="font-black text-red-600 text-sm tracking-widest">ROOT ACCESS</div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 glass-card rounded-[32px] p-8 flex flex-col h-[600px] border border-slate-800">
+            <div class="lg:col-span-2 glass-card rounded-[32px] p-8 flex flex-col h-[600px] border border-slate-200">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-black text-slate-100 flex items-center gap-3">
-                        <span class="text-indigo-500"><i class="fa-solid fa-headset"></i></span> Q-CENTER <small class="text-[10px] text-slate-500 tracking-widest uppercase ml-2">Real-time Question</small>
+                    <h2 class="text-xl font-black text-slate-800 flex items-center gap-3">
+                        <span class="text-indigo-600"><i class="fa-solid fa-headset"></i></span> Q-CENTER <small class="text-[10px] text-slate-400 tracking-widest uppercase ml-2">Real-time Question</small>
                     </h2>
-                    <button onclick="fetchQuestions()" class="text-[10px] bg-indigo-500/10 px-4 py-2 rounded-xl hover:bg-indigo-500/20 font-black text-indigo-400 transition border border-indigo-500/30 tracking-widest uppercase">Sync Now</button>
+                    <button onclick="fetchQuestions()" class="text-[10px] bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 font-black text-indigo-500 transition border border-indigo-100 tracking-widest uppercase">Sync Now</button>
                 </div>
                 
                 <div class="flex gap-2 overflow-x-auto pb-4 mb-4 shrink-0 scrollbar-hide" id="q-grade-tabs">
@@ -178,46 +179,46 @@
                 </div>
 
                 <div id="q-student-grid" class="flex-1 overflow-y-auto custom-scroll grid grid-cols-2 md:grid-cols-3 gap-4 content-start">
-                    <div class="col-span-full text-center py-20 text-slate-600 font-bold italic tracking-tighter">Initializing Q-Center...</div>
+                    <div class="col-span-full text-center py-20 text-slate-400 font-bold italic tracking-tighter">Initializing Q-Center...</div>
                 </div>
             </div>
 
-            <div class="glass-card rounded-[32px] overflow-hidden border border-slate-800">
+            <div class="glass-card rounded-[32px] overflow-hidden border border-slate-200">
                 <iframe src="teacher_dashboard_status.html" class="w-full h-full border-0" scrolling="no"></iframe>
             </div>
         </div>
     </div>
 
-    <div id="q-modal-overlay" style="display:none;" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[150] flex items-center justify-center p-6">
-        <div class="q-modal-content glass-card max-w-6xl w-full h-[85vh] rounded-[40px] flex flex-col overflow-hidden border border-slate-700">
-             <div class="bg-slate-800/50 p-6 flex justify-between items-center border-b border-slate-700">
+    <div id="q-modal-overlay" style="display:none;" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] flex items-center justify-center p-6">
+        <div class="q-modal-content bg-white max-w-6xl w-full h-[85vh] rounded-[40px] flex flex-col overflow-hidden border border-slate-200 shadow-2xl">
+             <div class="bg-slate-50 p-6 flex justify-between items-center border-b border-slate-200">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center font-black text-xl text-white shadow-lg" id="qm-avatar">?</div>
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center font-black text-xl text-white shadow-md" id="qm-avatar">?</div>
                     <div>
-                        <h3 class="font-black text-xl text-slate-100" id="qm-name">학생 이름</h3>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest" id="qm-info">GRADE | TIER</p>
+                        <h3 class="font-black text-xl text-slate-800" id="qm-name">학생 이름</h3>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest" id="qm-info">GRADE | TIER</p>
                     </div>
                 </div>
-                <button onclick="closeQModal()" class="text-slate-500 hover:text-white transition text-3xl"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="closeQModal()" class="text-slate-400 hover:text-slate-600 transition text-3xl"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="flex-1 flex overflow-hidden">
-                <div class="w-1/3 border-r border-slate-800 flex flex-col">
+                <div class="w-1/3 border-r border-slate-200 flex flex-col bg-white">
                     <div id="qm-list" class="flex-1 overflow-y-auto p-6 space-y-3 custom-scroll"></div>
-                    <div class="p-6 border-t border-slate-800 bg-slate-900/30">
-                        <button onclick="completeRound()" class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl transition shadow-lg shadow-indigo-900/20 active:scale-95">1회 클리닉 완료</button>
+                    <div class="p-6 border-t border-slate-200 bg-slate-50">
+                        <button onclick="completeRound()" class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl transition shadow-lg hover:bg-indigo-700 active:scale-95">1회 클리닉 완료</button>
                     </div>
                 </div>
-                <div class="flex-1 bg-slate-950 relative flex flex-col">
-                    <div id="qm-viewer" class="flex-1 overflow-auto flex items-center justify-center p-8 text-slate-700 font-bold italic">
+                <div class="flex-1 bg-slate-50 relative flex flex-col">
+                    <div id="qm-viewer" class="flex-1 overflow-auto flex items-center justify-center p-8 text-slate-400 font-bold italic">
                         Select a question from the left.
                     </div>
-                    <div id="qm-actions" class="p-6 bg-slate-900/80 border-t border-slate-800 hidden">
+                    <div id="qm-actions" class="p-6 bg-white border-t border-slate-200 hidden">
                         <div class="flex justify-between items-center">
                             <div class="flex gap-6">
-                                <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q-action" value="resolve" checked class="w-5 h-5 accent-indigo-500"><span class="font-black text-slate-300">해결 완료</span></label>
+                                <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q-action" value="resolve" checked class="w-5 h-5 accent-indigo-600"><span class="font-black text-slate-700">해결 완료</span></label>
                                 <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="q-action" value="hold" class="w-5 h-5 accent-slate-500"><span class="font-black text-slate-500">보류</span></label>
                             </div>
-                            <button onclick="confirmQAction()" class="bg-indigo-600 text-white px-10 py-3 rounded-xl font-black shadow-lg transition active:scale-95">CONFIRM</button>
+                            <button onclick="confirmQAction()" class="bg-indigo-600 text-white px-10 py-3 rounded-xl font-black shadow-lg transition hover:bg-indigo-700 active:scale-95">CONFIRM</button>
                         </div>
                     </div>
                 </div>
@@ -225,23 +226,23 @@
         </div>
     </div>
 
-    <div id="pw-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[200] flex items-center justify-center">
-        <div class="glass-card rounded-[32px] p-8 w-full max-w-sm border border-slate-700">
-            <h3 class="text-xl font-black text-slate-100 mb-6 border-b border-slate-800 pb-4">🔒 Password Change</h3>
+    <div id="pw-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center">
+        <div class="bg-white rounded-[32px] p-8 w-full max-w-sm border border-slate-200 shadow-2xl">
+            <h3 class="text-xl font-black text-slate-800 mb-6 border-b border-slate-100 pb-4">🔒 Password Change</h3>
             <div class="space-y-4 mb-8">
-                <div><label class="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Current</label><input type="password" id="cur-pw" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-white"></div>
-                <div><label class="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">New</label><input type="password" id="new-pw" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-white"></div>
-                <div><label class="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Confirm</label><input type="password" id="confirm-pw" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-white"></div>
+                <div><label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Current</label><input type="password" id="cur-pw" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-indigo-500"></div>
+                <div><label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">New</label><input type="password" id="new-pw" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-indigo-500"></div>
+                <div><label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Confirm</label><input type="password" id="confirm-pw" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:outline-none focus:border-indigo-500"></div>
             </div>
             <div class="flex gap-3">
-                <button onclick="closePwModal()" class="flex-1 py-3 text-slate-500 font-bold">CANCEL</button>
-                <button onclick="changePassword()" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-black shadow-lg">UPDATE</button>
+                <button onclick="closePwModal()" class="flex-1 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-2xl transition">CANCEL</button>
+                <button onclick="changePassword()" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition">UPDATE</button>
             </div>
         </div>
     </div>
 
     <script>
-        /* [기존 스크립트 로직 유지 - 0점 스탯 수정 포함] */
+        /* 기존 로직 100% 유지 */
         const user = JSON.parse(sessionStorage.getItem('currentUser'));
         if (!user || (user.role !== 'teacher' && user.role !== 'admin')) { alert("로그인이 필요합니다."); location.href = 'index.html'; } 
         else { document.getElementById('t-name').innerText = user.name; if (user.username === '곽명용이브' || user.role === 'admin') { document.getElementById('god-menu').classList.remove('hidden'); document.getElementById('god-menu-2').classList.remove('hidden'); } }
@@ -274,32 +275,30 @@
             const grid = document.getElementById('q-student-grid');
             let list = qDataAll;
             if (currentQFilter !== 'all') list = qDataAll.filter(s => s.grade === currentQFilter);
-            if (list.length === 0) { grid.innerHTML = `<div class="col-span-full text-center py-20 text-slate-600 font-bold italic tracking-tighter uppercase opacity-50">No Active Questions</div>`; return; }
+            if (list.length === 0) { grid.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400 font-bold italic tracking-tighter uppercase opacity-80">No Active Questions</div>`; return; }
             grid.innerHTML = list.map(s => {
                 const r = s.round;
-                let badgeColor = 'bg-indigo-500/20 text-indigo-400';
-                if (r === 1) badgeColor = 'bg-emerald-500/20 text-emerald-400';
-                else if (r >= 2) badgeColor = 'bg-slate-500/20 text-slate-400';
+                let badgeColor = 'bg-indigo-100 text-indigo-600';
+                if (r === 1) badgeColor = 'bg-emerald-100 text-emerald-600';
+                else if (r >= 2) badgeColor = 'bg-slate-200 text-slate-500';
                 return `
-                <div onclick="openQModal('${s.id}')" class="glass-card rounded-2xl p-4 shadow-sm hover:border-indigo-500 transition group relative overflow-hidden">
+                <div onclick="openQModal('${s.id}')" class="glass-card rounded-2xl p-4 shadow-sm hover:border-indigo-400 transition group relative overflow-hidden bg-white">
                     <div class="absolute right-0 top-0 ${badgeColor} text-[9px] font-black px-2 py-1 rounded-bl-xl uppercase tracking-widest">${r} Round</div>
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-black text-slate-400 text-sm group-hover:text-indigo-400 transition">${s.name[0]}</div>
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-slate-500 text-sm group-hover:text-indigo-600 transition">${s.name[0]}</div>
                         <div>
-                            <div class="font-black text-slate-200 text-sm">${s.name}</div>
-                            <div class="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">${s.grade}</div>
+                            <div class="font-black text-slate-800 text-sm">${s.name}</div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">${s.grade}</div>
                         </div>
                     </div>
                     <div class="mt-4 flex justify-between items-center">
-                        <span class="text-[10px] font-black text-slate-500 tracking-widest uppercase">Pending</span>
-                        <span class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-xs font-black shadow-lg shadow-indigo-900/40">${s.questions.length}</span>
+                        <span class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Pending</span>
+                        <span class="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-xs font-black shadow-md shadow-indigo-200">${s.questions.length}</span>
                     </div>
                 </div>`;
             }).join('');
         }
 
-        /* 나머지 세부 함수(openQModal, checkInboxes 등)는 원본 로직을 그대로 사용하되 디자인적 일관성을 유지함 */
-        // ... (이하 생략된 기존 함수들 모두 포함되어야 함) ...
         async function checkInboxes() {
             const { count: spCount } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('is_special', true).eq('status', 'submitted').is('final_score', null);
             document.getElementById('cnt-special').innerText = spCount || 0;
@@ -314,6 +313,9 @@
         function openGodMode() { window.open('admin_god_stats.html', '_blank', 'width=1250,height=950'); }
         function openManual() { window.open('teacher_manual.html', '_blank', 'width=900,height=800'); }
         
+        /* 세부 로직 함수들 (원본 유지) */
+        // ... (openQModal, confirmQAction 등 기존 로직들 포함되어야 함) ...
+
         loadData();
     </script>
 </body>

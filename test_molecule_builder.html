@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>분자 속성 조립소 - Visual Molecule Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 시스템 메인 테마: 다크 네이비 & 인디고 */
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #0f172a; color: #f8fafc; padding: 40px; overflow: hidden; height: 100vh; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-blur: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        /* 원자 블록 스타일 (라이브러리) */
+        .atom-chip { 
+            background: rgba(99, 102, 241, 0.1); 
+            border: 1px solid rgba(99, 102, 241, 0.3); 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer;
+        }
+        .atom-chip:hover { 
+            background: rgba(99, 102, 241, 0.25); 
+            transform: translateY(-2px); 
+            border-color: #6366f1;
+        }
+        
+        /* 조립 캔버스 및 블록 디자인 */
+        .build-canvas { 
+            border: 2px dashed rgba(99, 102, 241, 0.2); 
+            min-height: 150px; 
+            background: rgba(15, 23, 42, 0.5); 
+        }
+        .assembled-block { 
+            background: linear-gradient(135deg, #6366f1, #4338ca); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* 입력 장치 공통 스타일 */
+        input { 
+            background: rgba(15, 23, 42, 0.9) !important; 
+            border: 1px solid #334155 !important; 
+            color: white !important; 
+            outline: none !important; 
+            user-select: text !important;
+        }
+        input:focus { border-color: #6366f1 !important; box-shadow: 0 0 15px rgba(99, 102, 241, 0.2); }
+        
+        .btn-save { background: linear-gradient(135deg, #10b981, #059669); transition: all 0.3s; }
+        .btn-save:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); }
+        
+        .text-glow { text-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+    </style>
+</head>
+<body class="flex gap-8">
+    <script src="config.js"></script>
+
+    <aside class="w-80 flex flex-col gap-6">
+        <div class="px-2">
+            <h3 class="text-indigo-500 font-black text-[10px] uppercase tracking-[0.4em] mb-2 italic">Infrastructure</h3>
+            <h2 class="text-2xl font-black text-white tracking-tighter text-glow">원자 라이브러리</h2>
+            <button onclick="window.open('test_atom_factory.html', 'atom_factory', 'width=450,height=750')" class="mt-4 w-full py-3 bg-slate-800 rounded-2xl text-[10px] font-black text-slate-400 hover:text-indigo-400 border border-slate-700 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-atom"></i> 원자 속성 추가 제작
+            </button>
+        </div>
+        
+        <div class="glass-panel flex-1 rounded-[32px] p-6 overflow-y-auto custom-scroll space-y-3 shadow-2xl" id="atom-list">
+            <div class="text-center py-20 text-slate-700 animate-pulse text-xs font-bold italic">원자 데이터를 불러오는 중...</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col gap-6">
+        <div class="px-2">
+            <h3 class="text-indigo-500 font-black text-[10px] uppercase tracking-[0.4em] mb-2 italic">Assembly Line</h3>
+            <h2 class="text-2xl font-black text-white tracking-tighter text-glow">분자 속성 조립소</h2>
+        </div>
+
+        <div class="glass-panel flex-1 rounded-[40px] p-12 flex flex-col border border-slate-800 shadow-2xl relative">
+            
+            <div class="mb-10">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">분자 속성 명칭 (가문 이름)</label>
+                <input type="text" id="molecule-name" placeholder="예: 제한시간, 합격컷, 오답감점" class="w-full max-w-md px-6 py-5 rounded-2xl font-black text-lg shadow-2xl border-t border-white/5">
+            </div>
+
+            <div class="mb-6 flex-1 flex flex-col">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Visual Logic Assembly Canvas</label>
+                <div id="canvas" class="build-canvas flex-1 rounded-[32px] p-10 flex flex-wrap gap-4 items-center content-start overflow-y-auto custom-scroll">
+                    <p class="text-slate-700 italic font-bold text-sm w-full text-center py-10">왼쪽에서 원자를 선택하여 분자 구조를 설계해 주세요.</p>
+                </div>
+            </div>
+
+            <div class="p-6 bg-slate-900/50 rounded-3xl border border-slate-800 mb-8">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fa-solid fa-route text-indigo-500 text-xs"></i>
+                    <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Logic Path Preview</span>
+                </div>
+                <div id="preview-text" class="text-sm font-bold text-indigo-400/70 italic ml-1">설계된 로직 경로가 비어 있습니다.</div>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <button onclick="clearCanvas()" class="text-[10px] font-black text-slate-600 hover:text-rose-500 transition uppercase tracking-widest italic">
+                    <i class="fa-solid fa-trash-can mr-1"></i> Reset Canvas
+                </button>
+                <button onclick="saveMolecule()" class="btn-save px-14 py-5 rounded-[24px] font-black text-sm text-white tracking-[0.2em] shadow-2xl flex items-center gap-3">
+                    <i class="fa-solid fa-dna"></i> 분자 속성 최종 융합
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        let assembledAtoms = [];
+
+        /**
+         * @description DB에서 생성된 원자(Atom) 리스트를 호출하여 라이브러리 구성
+         */
+        async function fetchAtoms() {
+            const { data, error } = await _supabase
+                .from('test_property_atom')
+                .select('*')
+                .order('created_at', { ascending: true });
+            
+            if (error) return console.error("원자 로드 실패:", error);
+            
+            const list = document.getElementById('atom-list');
+            list.innerHTML = (data || []).map(a => `
+                <div onclick="addAtomToCanvas('${a.atom_id}', '${a.display_name.replace(/'/g, "\\'")}', '${a.atom_type}')" 
+                     class="atom-chip p-5 rounded-2xl flex justify-between items-center group">
+                    <div>
+                        <div class="text-[12px] font-black text-slate-100">${a.display_name}</div>
+                        <div class="text-[9px] text-slate-600 font-bold mt-1 uppercase tracking-tighter">${a.atom_type}</div>
+                    </div>
+                    <i class="fa-solid fa-plus-circle text-slate-800 group-hover:text-indigo-500 transition-all"></i>
+                </div>
+            `).join('') || '<p class="text-center py-10 text-slate-700 text-xs italic">생성된 원자가 없습니다.</p>';
+        }
+
+        /**
+         * @description 캔버스에 원자 추가 (시각적 조립)
+         */
+        function addAtomToCanvas(id, name, type) {
+            assembledAtoms.push({ id, name, type });
+            renderCanvas();
+        }
+
+        /**
+         * @description 조립된 원자 배열을 바탕으로 캔버스 및 프리뷰 갱신
+         */
+        function renderCanvas() {
+            const canvas = document.getElementById('canvas');
+            const preview = document.getElementById('preview-text');
+            
+            if (assembledAtoms.length === 0) {
+                canvas.innerHTML = '<p class="text-slate-700 italic font-bold text-sm w-full text-center py-10">왼쪽에서 원자를 선택하여 분자 구조를 설계해 주세요.</p>';
+                preview.innerText = '설계된 로직 경로가 비어 있습니다.';
+                return;
+            }
+
+            canvas.innerHTML = assembledAtoms.map((a, idx) => `
+                <div class="assembled-block px-6 py-4 rounded-2xl flex items-center gap-4 transition-all">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-black text-white">${a.name}</span>
+                        <span class="text-[8px] text-white/50 font-bold uppercase">${a.type}</span>
+                    </div>
+                    <button onclick="removeAtom(${idx})" class="text-white/30 hover:text-white transition-colors">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            preview.innerText = assembledAtoms.map(a => a.name).join(' ➔ ') + ' 구조로 융합 대기 중';
+        }
+
+        function removeAtom(idx) {
+            assembledAtoms.splice(idx, 1);
+            renderCanvas();
+        }
+
+        function clearCanvas() {
+            if(!confirm("조립 중인 모든 구조를 초기화하시겠습니까?")) return;
+            assembledAtoms = [];
+            renderCanvas();
+        }
+
+        /**
+         * @description 조립된 객체 배열(JSONB)을 테이블에 저장
+         */
+        async function saveMolecule() {
+            const name = document.getElementById('molecule-name').value.trim();
+            if (!name) return alert("데이터 무결성 오류: 분자의 명칭은 필수 항목입니다.");
+            if (assembledAtoms.length === 0) return alert("구조 설계 오류: 최소 하나 이상의 원자가 조립되어야 합니다.");
+
+            const btn = document.querySelector('.btn-save');
+            btn.disabled = true;
+            btn.innerText = "데이터 보따리 융합 중...";
+
+            try {
+                // atom_structure 컬럼에 조립된 원자 배열(JSON)을 그대로 저장
+                const { error } = await _supabase.from('test_setting_template').insert({
+                    label: name,
+                    atom_structure: assembledAtoms, // JSONB 타입에 배열 객체로 뙇!
+                    guide_text: assembledAtoms.map(a => a.name).join(' ')
+                });
+
+                if (error) {
+                    if(error.code === '23505') throw new Error("이미 등록된 분자 속성 명칭입니다.");
+                    throw error;
+                }
+
+                alert(`융합 완료: [${name}] 분자가 시스템 보따리에 성공적으로 저장되었습니다.`);
+                window.close(); // 팝업 종료
+            } catch (e) {
+                alert("융합 작업 실패: " + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-dna mr-2"></i> 완성된 분자 융합 저장';
+            }
+        }
+
+        window.onload = fetchAtoms;
+    </script>
+</body>
+</html>
