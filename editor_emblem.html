@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Math Emblem Atelier (Lite Edition)</title>
+    <title>Math Emblem Atelier (Storage Edition)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -75,18 +75,27 @@
             visibility: hidden; width: 160px; background-color: #334155; color: #fff; text-align: center; border-radius: 6px; padding: 5px; position: absolute; z-index: 100; bottom: 125%; left: 50%; margin-left: -80px; opacity: 0; transition: opacity 0.3s; font-size: 10px; pointer-events: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 1px solid #475569;
         }
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #f472b6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="flex h-screen">
 
     <script src="config.js"></script>
     
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <div class="text-white font-bold text-sm">Supabase 스토리지에 업로드 중...</div>
+    </div>
+
     <div class="w-80 bg-slate-900 border-r border-slate-700 flex flex-col shrink-0 z-20 shadow-xl">
         <div class="p-4 border-b border-slate-800 bg-slate-950">
             <h1 class="font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 text-lg">
                 <i class="fa-solid fa-flask mr-2"></i>EMBLEM LAB
             </h1>
-            <p class="text-[10px] text-slate-500 mt-1">Lite Edition (Manual BG)</p>
+            <p class="text-[10px] text-slate-500 mt-1">Storage Edition (Bucket Upload)</p>
         </div>
 
         <div class="flex-1 overflow-y-auto p-2 border-b border-slate-800 h-1/4">
@@ -182,8 +191,8 @@
                 <div class="flex items-center gap-2 bg-slate-900/50 p-1 rounded border border-slate-700">
                     <input type="file" id="img-upload" accept="image/*" class="hidden" onchange="handleImageUpload(this)">
                     <button onclick="document.getElementById('img-upload').click()" class="tooltip bg-pink-600 hover:bg-pink-500 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1 transition">
-                        <i class="fa-solid fa-image"></i> 업로드
-                        <span class="tooltiptext">배경이 없는 투명 PNG 파일 권장!</span>
+                        <i class="fa-solid fa-cloud-arrow-up"></i> 업로드 (Storage)
+                        <span class="tooltiptext">Supabase 버킷에 영구 저장됩니다!</span>
                     </button>
                 </div>
             </div>
@@ -266,17 +275,42 @@
             window.addEventListener('mouseup', handleGlobalMouseUp);
         }
 
-        // ★ [SIMPLIFIED] 이미지 업로드 로직 (배경 제거 기능 삭제)
+        // ★ [NEW] Supabase Storage 업로드 로직 (핵심!)
         async function handleImageUpload(input) {
             const file = input.files[0];
             if (!file) return;
 
-            // 바로 URL로 변환하여 레이어 추가
-            const imgUrl = URL.createObjectURL(file);
-            addLayer('image', imgUrl, 'custom');
-            
-            // 입력 초기화 (같은 파일 다시 선택 가능하게)
-            input.value = '';
+            const loading = document.getElementById('loading-overlay');
+            loading.style.display = 'flex'; // 로딩 시작
+
+            try {
+                // 1. 파일명 유니크하게 생성 (충돌 방지)
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+                const filePath = `${fileName}`; // 폴더 없이 루트에 저장 (필요시 'folder/filename' 가능)
+
+                // 2. 버킷에 업로드 ('emblem_assets' 버킷이 존재해야 함!)
+                const { data, error } = await _supabase.storage
+                    .from('emblem_assets')
+                    .upload(filePath, file);
+
+                if (error) throw error;
+
+                // 3. 공개 URL 가져오기
+                const { data: { publicUrl } } = _supabase.storage
+                    .from('emblem_assets')
+                    .getPublicUrl(filePath);
+
+                // 4. URL을 레이어 컨텐츠로 사용
+                addLayer('image', publicUrl, 'custom');
+
+            } catch (e) {
+                console.error(e);
+                alert("업로드 실패!\nSupabase에 'emblem_assets' 버킷이 있는지, Public 설정이 되어있는지 확인해주세요.\n\n에러: " + e.message);
+            } finally {
+                loading.style.display = 'none'; // 로딩 끝
+                input.value = ''; // 초기화
+            }
         }
 
         function addLayer(type, content, subType='emoji') {
@@ -325,12 +359,10 @@
             });
         }
 
-        // 레이어 리스트 및 순서 변경 UI
         function renderLayerList() {
             const list = document.getElementById('layer-list');
             list.innerHTML = '';
             
-            // 역순 표시 (화면상 맨 앞 레이어가 리스트 상단에 오도록)
             const reversedLayers = [...layers].map((l, idx) => ({...l, originalIndex: idx})).reverse();
 
             reversedLayers.forEach(l => {
@@ -358,16 +390,11 @@
             });
         }
 
-        // 레이어 순서 변경 (배열 내 위치 교환)
         function moveLayer(id, dir) {
             const idx = layers.findIndex(l => l.id === id);
             if (idx === -1) return;
-
             const newIdx = idx + dir;
-            // 배열 범위 체크
             if (newIdx < 0 || newIdx >= layers.length) return;
-
-            // Swap
             [layers[idx], layers[newIdx]] = [layers[newIdx], layers[idx]];
             renderAll();
         }
@@ -586,8 +613,6 @@
         function addTextLayer() { const txt=document.getElementById('quick-text').value||"TIER"; addLayer('text', txt); document.getElementById('quick-text').value=''; }
         function deleteLayer() { if(!selectedId)return; layers=layers.filter(l=>l.id!==selectedId); selectedId=null; document.getElementById('prop-panel').classList.add('hidden'); renderAll(); }
         function clearCanvas() { if(confirm("Clear?")) { layers=[]; selectedId=null; document.getElementById('prop-panel').classList.add('hidden'); renderAll(); } }
-
-        window.imglyRemoveBackground = window.imglyRemoveBackground || async function(f){ console.error("Lib not loaded"); return f; };
 
         init();
     </script>
