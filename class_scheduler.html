@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Operation Center - Tier Integrated</title>
+    <title>Weekly Operation Center - Stamp Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* [Elite System UI Standard] */
+        /* [Elite System UI Standard - V19.0 Base] */
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
         
-        /* Grid Layout */
+        /* Grid Structure */
         .time-slot { height: 100px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; position: relative; box-sizing: border-box; }
         .day-column { min-width: 140px; flex: 1; position: relative; border-right: 1px solid #e2e8f0; }
         
@@ -25,18 +24,40 @@
             overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
         }
         .class-card:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 20px rgba(79, 70, 229, 0.4); z-index: 20; }
+
+        /* Memo Button */
+        .memo-btn {
+            position: absolute; top: 6px; right: 6px; width: 24px; height: 24px;
+            background: rgba(255, 255, 255, 0.2); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; transition: all 0.2s; z-index: 30;
+        }
+        .memo-btn:hover { background: white; color: #4f46e5; transform: scale(1.1); }
+        .memo-btn.active { background: #fbbf24; color: #78350f; border: 1px solid #f59e0b; animation: twinkle 1.5s infinite alternate; }
+        @keyframes twinkle { 0% { box-shadow: 0 0 5px #fbbf24; } 100% { box-shadow: 0 0 15px #fbbf24; } }
+
+        /* Modal Transitions */
+        .modal-content { transform: scale(0.98); opacity: 0; transition: all 0.2s ease-out; }
+        .show .modal-content { transform: scale(1); opacity: 1; }
         
-        /* Modal & Logic Cards */
-        .modal-content { transform: scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        #clinic-modal.show .modal-content { transform: scale(1); opacity: 1; }
+        /* Kimjang UI Elements */
+        .student-item { transition: 0.2s; border: 2px solid transparent; }
+        .student-item:hover { background-color: #f1f5f9; }
+        .student-item.selected { border-color: #6366f1; background-color: #e0e7ff; }
         
-        .option-card { border: 2px solid #e2e8f0; background: white; cursor: pointer; padding: 12px; border-radius: 16px; transition: 0.2s; position: relative; overflow: hidden; }
-        .option-card.selected { border-color: #6366f1; background-color: #f5f3ff; transform: scale(0.98); }
+        /* Locked Style - Now Clickable for Manual Unlock */
+        .student-item.locked { opacity: 0.6; filter: grayscale(1); background: #f8fafc; border-color: #e2e8f0; cursor: help; } 
+        .student-item.in-basket { opacity: 0.4; pointer-events: none; border: 2px dashed #cbd5e1; }
+
+        .option-card { border: 2px solid #e2e8f0; background: white; cursor: pointer; padding: 10px; border-radius: 12px; transition: 0.2s; position: relative; }
+        .option-card.selected { border-color: #6366f1; background-color: #f5f3ff; transform: scale(0.98); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
         .option-card.negative.selected { border-color: #ef4444; background-color: #fef2f2; }
         
-        /* Multiplier Badge */
+        .basket-item { animation: slideIn 0.2s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
         .multiplier-tag { font-size: 0.7rem; font-weight: 800; background: #1e293b; color: #fff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-left: 4px; }
-        .multiplier-alert { color: #ef4444; background: #fee2e2; } /* High penalty warning */
+        .multiplier-alert { color: #ef4444; background: #fee2e2; }
     </style>
 </head>
 <body class="p-6 h-screen flex flex-col box-border">
@@ -61,7 +82,7 @@
             <div class="w-20 shrink-0 border-r border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase tracking-tighter bg-white">Time</div>
             <div class="flex-1 flex" id="day-headers"></div>
         </div>
-        <div class="flex-1 overflow-y-auto custom-scroll relative bg-white">
+        <div class="flex-1 overflow-y-auto relative bg-white">
             <div class="flex min-h-full">
                 <div class="w-20 shrink-0 border-r border-slate-200 bg-slate-50/30" id="time-labels"></div>
                 <div class="flex-1 flex relative" id="schedule-grid-body"></div>
@@ -69,59 +90,111 @@
         </div>
     </div>
 
-    <div id="clinic-modal" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
-        <div class="modal-content bg-white w-full max-w-6xl h-[85vh] rounded-[40px] shadow-2xl flex flex-col overflow-hidden">
-            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div class="flex items-center gap-5">
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200"><i class="fa-solid fa-chalkboard-user"></i></div>
+    <div id="clinic-modal" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="modal-content bg-white w-full max-w-[95vw] h-[90vh] rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-slate-300">
+            
+            <div class="h-20 px-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-md"><i class="fa-solid fa-list-check"></i></div>
                     <div>
-                        <h2 class="text-2xl font-black text-slate-800" id="m-class-title">Class Name</h2>
-                        <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1" id="m-class-time">00:00 - 00:00</p>
+                        <h2 class="text-xl font-black text-slate-800" id="m-class-title">Class Name</h2>
+                        <div class="flex gap-2 items-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest" id="m-class-time">00:00 - 00:00</span>
+                            <span class="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-bold">MANAGEMENT MODE</span>
+                        </div>
                     </div>
                 </div>
-                <button onclick="closeModal()" class="w-12 h-12 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition text-2xl">×</button>
+                <button onclick="closeModal('clinic-modal')" class="w-10 h-10 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition text-2xl font-bold">×</button>
             </div>
 
-            <div class="flex-1 flex overflow-hidden">
-                <div class="w-1/3 border-r border-slate-100 flex flex-col bg-white">
-                    <div class="p-6 border-b border-slate-50 flex justify-between items-center">
-                        <span class="text-xs font-black text-slate-400 tracking-widest uppercase">Student List</span>
-                        <span id="m-student-count" class="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-lg font-bold">0</span>
+            <div class="flex-1 flex overflow-hidden bg-slate-100">
+                
+                <div class="w-1/4 flex flex-col border-r border-slate-200 bg-white h-full">
+                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0 h-14">
+                        <span class="text-xs font-black text-slate-600 uppercase"><i class="fa-solid fa-user-group mr-1"></i> 명단</span>
+                        <span id="m-student-count" class="bg-slate-200 text-slate-600 text-[10px] px-2 py-1 rounded font-bold">0</span>
                     </div>
-                    <div id="m-student-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+                    <div id="m-student-list" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
                 </div>
 
-                <div class="flex-1 bg-slate-50/50 p-8 overflow-y-auto flex flex-col">
-                    <div class="mb-6 flex justify-between items-center">
-                        <h3 class="font-black text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-scale-balanced text-indigo-500"></i> 평가 및 처벌 
-                            <span id="current-tier-display" class="hidden ml-2 text-xs bg-slate-800 text-white px-2 py-1 rounded"></span>
-                        </h3>
-                        <div id="target-badge" class="hidden bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-xs font-black border border-indigo-200 animate-pulse">Selected</div>
+                <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50 h-full relative">
+                    <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white shrink-0 h-14">
+                        <span class="text-xs font-black text-slate-600 uppercase"><i class="fa-solid fa-gavel mr-1"></i> 항목 선택</span>
+                        <div id="target-badge" class="opacity-0 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">
+                            <i class="fa-solid fa-check mr-1"></i> 선택됨
+                        </div>
                     </div>
-                    <div id="point-options-grid" class="grid grid-cols-2 gap-4"></div>
-                    <div class="mt-auto pt-8 border-t border-slate-200">
-                        <button id="btn-submit-points" onclick="submitPoints()" disabled class="w-full py-5 bg-slate-300 text-white rounded-3xl font-black text-lg shadow-sm transition">학생을 선택하세요</button>
+                    <div id="point-options-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 content-start"></div>
+                    <div class="p-4 border-t border-slate-200 bg-white shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
+                        <button id="btn-add-basket" onclick="addToBasket()" disabled class="w-full h-12 bg-slate-200 text-slate-400 rounded-xl font-black text-sm transition flex items-center justify-center gap-2">
+                            <span>학생과 항목을 선택하세요</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="w-[30%] flex flex-col bg-indigo-50/50 h-full">
+                    <div class="p-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50 shrink-0 h-14">
+                        <span class="text-xs font-black text-indigo-800 uppercase"><i class="fa-solid fa-basket-shopping mr-1"></i> 처리 대기</span>
+                        <span id="basket-count" class="bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="basket-list" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+                    <div class="p-5 border-t border-indigo-100 bg-white shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
+                        <label class="flex items-center gap-2 mb-3 cursor-pointer select-none">
+                            <input type="checkbox" id="chk-confirm" onchange="toggleSaveBtn()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-xs font-bold text-slate-500">최종 반영 확인</span>
+                        </label>
+                        <button id="btn-final-save" onclick="finalSave()" disabled class="w-full h-14 bg-slate-300 text-white rounded-xl font-black text-lg shadow-sm transition flex items-center justify-center gap-2 cursor-not-allowed">
+                            <i class="fa-solid fa-lock"></i> <span>저장 (Locked)</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <div id="preview-modal" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm hidden flex items-center justify-center">
+        <div class="bg-white w-[350px] rounded-2xl shadow-2xl p-6 border border-slate-200 transform scale-100">
+            <h3 class="font-black text-slate-800 mb-4 flex items-center gap-2 text-lg"><i class="fa-solid fa-magnifying-glass text-indigo-500"></i> 적용 예정 상세</h3>
+            <div id="preview-list" class="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2 border-y border-slate-100 py-2"></div>
+            <button onclick="document.getElementById('preview-modal').classList.add('hidden')" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition">닫기</button>
+        </div>
+    </div>
+
+    <div id="memo-modal" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm hidden flex items-center justify-center">
+        <div class="bg-white w-[400px] h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-amber-200">
+            <div class="p-6 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
+                <h3 class="font-black text-amber-800 flex items-center gap-2"><i class="fa-solid fa-note-sticky text-amber-500"></i> Class Memo</h3>
+                <button onclick="closeModal('memo-modal')" class="text-amber-400 hover:text-amber-600 text-xl">×</button>
+            </div>
+            <div id="memo-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-amber-50/10"></div>
+            <div class="p-4 bg-white border-t border-slate-100"><div class="flex gap-2"><input type="text" id="new-memo-input" placeholder="메시지 입력..." class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 font-bold text-slate-700 focus:ring-2 focus:ring-amber-400"><button onclick="addMemo()" class="bg-amber-400 hover:bg-amber-500 text-white w-12 rounded-xl shadow-lg shadow-amber-200 transition active:scale-95"><i class="fa-solid fa-plus"></i></button></div></div>
+        </div>
+    </div>
+
     <script>
         /**
-         * [System Core] V15.5 Logic Update
-         * Feature: Tier-based Multiplier Calculation
+         * [System Core] V21.0 Stamp & Manual Unlock
+         * - Logic: Uses 'last_evaluation_date' in 'class_members' table
+         * - Lock: If last_evaluation_date == Today -> Locked
+         * - Unlock: Click locked item -> Confirm -> Set last_evaluation_date to NULL
          */
         
         let baseDate = new Date();
         let allRules = [];
-        let classStudentsMap = {}; // Cache for student data (including tier)
-        let selectedStudentData = null; // Stores currently selected student object
+        let classStudentsMap = {}; 
+        let currentClassId = null;
+        let currentMemoClassId = null;
+        
+        let selectedStudentData = null;
         let selectedRuleIds = new Set();
+        let basketData = {}; 
+        let lockedStudents = new Set(); // Stores IDs of students locked TODAY
 
         const dayMap = { '월요일': 0, '화요일': 1, '수요일': 2, '목요일': 3, '금요일': 4, '토요일': 5, '일요일': 6 };
         const dayNamesEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+        const START_HOUR = 9; 
+        const END_HOUR = 22;
 
         async function init() {
             updateWeekDisplay();
@@ -130,19 +203,16 @@
             await fetchClasses();
         }
 
-        // --- Core Logic: Load Rules & Multipliers ---
         async function loadRules() {
-            // Fetch rules including the 'tier_multipliers' JSONB column
-            const { data } = await _supabase.from('point_rules').select('*').order('id');
+            const { data } = await _supabase.from('point_rules').select('*').eq('is_active', true).order('id');
             allRules = data || [];
         }
 
-        // --- Core Logic: Student Data (with Tier) ---
+        // --- Management Logic ---
         async function openClinic(id, name, time) {
-            selectedStudentData = null;
-            selectedRuleIds.clear();
-            classStudentsMap = {};
-
+            currentClassId = id;
+            resetManagementState();
+            
             const modal = document.getElementById('clinic-modal');
             modal.classList.remove('hidden');
             setTimeout(() => modal.classList.add('show'), 10);
@@ -150,242 +220,260 @@
             document.getElementById('m-class-title').innerText = name;
             document.getElementById('m-class-time').innerText = time;
 
-            // ★ IMPORTANT: Fetch 'tier' along with other info
+            // ★ Fetch Students AND Last Evaluation Date
             const { data: members } = await _supabase.from('class_members')
-                .select('student_id, users(name, grade, tier)') // Fetch Tier!
+                .select('student_id, last_evaluation_date, users(name, grade, tier)') 
                 .eq('class_id', id);
-            
-            const list = document.getElementById('m-student-list');
-            document.getElementById('m-student-count').innerText = members ? members.length : 0;
 
-            if (!members || members.length === 0) {
-                list.innerHTML = `<div class="text-center py-10 text-slate-400 font-medium text-xs">배정된 학생이 없습니다.</div>`;
-            } else {
-                list.innerHTML = members.map(m => {
-                    // Cache student data for logic calculation
+            // ★ Lock Logic: Compare date with today (YYYY-MM-DD)
+            const today = new Date().toISOString().split('T')[0];
+            
+            classStudentsMap = {};
+            lockedStudents.clear();
+
+            if (members) {
+                members.forEach(m => {
+                    // Check Stamp
+                    if (m.last_evaluation_date === today) {
+                        lockedStudents.add(m.student_id);
+                    }
+
                     classStudentsMap[m.student_id] = { 
                         id: m.student_id, 
                         name: m.users.name, 
-                        grade: m.users.grade,
-                        tier: m.users.tier || 'Unranked' // Default if null
+                        grade: m.users.grade, 
+                        tier: m.users.tier || 'Unranked' 
                     };
-
-                    return `
-                    <div onclick="selectStudent('${m.student_id}')" id="st-${m.student_id}" 
-                         class="p-4 rounded-2xl bg-slate-50 border border-slate-100 cursor-pointer hover:border-indigo-300 transition flex justify-between items-center group">
-                        <span class="font-bold text-slate-700 group-hover:text-indigo-600 text-sm">${m.users.name}</span>
-                        <div class="flex gap-1">
-                            <span class="text-[9px] font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">${m.users.tier || '-'}</span>
-                            <span class="text-[10px] font-black text-slate-400 uppercase bg-white px-2 py-1 rounded-lg border border-slate-100">${m.users.grade}</span>
-                        </div>
-                    </div>`;
-                }).join('');
+                });
             }
-            renderRules(); // Render initial state (no multipliers applied yet)
-            updateSubmitBtn();
+            
+            renderStudentList();
+            renderRuleGrid(); 
+            renderBasket();
+        }
+
+        function resetManagementState() {
+            selectedStudentData = null;
+            selectedRuleIds.clear();
+            basketData = {};
+            lockedStudents.clear();
+            document.getElementById('chk-confirm').checked = false;
+            toggleSaveBtn();
+        }
+
+        // --- Render Student List (With Unlock Trigger) ---
+        function renderStudentList() {
+            const list = document.getElementById('m-student-list');
+            const ids = Object.keys(classStudentsMap);
+            document.getElementById('m-student-count').innerText = ids.length;
+
+            if (ids.length === 0) { list.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">학생이 없습니다.</div>`; return; }
+
+            list.innerHTML = ids.map(id => {
+                const s = classStudentsMap[id];
+                const isLocked = lockedStudents.has(id);
+                const isInBasket = basketData[id] !== undefined;
+                const isSelected = selectedStudentData && selectedStudentData.id === id;
+
+                let classes = "student-item p-3 rounded-xl bg-white border border-slate-100 cursor-pointer flex justify-between items-center mb-2 hover:shadow-sm";
+                let statusIcon = "";
+                let clickAction = `onclick="selectStudent('${id}')"`; // Default action
+
+                if (isLocked) { 
+                    classes += " locked"; 
+                    statusIcon = `<span class="text-[9px] font-bold bg-slate-200 text-slate-500 px-2 py-0.5 rounded"><i class="fa-solid fa-lock mr-1"></i>완료</span>`;
+                    // ★ Manual Unlock Trigger
+                    clickAction = `onclick="manualUnlock('${id}', '${s.name}')"`;
+                } else if (isInBasket) { 
+                    classes += " in-basket"; 
+                    statusIcon = `<span class="text-[9px] font-bold bg-indigo-100 text-indigo-500 px-2 py-0.5 rounded"><i class="fa-solid fa-basket-shopping mr-1"></i>대기</span>`; 
+                    clickAction = ""; // No action in basket
+                } else if (isSelected) { 
+                    classes += " selected"; 
+                }
+
+                return `<div ${clickAction} class="${classes}">
+                    <div><div class="font-bold text-slate-700 text-sm">${s.name}</div><div class="text-[10px] text-slate-400">${s.grade}</div></div>${statusIcon}</div>`;
+            }).join('');
+        }
+
+        // ★ Manual Unlock Function
+        async function manualUnlock(studentId, studentName) {
+            if(confirm(`[관리자 권한]\n'${studentName}' 학생의 잠금을 해제하시겠습니까?\n(오늘 완료 표시가 사라집니다)`)) {
+                try {
+                    // Clear stamp
+                    await _supabase.from('class_members')
+                        .update({ last_evaluation_date: null })
+                        .match({ class_id: currentClassId, student_id: studentId });
+                    
+                    // Refresh
+                    lockedStudents.delete(studentId);
+                    renderStudentList();
+                } catch(e) {
+                    alert("해제 실패: " + e.message);
+                }
+            }
         }
 
         function selectStudent(id) {
             selectedStudentData = classStudentsMap[id];
-            
-            // Visual Update
-            document.querySelectorAll('[id^="st-"]').forEach(el => el.classList.remove('border-indigo-600', 'bg-indigo-50', 'ring-2', 'ring-indigo-100'));
-            document.getElementById(`st-${id}`).classList.add('border-indigo-600', 'bg-indigo-50', 'ring-2', 'ring-indigo-100');
-            document.getElementById('target-badge').classList.remove('hidden');
-            
-            // Display Current Tier
-            const tierDisplay = document.getElementById('current-tier-display');
-            tierDisplay.classList.remove('hidden');
-            tierDisplay.innerText = `Target Tier: ${selectedStudentData.tier}`;
-
-            selectedRuleIds.clear();
-            renderRules(); // Re-render rules to show multipliers specific to this student
-            updateSubmitBtn();
+            selectedRuleIds.clear(); 
+            document.getElementById('target-badge').style.opacity = '1';
+            document.getElementById('target-badge').innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${selectedStudentData.name}`;
+            renderStudentList(); renderRuleGrid(); updateAddBtn();
         }
 
-        // --- Core Logic: Rendering Rules with Multipliers ---
-        function renderRules() {
+        // --- Rules & Basket (Same as V19) ---
+        function renderRuleGrid() {
             const container = document.getElementById('point-options-grid');
-            const studentTier = selectedStudentData ? selectedStudentData.tier : null;
+            if(!selectedStudentData) { container.innerHTML = `<div class="col-span-2 text-center py-20 text-slate-400 text-xs">왼쪽에서 학생을 선택해주세요.</div>`; return; }
 
+            const tier = selectedStudentData.tier;
             container.innerHTML = allRules.map(r => {
-                const isSelected = selectedRuleIds.has(r.id);
+                const isSel = selectedRuleIds.has(r.id);
                 const isNeg = r.xp_change < 0 || r.cp_change < 0;
-                
-                // ★ Calculate Multiplier
-                let multiplier = 1.0;
-                let multiplierBadge = '';
-                
-                if (studentTier && r.tier_multipliers && r.tier_multipliers[studentTier]) {
-                    multiplier = parseFloat(r.tier_multipliers[studentTier]);
-                    if(multiplier !== 1.0) {
-                        const styleClass = multiplier > 1.0 && isNeg ? 'multiplier-alert' : 'multiplier-tag';
-                        multiplierBadge = `<span class="${styleClass}">x${multiplier}</span>`;
-                    }
+                let multi = 1.0, badge = '';
+                if (tier && r.tier_multipliers && r.tier_multipliers[tier]) {
+                    multi = parseFloat(r.tier_multipliers[tier]);
+                    if(multi !== 1.0) badge = `<span class="${multi>1.0&&isNeg?'multiplier-alert':'multiplier-tag'}">x${multi}</span>`;
                 }
+                const xp = Math.round(r.xp_change * multi), cp = Math.round(r.cp_change * multi);
 
-                // Apply Multiplier for Display
-                const finalXP = Math.round(r.xp_change * multiplier);
-                const finalCP = Math.round(r.cp_change * multiplier);
-
-                return `
-                <div onclick="toggleRule(${r.id})" class="option-card ${isNeg ? 'negative' : ''} ${isSelected ? 'selected ring-2 ring-indigo-500' : ''}">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wide">${r.category}</span>
-                        <div class="text-right">
-                            <div class="text-xs font-black ${finalXP >= 0 ? 'text-indigo-600' : 'text-red-500'}">
-                                ${finalXP > 0 ? '+' : ''}${finalXP} XP ${multiplierBadge}
-                            </div>
-                            <div class="text-[10px] font-bold text-amber-500">
-                                ${finalCP > 0 ? '+' : ''}${finalCP} CP
-                            </div>
-                        </div>
-                    </div>
-                    <div class="font-black text-sm text-slate-700 leading-tight">${r.name}</div>
-                </div>`;
+                return `<div onclick="toggleRule(${r.id})" class="option-card ${isNeg?'negative':''} ${isSel?'selected':''}">
+                    <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400 uppercase">${r.category}</span>
+                    <div class="text-right text-[10px]"><div class="${xp>=0?'text-indigo-600':'text-red-500'} font-black">${xp} XP ${badge}</div><div class="text-amber-500 font-bold">${cp} CP</div></div></div>
+                    <div class="font-bold text-sm text-slate-700">${r.name}</div></div>`;
             }).join('');
         }
 
-        function toggleRule(id) {
-            if (!selectedStudentData) return alert("학생을 먼저 선택해주세요.");
-            if (selectedRuleIds.has(id)) selectedRuleIds.delete(id);
-            else selectedRuleIds.add(id);
-            renderRules(); // Refresh to keep UI synced
-            updateSubmitBtn();
-        }
+        function toggleRule(id) { if(selectedRuleIds.has(id)) selectedRuleIds.delete(id); else selectedRuleIds.add(id); renderRuleGrid(); updateAddBtn(); }
 
-        function updateSubmitBtn() {
-            const btn = document.getElementById('btn-submit-points');
+        function updateAddBtn() {
+            const btn = document.getElementById('btn-add-basket');
             if (selectedStudentData && selectedRuleIds.size > 0) {
                 btn.disabled = false;
-                btn.className = "w-full py-5 bg-indigo-600 text-white rounded-3xl font-black text-lg shadow-xl hover:bg-indigo-700 transition active:scale-95";
-                btn.innerText = `${selectedRuleIds.size}건 평가 반영하기`;
+                btn.className = "w-full h-12 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-lg hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-2";
+                btn.innerHTML = `<span>담기 (${selectedRuleIds.size}건)</span> <i class="fa-solid fa-arrow-right"></i>`;
             } else {
                 btn.disabled = true;
-                btn.className = "w-full py-5 bg-slate-300 text-white rounded-3xl font-black text-lg cursor-not-allowed";
-                btn.innerText = "학생과 항목을 선택하세요";
+                btn.className = "w-full h-12 bg-slate-200 text-slate-400 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 cursor-not-allowed";
+                btn.innerHTML = `<span>학생과 항목을 선택하세요</span>`;
             }
         }
 
-        // --- Core Logic: Submission with Calculation ---
-        async function submitPoints() {
-            if (!confirm("평가를 반영하시겠습니까? (배율 자동 적용됨)")) return;
-            
-            const btn = document.getElementById('btn-submit-points');
-            btn.innerText = "처리 중...";
+        function addToBasket() {
+            if(!selectedStudentData || selectedRuleIds.size === 0) return;
+            const rules = [];
+            selectedRuleIds.forEach(rid => {
+                const r = allRules.find(x => x.id === rid);
+                let multi = 1.0;
+                if(selectedStudentData.tier && r.tier_multipliers && r.tier_multipliers[selectedStudentData.tier]) multi = parseFloat(r.tier_multipliers[selectedStudentData.tier]);
+                rules.push({ ...r, appliedMultiplier: multi });
+            });
+            basketData[selectedStudentData.id] = { data: selectedStudentData, rules: rules };
+            selectedStudentData = null; selectedRuleIds.clear(); document.getElementById('target-badge').style.opacity='0';
+            renderStudentList(); renderRuleGrid(); updateAddBtn(); renderBasket(); toggleSaveBtn();
+        }
+
+        function removeFromBasket(id) { delete basketData[id]; renderBasket(); renderStudentList(); toggleSaveBtn(); }
+
+        function renderBasket() {
+            const list = document.getElementById('basket-list');
+            const ids = Object.keys(basketData);
+            document.getElementById('basket-count').innerText = ids.length;
+            if (ids.length === 0) { list.innerHTML = `<div class="text-center py-20 text-slate-400/50 text-xs font-bold">목록이 비어있습니다.</div>`; return; }
+            list.innerHTML = ids.map(id => {
+                const item = basketData[id];
+                return `<div class="basket-item bg-white p-3 rounded-xl border border-indigo-100 shadow-sm flex justify-between items-center group">
+                    <div><div class="font-bold text-slate-700 text-sm">${item.data.name}</div><div class="text-[10px] text-slate-400">${item.rules.length}건</div></div>
+                    <div class="flex gap-1"><button onclick="openPreview('${id}')" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center"><i class="fa-solid fa-magnifying-glass text-xs"></i></button>
+                    <button onclick="removeFromBasket('${id}')" class="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-400 flex items-center justify-center"><i class="fa-solid fa-minus text-xs"></i></button></div></div>`;
+            }).join('');
+        }
+
+        function openPreview(id) {
+            const item = basketData[id];
+            document.getElementById('preview-list').innerHTML = item.rules.map(r => {
+                const xp = Math.round(r.xp_change * r.appliedMultiplier), cp = Math.round(r.cp_change * r.appliedMultiplier);
+                return `<div class="flex justify-between p-2 border-b border-slate-100 last:border-0"><span class="text-xs font-bold text-slate-700">${r.name}</span><div class="text-right text-[10px]"><span class="${xp>=0?'text-indigo-600':'text-red-500'} font-black">${xp} XP</span> <span class="text-amber-500 font-bold">${cp} CP</span></div></div>`;
+            }).join('');
+            document.getElementById('preview-modal').classList.remove('hidden');
+        }
+
+        // --- 4. Final Save (Stamp Logic) ---
+        function toggleSaveBtn() {
+            const chk = document.getElementById('chk-confirm'), btn = document.getElementById('btn-final-save');
+            const ready = chk.checked && Object.keys(basketData).length > 0;
+            btn.disabled = !ready;
+            btn.className = ready ? "w-full h-14 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-lg shadow-lg transition active:scale-95 flex items-center justify-center gap-2" : "w-full h-14 bg-slate-300 text-white rounded-xl font-black text-lg shadow-sm transition flex items-center justify-center gap-2 cursor-not-allowed";
+            btn.innerHTML = ready ? `<i class="fa-solid fa-check"></i> <span>최종 반영 (Save)</span>` : `<i class="fa-solid fa-lock"></i> <span>저장 (Locked)</span>`;
+        }
+
+        async function finalSave() {
+            if(!confirm("최종 반영하시겠습니까?")) return;
+            const btn = document.getElementById('btn-final-save'); btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...`;
             
             try {
                 const promises = [];
-                const studentTier = selectedStudentData.tier;
+                const studentIdsToStamp = []; // IDs to stamp
+                const today = new Date().toISOString().split('T')[0];
 
-                selectedRuleIds.forEach(rid => {
-                    const rule = allRules.find(r => r.id === rid);
-                    
-                    // ★ Final Calculation
-                    let multiplier = 1.0;
-                    if (studentTier && rule.tier_multipliers && rule.tier_multipliers[studentTier]) {
-                        multiplier = parseFloat(rule.tier_multipliers[studentTier]);
-                    }
-
-                    const finalXP = Math.round(rule.xp_change * multiplier);
-                    const finalCP = Math.round(rule.cp_change * multiplier);
-                    
-                    // Log for debugging (Elite Mode)
-                    console.log(`Applying Rule: ${rule.name}, Tier: ${studentTier}, Multi: ${multiplier}, XP: ${finalXP}`);
-
-                    promises.push(_supabase.rpc('give_points', {
-                        p_student_id: selectedStudentData.id,
-                        p_xp: finalXP,
-                        p_cp: finalCP,
-                        p_rule_name: `[수업] ${rule.name} (x${multiplier})` // Record multiplier in history
-                    }));
+                Object.values(basketData).forEach(item => {
+                    studentIdsToStamp.push(item.data.id);
+                    item.rules.forEach(rule => {
+                        const xp = Math.round(rule.xp_change * rule.appliedMultiplier), cp = Math.round(rule.cp_change * rule.appliedMultiplier);
+                        promises.push(_supabase.rpc('give_points', { p_student_id: item.data.id, p_xp: xp, p_cp: cp, p_rule_name: `[수업] ${rule.name} (x${rule.appliedMultiplier})` }));
+                    });
                 });
 
+                // 1. Give Points
                 await Promise.all(promises);
-                alert("✅ 평가가 반영되었습니다.");
-                
-                // Reset
-                selectedRuleIds.clear();
-                renderRules();
-                updateSubmitBtn();
-            } catch (e) {
-                alert("오류 발생: " + e.message);
-                updateSubmitBtn();
-            }
+
+                // 2. ★ STAMP LOGIC: Update class_members with today's date
+                if(studentIdsToStamp.length > 0) {
+                    await _supabase.from('class_members')
+                        .update({ last_evaluation_date: today })
+                        .eq('class_id', currentClassId)
+                        .in('student_id', studentIdsToStamp);
+                }
+
+                alert("완료되었습니다."); closeModal('clinic-modal');
+            } catch(e) { alert("오류: " + e.message); toggleSaveBtn(); }
         }
 
-        // --- Grid & Date Utils ---
-        function changeWeek(offset) {
-            baseDate.setDate(baseDate.getDate() + (offset * 7));
-            updateWeekDisplay();
-            fetchClasses();
-        }
-        function setToday() {
-            baseDate = new Date();
-            updateWeekDisplay();
-            fetchClasses();
-        }
-        function updateWeekDisplay() {
-            const start = new Date(baseDate);
-            const day = baseDate.getDay();
-            const diff = baseDate.getDate() - day + (day === 0 ? -6 : 1); 
-            start.setDate(diff);
-            const end = new Date(start);
-            end.setDate(start.getDate() + 6);
-            const formatDate = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
-            document.getElementById('current-week-range').innerText = `${formatDate(start)} - ${formatDate(end)}`;
-            renderHeader(start);
-        }
-        function renderHeader(startDate) {
-            const container = document.getElementById('day-headers');
-            let html = '';
-            const todayStr = new Date().toDateString();
-            for(let i=0; i<7; i++) {
-                const d = new Date(startDate);
-                d.setDate(startDate.getDate() + i);
-                const isToday = d.toDateString() === todayStr;
-                html += `<div class="day-column border-r border-slate-200 p-3 text-center ${isToday ? 'bg-indigo-50/50' : ''}"><div class="text-[10px] font-black ${isToday ? 'text-indigo-600' : 'text-slate-400'} tracking-widest mb-1">${dayNamesEng[i]}</div><div class="text-xl font-black ${isToday ? 'text-indigo-700' : 'text-slate-700'}">${d.getDate()}</div></div>`;
-            }
-            container.innerHTML = html;
-        }
+        // --- Grid & Memo Utils ---
         function renderTimeGrid() {
-            let labels = '';
-            for(let h=13; h<=22; h++) labels += `<div class="h-[100px] flex items-start justify-center pt-2 text-[11px] font-bold text-slate-400 border-b border-slate-100 font-mono">${h}:00</div>`;
+            let labels = ''; for(let h=START_HOUR; h<=END_HOUR; h++) labels += `<div class="h-[100px] flex items-start justify-center pt-2 text-[11px] font-bold text-slate-400 border-b border-slate-100 font-mono">${h}:00</div>`;
             document.getElementById('time-labels').innerHTML = labels;
-            let body = '';
-            for(let d=0; d<7; d++) {
-                body += `<div class="day-column" id="col-day-${d}">`;
-                for(let h=13; h<=22; h++) body += `<div class="time-slot" data-hour="${h}"></div>`;
-                body += `</div>`;
-            }
+            let body = ''; for(let d=0; d<7; d++) { body += `<div class="day-column" id="col-day-${d}">`; for(let h=START_HOUR; h<=END_HOUR; h++) body += `<div class="time-slot" data-hour="${h}"></div>`; body += `</div>`; }
             document.getElementById('schedule-grid-body').innerHTML = body;
         }
         async function fetchClasses() {
             document.querySelectorAll('.class-card').forEach(e => e.remove());
-            const { data: classes, error } = await _supabase.from('classes').select('*');
-            if (error) return;
-            classes.forEach(c => {
-                if (!c.day_of_week || !c.start_time || !c.end_time) return;
-                const colIndex = dayMap[c.day_of_week];
-                if (colIndex === undefined) return;
-                const [startH, startM] = c.start_time.split(':').map(Number);
-                const [endH, endM] = c.end_time.split(':').map(Number);
-                const top = (startH - 13) * 100 + (startM / 60) * 100;
-                const height = ((endH * 60 + endM) - (startH * 60 + startM)) / 60 * 100;
-                const card = document.createElement('div');
-                card.className = "class-card group";
-                card.style.top = `${top}px`;
-                card.style.height = `${height}px`;
-                card.innerHTML = `<div class="flex justify-between items-start"><div class="text-[10px] font-black opacity-80 uppercase tracking-tight leading-none">${c.start_time.slice(0,5)} - ${c.end_time.slice(0,5)}</div>${c.google_folder_id ? '<i class="fa-brands fa-google-drive text-white opacity-50 text-xs"></i>' : ''}</div><div class="text-sm font-black mt-1 leading-tight group-hover:underline underline-offset-2">${c.name}</div>`;
-                card.onclick = () => openClinic(c.id, c.name, `${c.start_time.slice(0,5)} - ${c.end_time.slice(0,5)}`);
-                const column = document.getElementById(`col-day-${colIndex}`);
-                if (column) column.appendChild(card);
+            const { data: classes } = await _supabase.from('classes').select('*');
+            const { data: memos } = await _supabase.from('class_memos').select('class_id');
+            const counts = {}; if(memos) memos.forEach(m => counts[m.class_id] = (counts[m.class_id]||0)+1);
+            if(classes) classes.forEach(c => {
+                if(!c.day_of_week) return;
+                const colIdx = dayMap[c.day_of_week]; if(colIdx===undefined) return;
+                const [sh, sm] = c.start_time.split(':').map(Number), [eh, em] = c.end_time.split(':').map(Number);
+                const top = (sh - START_HOUR)*100 + (sm/60)*100, height = ((eh*60+em)-(sh*60+sm))/60*100;
+                const hasMemo = (counts[c.id]||0)>0, icon = hasMemo?'<i class="fa-solid fa-note-sticky"></i>':'<i class="fa-solid fa-plus"></i>';
+                const card = document.createElement('div'); card.className = "class-card group"; card.style.top=`${top}px`; card.style.height=`${height}px`;
+                card.innerHTML = `<div class="flex justify-between items-start"><div class="text-[10px] font-black opacity-80 uppercase leading-none">${c.start_time.slice(0,5)}-${c.end_time.slice(0,5)}</div><div onclick="openMemo(event, ${c.id})" class="memo-btn ${hasMemo?'active':''}">${icon}</div></div><div class="text-sm font-black mt-1 group-hover:underline" onclick="openClinic(${c.id}, '${c.name}', '${c.start_time}-${c.end_time}')">${c.name}</div>`;
+                document.getElementById(`col-day-${colIdx}`).appendChild(card);
             });
         }
-        function closeModal() {
-            document.getElementById('clinic-modal').classList.remove('show');
-            setTimeout(() => document.getElementById('clinic-modal').classList.add('hidden'), 300);
-        }
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); setTimeout(()=>document.getElementById(id).classList.add('hidden'),300); }
+        function changeWeek(o) { baseDate.setDate(baseDate.getDate()+(o*7)); updateWeekDisplay(); fetchClasses(); }
+        function setToday() { baseDate = new Date(); updateWeekDisplay(); fetchClasses(); }
+        function updateWeekDisplay() { const s=new Date(baseDate), d=baseDate.getDay(), diff=baseDate.getDate()-d+(d===0?-6:1); s.setDate(diff); const e=new Date(s); e.setDate(s.getDate()+6); document.getElementById('current-week-range').innerText=`${s.toLocaleDateString()} - ${e.toLocaleDateString()}`; renderHeader(s); }
+        function renderHeader(s) { let html=''; const t=new Date().toDateString(); for(let i=0;i<7;i++){ const d=new Date(s); d.setDate(s.getDate()+i); const isT=d.toDateString()===t; html+=`<div class="day-column border-r border-slate-200 p-3 text-center ${isT?'bg-indigo-50/50':''}"><div class="text-[10px] font-black ${isT?'text-indigo-600':'text-slate-400'} tracking-widest mb-1">${dayNamesEng[i]}</div><div class="text-xl font-black ${isT?'text-indigo-700':'text-slate-700'}">${d.getDate()}</div></div>`; } document.getElementById('day-headers').innerHTML=html; }
+        async function openMemo(e, cid) { e.stopPropagation(); currentMemoClassId = cid; document.getElementById('memo-modal').classList.remove('hidden'); renderMemoList(); }
+        async function renderMemoList() { const list=document.getElementById('memo-list'); const {data}=await _supabase.from('class_memos').select('*').eq('class_id',currentMemoClassId).order('created_at'); list.innerHTML = data&&data.length? data.map(m=>`<div class="bg-white p-3 rounded-xl border border-amber-100 relative group"><p contenteditable="true" onblur="updateMemo(${m.id},this.innerText)" class="text-sm font-bold text-slate-600 outline-none">${m.content}</p><button onclick="deleteMemo(${m.id})" class="absolute top-2 right-2 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button></div>`).join(''):'<div class="text-center text-amber-300 text-xs py-10">메모 없음</div>'; }
+        async function addMemo() { const inp=document.getElementById('new-memo-input'); if(inp.value.trim()){ await _supabase.from('class_memos').insert({class_id:currentMemoClassId, content:inp.value.trim()}); inp.value=''; renderMemoList(); fetchClasses(); } }
+        async function updateMemo(id,v) { await _supabase.from('class_memos').update({content:v}).eq('id',id); }
+        async function deleteMemo(id) { if(confirm("삭제?")) { await _supabase.from('class_memos').delete().eq('id',id); renderMemoList(); fetchClasses(); } }
 
         init();
     </script>
