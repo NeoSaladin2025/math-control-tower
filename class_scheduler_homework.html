@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <link rel="manifest" href="site.webmanifest">
+    
+    <link rel="apple-touch-icon" href="favicon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework Management Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* [Elite System UI Standard] */
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; overflow: hidden; }
+        
+        /* List Items */
+        .student-item { padding: 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: all 0.2s; background: white; display: flex; justify-content: space-between; align-items: center; }
+        .student-item:hover { background-color: #f8fafc; }
+        .student-item.selected { background-color: #f0fdfa; border-left: 4px solid #0d9488; } 
+        .student-item.locked { opacity: 0.6; filter: grayscale(1); background: #f8fafc; cursor: help; } 
+        .student-item.in-basket { opacity: 0.5; pointer-events: none; background: #f1f5f9; border: 1px dashed #cbd5e1; }
+
+        /* History Card (Past Homeworks) */
+        .history-card { 
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 12px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03); position: relative; transition: 0.2s;
+        }
+        .history-card:hover { border-color: #cbd5e1; transform: translateX(2px); }
+        /* Timeline Dot */
+        .history-card::before { content: ''; position: absolute; top: 16px; left: -21px; width: 10px; height: 10px; background: #0d9488; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 1px #e2e8f0; }
+
+        /* Basket Item */
+        .basket-item { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 10px; animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+    <script src="config.js"></script>
+
+    <div class="h-20 bg-white border-b border-slate-200 flex justify-between items-center px-8 shrink-0 z-20 shadow-sm">
+        <div class="flex items-center gap-5">
+            <button onclick="history.back()" class="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition hover:text-slate-600">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-teal-500 text-white flex items-center justify-center text-lg shadow-lg shadow-teal-200">
+                        <i class="fa-solid fa-book-open"></i>
+                    </div>
+                    숙제 관리 센터
+                </h1>
+                <p class="text-xs text-slate-400 font-bold mt-1 ml-1" id="class-info-display">Loading Class Info...</p>
+            </div>
+        </div>
+        <div class="flex gap-3 items-center">
+            <div class="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs font-bold text-slate-500 flex items-center gap-2">
+                <i class="fa-regular fa-calendar-check text-teal-500"></i> <span id="current-date"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden bg-slate-50">
+        
+        <div class="w-1/4 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
+                <span class="text-xs font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-user-group mr-2"></i>수강생 명단</span>
+                <span id="student-count" class="bg-teal-50 text-teal-600 text-[10px] px-2.5 py-1 rounded-lg font-bold border border-teal-100">0</span>
+            </div>
+            <div id="student-list" class="flex-1 overflow-y-auto custom-scroll p-3 space-y-1"></div>
+        </div>
+
+        <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50/50 relative">
+            <div class="p-5 border-b border-slate-200 bg-white shrink-0 h-16 flex justify-between items-center">
+                <span class="text-xs font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-clock-rotate-left mr-2"></i>과거 기록 & 작성</span>
+                <div id="selected-badge" class="opacity-0 transform scale-90 transition-all duration-300 bg-teal-600 text-white px-4 py-1.5 rounded-full text-[11px] font-bold shadow-md shadow-teal-200">
+                    <i class="fa-solid fa-check mr-1.5"></i> 선택됨
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-8 relative" id="history-wrapper">
+                <div class="absolute left-8 top-0 bottom-0 w-px bg-slate-200 z-0" style="left: 31px;"></div> <div id="history-panel" class="relative z-10 pl-8 space-y-4">
+                    <div class="text-center py-32 text-slate-300 text-sm font-bold select-none">
+                        <i class="fa-solid fa-arrow-left mb-2 text-2xl opacity-50 block"></i>
+                        좌측 목록에서 학생을 선택해주세요.
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-5 bg-white border-t border-slate-200 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-20">
+                <div class="flex justify-between items-end mb-2">
+                    <label class="text-[11px] font-black text-slate-500 uppercase tracking-wide">New Homework Task</label>
+                    <span class="text-[10px] text-slate-300 font-medium">내용을 입력하고 담기 버튼을 누르세요</span>
+                </div>
+                <div class="flex gap-3">
+                    <textarea id="homework-input" disabled class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-teal-400 focus:bg-white focus:border-transparent outline-none resize-none h-24 transition placeholder:text-slate-300 placeholder:font-medium" placeholder="예: 수학익힘책 30~35p 풀고 채점하기..."></textarea>
+                    <button id="btn-add-basket" onclick="addToBasket()" disabled class="w-20 bg-slate-100 text-slate-300 rounded-2xl transition hover:bg-slate-200 hover:text-slate-500 flex flex-col items-center justify-center gap-1 active:scale-95 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-folder-plus text-xl"></i>
+                        <span class="text-[10px] font-black">담기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-[30%] bg-white flex flex-col z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+            <div class="p-5 border-b border-slate-100 bg-white shrink-0 h-16 flex justify-between items-center">
+                <span class="text-xs font-black text-teal-600 tracking-widest uppercase"><i class="fa-solid fa-paper-plane mr-2"></i>발송 대기열</span>
+                <span id="basket-count" class="bg-red-500 text-white text-[10px] px-2.5 py-1 rounded-full font-bold shadow-sm shadow-red-200">0</span>
+            </div>
+
+            <div id="basket-list" class="flex-1 overflow-y-auto custom-scroll p-5 space-y-3 bg-slate-50/50">
+                <div class="text-center py-32 text-slate-300 text-xs font-bold leading-relaxed">
+                    <i class="fa-solid fa-basket-shopping text-3xl mb-3 opacity-30 block"></i>
+                    대기 목록이 비어있습니다.<br>숙제를 담아주세요.
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-slate-100 bg-white shrink-0">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-xs font-bold text-slate-400">총 발송 대상</span>
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-2xl font-black text-slate-800" id="total-target">0</span>
+                        <span class="text-xs font-bold text-slate-400">명</span>
+                    </div>
+                </div>
+                <button id="btn-final-save" onclick="finalSave()" disabled class="w-full h-14 bg-slate-200 text-white rounded-2xl font-black text-lg shadow-none transition flex items-center justify-center gap-3 cursor-not-allowed group">
+                    <i class="fa-solid fa-check"></i> <span>전송 및 저장</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * [System Core] V27.0 Simple Text Edition (No UUID)
+         * - Table: 'homework_messages' (columns: id, class_id(text), student_id(text), content(text), created_at)
+         * - Logic: Pure string handling for IDs to prevent UUID syntax errors.
+         */
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentClassId = urlParams.get('class_id'); // Just a string now!
+        const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        
+        let students = [];
+        let lockedStudentIds = new Set();
+        let basket = {};
+        let selectedStudent = null;
+        let className = "Class";
+
+        document.getElementById('current-date').innerText = todayStr;
+        
+        async function init() {
+            if (!currentClassId) { alert("잘못된 접근입니다. (Class ID Missing)"); history.back(); return; }
+            await loadClassInfo();
+            await loadStudents();
+        }
+
+        async function loadClassInfo() {
+            // Note: If 'classes' table uses UUID for 'id', this query might fail if currentClassId is garbage text.
+            // But usually currentClassId comes from the previous page which has valid IDs.
+            // We proceed assuming currentClassId is valid enough to query.
+            const { data } = await _supabase.from('classes').select('name').eq('id', currentClassId).single();
+            if (data) {
+                className = data.name;
+                document.getElementById('class-info-display').innerText = data.name;
+            }
+        }
+
+        async function loadStudents() {
+            const { data: members } = await _supabase.from('class_members').select('student_id, users(name, grade)').eq('class_id', currentClassId);
+            
+            // Fetch Today's Logs using Text IDs (No UUID Casting issues)
+            const todayISO = new Date().toISOString().split('T')[0];
+            const { data: logs } = await _supabase.from('homework_messages')
+                .select('student_id')
+                .eq('class_id', currentClassId)
+                .gte('created_at', `${todayISO}T00:00:00`);
+
+            lockedStudentIds.clear();
+            if (logs) logs.forEach(log => lockedStudentIds.add(log.student_id));
+
+            students = members ? members.map(m => ({ id: m.student_id, name: m.users.name, grade: m.users.grade })) : [];
+            renderStudentList();
+        }
+
+        function renderStudentList() {
+            const list = document.getElementById('student-list');
+            document.getElementById('student-count').innerText = students.length;
+            if (students.length === 0) { list.innerHTML = `<div class="text-center py-20 text-slate-400 text-xs">학생이 없습니다.</div>`; return; }
+
+            list.innerHTML = students.map(s => {
+                const isLocked = lockedStudentIds.has(s.id);
+                const isInBasket = basket[s.id] !== undefined;
+                const isSelected = selectedStudent && selectedStudent.id === s.id;
+
+                let classes = "student-item rounded-xl mb-1";
+                let statusIcon = `<i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>`;
+                let clickAction = `onclick="selectStudent('${s.id}')"`;
+
+                if (isLocked) {
+                    classes += " locked";
+                    statusIcon = `<span class="text-[9px] bg-slate-100 text-slate-400 px-2 py-1 rounded font-bold border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>완료</span>`;
+                    clickAction = `onclick="manualUnlock('${s.id}', '${s.name}')"`;
+                } else if (isInBasket) {
+                    classes += " in-basket";
+                    statusIcon = `<span class="text-[9px] bg-teal-50 text-teal-600 px-2 py-1 rounded font-bold border border-teal-100"><i class="fa-solid fa-check mr-1"></i>대기</span>`;
+                    clickAction = "";
+                } else if (isSelected) {
+                    classes += " selected";
+                }
+
+                return `
+                <div class="${classes}" ${clickAction}>
+                    <div>
+                        <div class="text-sm font-bold text-slate-700">${s.name}</div>
+                        <div class="text-[10px] text-slate-400 font-bold">${s.grade}</div>
+                    </div>
+                    ${statusIcon}
+                </div>`;
+            }).join('');
+        }
+
+        async function selectStudent(id) {
+            selectedStudent = students.find(s => s.id === id);
+            
+            const badge = document.getElementById('selected-badge');
+            badge.style.opacity = '1';
+            badge.style.transform = 'scale(1)';
+            badge.innerHTML = `<i class="fa-solid fa-check mr-1.5"></i> ${selectedStudent.name}`;
+            
+            const input = document.getElementById('homework-input');
+            input.disabled = false; input.value = ''; input.focus();
+            
+            const btn = document.getElementById('btn-add-basket');
+            btn.disabled = false;
+            btn.className = "w-20 bg-teal-500 text-white rounded-2xl shadow-lg shadow-teal-200 hover:bg-teal-600 transition flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer";
+
+            renderStudentList();
+            await loadHistory(id);
+        }
+
+        async function loadHistory(studentId) {
+            const panel = document.getElementById('history-panel');
+            panel.innerHTML = `<div class="text-center py-20 text-teal-500"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i></div>`;
+
+            // ★ Load History (Simple Text Match)
+            const { data: history } = await _supabase.from('homework_messages')
+                .select('content, created_at')
+                .eq('class_id', currentClassId)
+                .eq('student_id', studentId)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (!history || history.length === 0) {
+                panel.innerHTML = `<div class="text-center py-32 text-slate-300 text-xs font-bold opacity-60">기록된 숙제가 없습니다.<br>오늘의 첫 숙제를 입력하세요!</div>`;
+                return;
+            }
+
+            panel.innerHTML = history.map(h => {
+                const date = new Date(h.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+                return `
+                <div class="history-card">
+                    <div class="text-[10px] font-black text-teal-600 mb-1.5 uppercase tracking-wide">${date}</div>
+                    <div class="text-sm font-bold text-slate-700 whitespace-pre-wrap leading-relaxed">${h.content}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function addToBasket() {
+            const content = document.getElementById('homework-input').value.trim();
+            if (!content) return alert("숙제 내용을 입력해주세요.");
+            
+            basket[selectedStudent.id] = { name: selectedStudent.name, content: content };
+            
+            selectedStudent = null;
+            document.getElementById('homework-input').value = ''; 
+            document.getElementById('homework-input').disabled = true;
+            document.getElementById('btn-add-basket').disabled = true;
+            document.getElementById('btn-add-basket').className = "w-20 bg-slate-100 text-slate-300 rounded-2xl transition flex flex-col items-center justify-center gap-1 cursor-not-allowed";
+            document.getElementById('selected-badge').style.opacity = '0';
+            document.getElementById('history-panel').innerHTML = `<div class="text-center py-32 text-slate-300 text-sm font-bold select-none"><i class="fa-solid fa-arrow-left mb-2 text-2xl opacity-50 block"></i>좌측 목록에서 학생을 선택해주세요.</div>`;
+            
+            renderStudentList(); 
+            renderBasket();
+        }
+
+        function removeFromBasket(id) { 
+            delete basket[id]; 
+            renderBasket(); 
+            renderStudentList(); 
+        }
+
+        function renderBasket() {
+            const list = document.getElementById('basket-list');
+            const ids = Object.keys(basket);
+            
+            document.getElementById('basket-count').innerText = ids.length;
+            document.getElementById('total-target').innerText = ids.length;
+
+            const btnSave = document.getElementById('btn-final-save');
+            if (ids.length > 0) {
+                btnSave.disabled = false;
+                btnSave.className = "w-full h-14 bg-teal-500 hover:bg-teal-600 text-white rounded-2xl font-black text-lg shadow-lg shadow-teal-200 transition flex items-center justify-center gap-3 active:scale-95 cursor-pointer";
+            } else {
+                btnSave.disabled = true;
+                btnSave.className = "w-full h-14 bg-slate-200 text-white rounded-2xl font-black text-lg shadow-none transition flex items-center justify-center gap-3 cursor-not-allowed";
+                list.innerHTML = `<div class="text-center py-32 text-slate-300 text-xs font-bold leading-relaxed"><i class="fa-solid fa-basket-shopping text-3xl mb-3 opacity-30 block"></i>대기 목록이 비어있습니다.<br>숙제를 담아주세요.</div>`;
+                return;
+            }
+
+            list.innerHTML = ids.map(id => {
+                const item = basket[id];
+                return `
+                <div class="basket-item relative group">
+                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-50">
+                        <span class="font-bold text-slate-700 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-user-tag text-slate-300"></i> ${item.name}
+                        </span>
+                        <button onclick="removeFromBasket('${id}')" class="w-6 h-6 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition flex items-center justify-center">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 whitespace-pre-wrap font-medium leading-relaxed">${item.content}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function finalSave() {
+            const ids = Object.keys(basket);
+            if (ids.length === 0) return;
+            if (!confirm(`총 ${ids.length}명에게 숙제를 전송하고 저장하시겠습니까?`)) return;
+
+            const btn = document.getElementById('btn-final-save');
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>전송 중...</span>`;
+
+            try {
+                const payload = [];
+                ids.forEach(id => {
+                    const item = basket[id];
+                    // ★ PURE TEXT INSERT (Safe for any ID string)
+                    payload.push({
+                        class_id: currentClassId, // Stored as Text
+                        student_id: id,           // Stored as Text
+                        content: item.content,
+                        is_read: false
+                    });
+                });
+
+                const { error } = await _supabase.from('homework_messages').insert(payload);
+
+                if (error) throw error;
+
+                basket = {};
+                await loadStudents();
+                renderBasket();
+                renderStudentList();
+                
+                alert("✅ 숙제가 성공적으로 전송되었습니다!");
+
+            } catch (e) {
+                alert("오류 발생: " + e.message);
+                renderBasket();
+            }
+        }
+
+        async function manualUnlock(studentId, studentName) {
+            if(!confirm(`[관리자 권한]\n'${studentName}' 학생의 잠금을 해제하시겠습니까?\n(이미 저장된 기록은 유지되지만, 추가 숙제를 입력할 수 있습니다.)`)) return;
+            lockedStudentIds.delete(studentId);
+            renderStudentList();
+            alert("잠금이 해제되었습니다.");
+        }
+
+        init();
+    </script>
+</body>
+</html>

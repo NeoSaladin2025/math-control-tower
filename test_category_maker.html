@@ -1,175 +1,268 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <link rel="manifest" href="site.webmanifest">
+    
+    <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
-    <title>진단평가 카테고리 관리 - 마스터 시스템</title>
+    <title>진단평가 카테고리 관리 - 엘리트 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* 시스템 메인 테마: 다크 인디고 & 글래스모피즘 */
         body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #0f172a; color: #f8fafc; overflow: hidden; height: 100vh; }
-        .glass-panel { background: rgba(30, 41, 59, 0.6); backdrop-blur: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .glass-panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* 스크롤바 디자인 */
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        /* 리스트 아이템 호버 효과 */
         .category-item { transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255,255,255,0.03); }
-        .category-item:hover { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.4); transform: translateX(4px); }
-        .cart-item.pending { border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.08); }
-        input { background: rgba(15, 23, 42, 0.9) !important; border: 1px solid #1e293b !important; color: white !important; user-select: text !important; }
-        .btn-gradient { background: linear-gradient(135deg, #6366f1, #4338ca); transition: all 0.3s ease; }
-        .edit-mode { border: 2px solid #f59e0b !important; background: rgba(245, 158, 11, 0.1) !important; }
+        .category-item:hover { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3); }
+        .category-item.selected { background: rgba(99, 102, 241, 0.2); border-left: 4px solid #6366f1; }
+
+        /* 체크박스 커스텀 스타일 */
+        .custom-checkbox { width: 18px; height: 18px; accent-color: #6366f1; cursor: pointer; }
     </style>
 </head>
-<body class="p-8 flex gap-8">
+<body class="flex p-6 gap-6">
+
     <script src="config.js"></script>
 
-    <div class="flex-1 flex flex-col gap-8 overflow-hidden">
-        <div id="input-section" class="glass-panel p-8 rounded-[32px] border-t border-indigo-500/20 shadow-2xl relative">
-            <h3 id="input-title" class="text-indigo-400 font-black text-xs uppercase tracking-widest mb-6 italic">01. 평가 카테고리 제작</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <input type="text" id="cat-name" placeholder="카테고리 이름 (중복 불가)" class="w-full px-5 py-4 rounded-2xl text-sm font-black">
-                <input type="text" id="cat-desc" placeholder="상세 설명 입력" class="w-full px-5 py-4 rounded-2xl text-sm font-black">
-            </div>
-            <div class="flex gap-3">
-                <button id="add-btn" onclick="addToCart()" class="flex-1 btn-gradient py-4 rounded-2xl font-black text-xs tracking-widest flex items-center justify-center gap-3">
-                    <i class="fa-solid fa-plus-circle"></i> 리스트에 추가
+    <div class="w-1/3 flex flex-col gap-4">
+        <div class="glass-panel p-6 rounded-[32px] shadow-2xl">
+            <h2 class="text-xl font-black mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-folder-plus text-indigo-400"></i> 카테고리 설계
+            </h2>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Category Name</label>
+                    <input type="text" id="cat-name" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none transition" placeholder="예: 신입생 레벨 테스트">
+                </div>
+
+                <div class="bg-slate-800/30 p-4 rounded-2xl border border-slate-700/50">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 ml-1">Data Source Origin</label>
+                    <div class="flex items-center gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" id="chk-internal" class="custom-checkbox" checked onchange="toggleOrigin('internal')">
+                            <span class="text-sm font-bold text-slate-300 group-hover:text-white transition">내부 문제집</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" id="chk-external" class="custom-checkbox" onchange="toggleOrigin('external')">
+                            <span class="text-sm font-bold text-slate-300 group-hover:text-white transition">외부 교재</span>
+                        </label>
+                    </div>
+                    <p class="text-[9px] text-slate-500 mt-2 leading-relaxed">
+                        * 내부: 시스템에 등록된 문제집 데이터를 참조합니다.<br>
+                        * 외부: 별도의 텍스트나 외부 문항을 입력하는 방식입니다.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Description</label>
+                    <textarea id="cat-desc" class="w-full bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none transition h-24 resize-none" placeholder="해당 카테고리에 대한 설명을 입력하세요..."></textarea>
+                </div>
+
+                <button onclick="addToCart()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-cart-plus"></i> 설계 보관함에 담기
                 </button>
-                <button id="cancel-edit" onclick="resetInput()" class="hidden bg-slate-700 hover:bg-slate-600 text-white px-6 py-4 rounded-2xl font-black text-xs tracking-widest">
-                    취소
-                </button>
             </div>
-            <input type="hidden" id="edit-id">
         </div>
 
-        <div class="glass-panel flex-1 rounded-[40px] p-10 flex flex-col overflow-hidden border border-slate-800 shadow-2xl">
-            <div class="flex justify-between items-center mb-8">
-                <h3 class="text-slate-400 font-black text-sm italic">진단평가 종류 보관함 (가족 명부)</h3>
-                <span id="total-cnt" class="text-[11px] text-indigo-400 font-black">보관중 0</span>
+        <div class="glass-panel flex-1 rounded-[32px] p-6 flex flex-col overflow-hidden shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Pre-Save List</span>
+                <span id="cart-count" class="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
             </div>
-            <div id="category-list" class="flex-1 overflow-y-auto custom-scroll space-y-3 pr-4"></div>
+            <div id="cart-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2">
+                <div class="text-center py-10 text-slate-500 text-xs italic">보관함이 비어있습니다.</div>
+            </div>
+            <button id="btn-save-all" onclick="saveCart()" disabled class="mt-4 w-full bg-slate-700 text-slate-400 font-bold py-3 rounded-xl transition disabled:cursor-not-allowed">
+                카테고리 정보 최종 저장
+            </button>
         </div>
     </div>
 
-    <div class="w-[420px] glass-panel rounded-[40px] p-10 flex flex-col border-l border-indigo-500/30">
-        <h3 class="text-indigo-400 font-black text-base italic mb-10">02. 데이터 최종 동기화</h3>
-        <div id="cart-list" class="flex-1 overflow-y-auto custom-scroll space-y-4 mb-8"></div>
-        <button id="save-btn" disabled onclick="syncWithDatabase()" class="w-full btn-gradient py-5 rounded-[24px] font-black text-sm tracking-widest">
-            카테고리 정보 최종 저장
-        </button>
+    <div class="flex-1 glass-panel rounded-[40px] flex flex-col overflow-hidden shadow-2xl border-indigo-500/10">
+        <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+            <div>
+                <h2 class="text-2xl font-black tracking-tight flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-indigo-400"></i> 현존 카테고리 데이터베이스
+                </h2>
+                <p class="text-xs text-slate-500 font-medium mt-1 uppercase tracking-widest">Active Test Categories Management</p>
+            </div>
+            <button onclick="fetchCategories()" class="text-slate-400 hover:text-white transition active:rotate-180 duration-500">
+                <i class="fa-solid fa-rotate text-xl"></i>
+            </button>
+        </div>
+
+        <div id="category-grid" class="flex-1 overflow-y-auto custom-scroll p-8 grid grid-cols-2 gap-4 content-start">
+            <div class="col-span-full text-center py-20">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-indigo-500 mb-4"></i>
+                <p class="text-slate-500 font-bold">Synchronizing Data...</p>
+            </div>
+        </div>
     </div>
 
     <script>
+        /**
+         * [System Logic] V2.0 Evaluation Category Engine
+         * - Table: 'test' (Parent Record)
+         * - Table: 'test_category' (Meta Data: Name, Internal/External, Description)
+         */
+
         let cart = [];
-        let isEditMode = false;
+        let categories = [];
 
-        async function init() { await fetchCategories(); }
+        // 초기 로드
+        (async function init() {
+            await fetchCategories();
+        })();
 
+        // 1. 기존 카테고리 긁어오기 (test_category 테이블)
         async function fetchCategories() {
-            const { data } = await _supabase.from('test_category').select('*, test(created_at)').order('updated_at', { ascending: false });
-            const list = document.getElementById('category-list');
-            document.getElementById('total-cnt').innerText = `보관중 ${data?.length || 0}`;
-            list.innerHTML = (data || []).map(c => `
-                <div class="category-item glass-panel p-6 rounded-3xl flex justify-between items-center group">
-                    <div class="flex-1">
-                        <div class="text-sm font-black text-slate-100">${c.name}</div>
-                        <div class="text-[11px] text-indigo-400/80 font-bold mt-1.5 italic">${c.description || '설명 없음'}</div>
-                    </div>
-                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="startEdit('${c.test_id}', '${c.name.replace(/'/g, "\\'")}', '${c.description ? c.description.replace(/'/g, "\\'") : ""}')" class="p-2 text-indigo-400 hover:text-indigo-300">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button onclick="deleteCategoryOnly('${c.test_id}', '${c.name.replace(/'/g, "\\'")}')" class="p-2 text-slate-600 hover:text-rose-500">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('') || '<div class="text-center py-20 text-slate-700 italic text-sm font-bold">비어있음</div>';
+            const grid = document.getElementById('category-grid');
+            const { data, error } = await _supabase.from('test_category').select('*').order('created_at', { ascending: false });
+            
+            if (error) { console.error("Data Fetch Error:", error.message); return; }
+            categories = data || [];
+            renderGrid();
         }
 
-        function startEdit(id, name, desc) {
-            isEditMode = true;
-            document.getElementById('edit-id').value = id;
-            document.getElementById('cat-name').value = name;
-            document.getElementById('cat-desc').value = desc;
-            document.getElementById('input-section').classList.add('edit-mode');
-            document.getElementById('input-title').innerText = "01. 카테고리 정보 수정 중...";
-            document.getElementById('add-btn').innerHTML = '<i class="fa-solid fa-check-double"></i> 수정 내용 담기';
-            document.getElementById('cancel-edit').classList.remove('hidden');
-            document.getElementById('cat-name').focus();
+        // 2. 체크박스 배타적 선택 로직 (내부/외부 중 하나만 선택)
+        function toggleOrigin(type) {
+            const chkInt = document.getElementById('chk-internal');
+            const chkExt = document.getElementById('chk-external');
+            if (type === 'internal' && chkInt.checked) chkExt.checked = false;
+            else if (type === 'external' && chkExt.checked) chkInt.checked = false;
         }
 
-        function resetInput() {
-            isEditMode = false;
-            document.getElementById('edit-id').value = '';
-            document.getElementById('cat-name').value = '';
-            document.getElementById('cat-desc').value = '';
-            document.getElementById('input-section').classList.remove('edit-mode');
-            document.getElementById('input-title').innerText = "01. 평가 카테고리 제작";
-            document.getElementById('add-btn').innerHTML = '<i class="fa-solid fa-plus-circle"></i> 리스트에 추가';
-            document.getElementById('cancel-edit').classList.add('hidden');
-        }
-
+        // 3. 장바구니에 담기 (임시 저장)
         function addToCart() {
             const name = document.getElementById('cat-name').value.trim();
             const desc = document.getElementById('cat-desc').value.trim();
-            const editId = document.getElementById('edit-id').value;
-            if (!name) return alert("이름을 입력해 주세요!");
+            const isInternal = document.getElementById('chk-internal').checked;
 
-            cart.unshift({ test_id: editId || null, name, description: desc, is_update: !!editId });
+            if (!name) { alert("카테고리 이름을 입력해주세요."); return; }
+
+            cart.push({
+                name: name,
+                description: desc,
+                is_internal: isInternal,
+                is_update: false, // 신규 생성 플래그
+                test_id: null
+            });
+
+            // 입력 필드 초기화
+            document.getElementById('cat-name').value = '';
+            document.getElementById('cat-desc').value = '';
             renderCart();
-            resetInput();
         }
 
+        // 4. 장바구니 렌더링
         function renderCart() {
-            const container = document.getElementById('cart-list');
-            const btn = document.getElementById('save-btn');
-            btn.disabled = cart.length === 0;
-            container.innerHTML = cart.map((item, idx) => `
-                <div class="cart-item pending glass-panel p-5 rounded-2xl flex justify-between items-center animate-pulse">
+            const list = document.getElementById('cart-list');
+            const btn = document.getElementById('btn-save-all');
+            document.getElementById('cart-count').innerText = cart.length;
+
+            if (cart.length === 0) {
+                list.innerHTML = '<div class="text-center py-10 text-slate-500 text-xs italic">보관함이 비어있습니다.</div>';
+                btn.disabled = true; btn.className = "mt-4 w-full bg-slate-700 text-slate-400 font-bold py-3 rounded-xl";
+                return;
+            }
+
+            btn.disabled = false; btn.className = "mt-4 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition active:scale-95";
+            
+            list.innerHTML = cart.map((item, idx) => `
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 flex justify-between items-center group animate-[fadeIn_0.2s]">
                     <div>
                         <div class="text-xs font-black text-white">${item.name}</div>
-                        <div class="text-[9px] font-bold ${item.is_update ? 'text-amber-400' : 'text-indigo-400'} mt-1">
-                            ${item.is_update ? '정보 수정 대기' : '신규 제작 대기'}
+                        <div class="text-[9px] ${item.is_internal ? 'text-emerald-400' : 'text-amber-400'} font-bold mt-1 uppercase">
+                            ${item.is_internal ? '<i class="fa-solid fa-house-laptop"></i> 내부' : '<i class="fa-solid fa-globe"></i> 외부'}
                         </div>
                     </div>
-                    <button onclick="cart.splice(${idx},1);renderCart()" class="text-slate-600 hover:text-rose-500"><i class="fa-solid fa-circle-minus"></i></button>
+                    <button onclick="removeFromCart(${idx})" class="text-slate-500 hover:text-red-400 transition"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
             `).join('');
         }
 
-        async function syncWithDatabase() {
-            const btn = document.getElementById('save-btn');
-            btn.disabled = true; btn.innerText = "데이터 처리 중...";
+        function removeFromCart(idx) { cart.splice(idx, 1); renderCart(); }
+
+        // 5. 최종 저장 로직 (test 및 test_category 구멍 찌르기)
+        async function saveCart() {
+            const btn = document.getElementById('btn-save-all');
+            btn.disabled = true; btn.innerText = "데이터 침투 중...";
 
             try {
-                for(let item of cart) {
-                    // 이름 중복 체크 (신규 건인 경우에만)
-                    if (!item.is_update) {
-                        const { data: exist } = await _supabase.from('test_category').select('name').eq('name', item.name).maybeSingle();
-                        if (exist) { alert(`[${item.name}]은 이미 존재합니다.`); continue; }
-                    }
+                for (const item of cart) {
+                    // 1) 부모 레이블 'test'에 빈 행을 생성하여 ID 확보
+                    const { data: parent, error: pErr } = await _supabase.from('test').insert({}).select().single();
+                    if (pErr) throw pErr;
 
-                    if (item.is_update) {
-                        await _supabase.from('test_category').update({ name: item.name, description: item.description, updated_at: new Date() }).eq('test_id', item.test_id);
-                    } else {
-                        const { data: parent } = await _supabase.from('test').insert({}).select().single();
-                        await _supabase.from('test_category').insert({ test_id: parent.id, name: item.name, description: item.description });
-                    }
+                    // 2) 'test_category' 테이블에 메타 데이터 삽입 (is_internal, description 포함)
+                    const { error: cErr } = await _supabase.from('test_category').insert({
+                        test_id: parent.id,
+                        name: item.name,
+                        description: item.description,
+                        is_internal: item.is_internal
+                    });
+                    if (cErr) throw cErr;
                 }
-                alert("✅ 성공적으로 저장되었습니다!");
+
+                alert("✅ 모든 카테고리가 시스템에 성공적으로 등록되었습니다.");
                 cart = []; renderCart(); fetchCategories();
-            } catch(e) { alert("실패: " + e.message); }
-            finally { btn.disabled = false; btn.innerText = "카테고리 정보 최종 저장"; }
+            } catch(e) {
+                alert("침투 실패: " + e.message);
+                console.error(e);
+            } finally {
+                btn.disabled = false; btn.innerText = "카테고리 정보 최종 저장";
+            }
         }
 
-        // ★ 자식(test_category)만 삭제하고 조상(test)은 살려두는 주인님표 로직 ★
+        // 6. 우측 그리드 렌더링 (현존 데이터 관음)
+        function renderGrid() {
+            const grid = document.getElementById('category-grid');
+            if (categories.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500">등록된 카테고리가 없습니다.</div>';
+                return;
+            }
+
+            grid.innerHTML = categories.map(cat => `
+                <div class="category-item glass-panel p-6 rounded-3xl relative group">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-[10px] font-black px-2.5 py-1 rounded-lg ${cat.is_internal ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'} uppercase tracking-tighter">
+                            ${cat.is_internal ? 'Internal' : 'External'}
+                        </span>
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                            <button onclick="deleteCategoryOnly(${cat.test_id}, '${cat.name}')" class="w-8 h-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-black text-white mb-2">${cat.name}</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed line-clamp-3">${cat.description || '상세 설명이 등록되지 않았습니다.'}</p>
+                    <div class="mt-4 pt-4 border-t border-white/5 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                        Test ID: ${cat.test_id}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 7. 카테고리 단건 삭제 로직
         async function deleteCategoryOnly(testId, name) {
-            if(!confirm(`[${name}] 카테고리 정보만 삭제하시겠습니까?\n조상 데이터(ID)는 보관함에 보존됩니다.`)) return;
+            if(!confirm(`[${name}] 카테고리를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+            
             const { error } = await _supabase.from('test_category').delete().eq('test_id', testId);
-            if(error) alert("삭제 실패: " + error.message);
-            else fetchCategories();
+            if (error) alert("삭제 실패: " + error.message);
+            else { alert("삭제 완료."); fetchCategories(); }
         }
 
-        init();
     </script>
 </body>
 </html>

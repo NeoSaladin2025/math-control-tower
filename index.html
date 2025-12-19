@@ -1,9 +1,20 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <link rel="manifest" href="site.webmanifest">
+    
+    <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로그인 | Beyond The Line Math</title>
+    
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="apple-touch-icon" href="favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -29,147 +40,95 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .brand-subtitle {
-            font-family: 'Montserrat', sans-serif;
-            letter-spacing: 0.2em;
-            color: #94a3b8;
-        }
-
-        .input-minimal {
+        .login-card {
             width: 100%;
-            padding: 16px 0;
-            border: none;
-            border-bottom: 2px solid #e2e8f0;
-            background: transparent;
-            font-size: 15px;
-            font-weight: 600;
-            color: #334151;
-            transition: all 0.3s;
-            border-radius: 0;
-        }
-        .input-minimal::placeholder { color: #cbd5e1; font-weight: 400; }
-        .input-minimal:focus {
-            outline: none;
-            border-bottom-color: #0f172a;
+            max-width: 400px;
+            padding: 40px;
         }
 
-        .btn-black {
+        input {
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            border-color: #0f172a;
+            box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
+        }
+
+        .login-btn {
             background-color: #0f172a;
-            color: white;
-            font-weight: 800;
-            padding: 18px;
-            border-radius: 12px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .btn-black:hover {
-            background-color: #000000;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-        .btn-black:active { transform: scale(0.98); }
 
-        #caps-warning {
-            display: none;
-            align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            color: #ef4444;
-            font-weight: 700;
-            margin-top: 8px;
-            animation: shake 0.4s ease-in-out;
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(15, 23, 42, 0.5);
+            background-color: #1e293b;
         }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-        
-        .fade-in { animation: fadeIn 1s ease-out forwards; opacity: 0; transform: translateY(20px); }
-        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
 
     <script src="config.js"></script>
 
-    <div class="w-full max-w-[400px] p-8 fade-in">
-        <div class="text-center mb-16">
-            <p class="brand-subtitle text-[10px] font-bold uppercase mb-2">Education Platform</p>
-            <h1 class="text-5xl font-black brand-title leading-tight">
-                Beyond<br>
-                The Line<br>
-                Math
-            </h1>
-            <div class="w-10 h-1 bg-slate-900 mx-auto mt-6"></div>
+    <div class="login-card animate-[fadeIn_0.6s_ease-out]">
+        <div class="text-center mb-10">
+            <h1 class="brand-title text-4xl font-black mb-2">BEYOND THE LINE</h1>
+            <p class="text-slate-400 font-medium text-sm tracking-tight">AI Powered Mathematics Solution</p>
         </div>
 
-        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-8">
-            <div class="space-y-1">
-                <input type="text" id="username" class="input-minimal" placeholder="아이디 (ID)" required autocomplete="off">
+        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-6">
+            <div class="space-y-1.5">
+                <label for="username" class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Identity</label>
+                <input type="text" id="username" required 
+                    class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-semibold outline-none"
+                    placeholder="아이디를 입력하세요">
             </div>
 
-            <div class="space-y-1 relative">
-                <input type="password" id="password" class="input-minimal" placeholder="비밀번호 (Password)" required>
-                <div id="caps-warning">
-                    <i class="fa-solid fa-lock"></i>
-                    CAPS LOCK이 켜져 있습니다
-                </div>
+            <div class="space-y-1.5">
+                <label for="password" class="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Access Code</label>
+                <input type="password" id="password" required 
+                    class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-semibold outline-none"
+                    placeholder="비밀번호를 입력하세요">
             </div>
 
-            <div class="pt-4">
-                <button type="submit" class="btn-black w-full flex justify-between items-center px-6 group">
-                    <span>로그인</span>
-                    <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
-                </button>
-            </div>
+            <button type="submit" id="submit-btn" 
+                class="login-btn w-full py-5 text-white font-black rounded-2xl text-sm shadow-xl mt-4 flex items-center justify-center">
+                접속하기
+            </button>
         </form>
 
-        <div class="mt-12 text-center">
-            <p class="text-[10px] text-slate-400 font-medium">
-                © Beyond The Line Math. All rights reserved.<br>
-                Unauthorized access is prohibited.
-            </p>
-        </div>
+        <p class="text-center mt-10 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            &copy; 2024 Beyond The Line. All rights reserved.
+        </p>
     </div>
 
     <script>
-        const passwordInput = document.getElementById('password');
-        const capsWarning = document.getElementById('caps-warning');
-
-        function checkCapsLock(e) {
-            if (e.getModifierState("CapsLock")) {
-                capsWarning.style.display = 'flex';
-            } else {
-                capsWarning.style.display = 'none';
-            }
-        }
-
-        passwordInput.addEventListener('keydown', checkCapsLock);
-        passwordInput.addEventListener('keyup', checkCapsLock);
-        passwordInput.addEventListener('click', checkCapsLock);
-        passwordInput.addEventListener('focus', checkCapsLock);
-
         async function handleLogin(e) {
             e.preventDefault();
-            
-            const btn = document.querySelector('button[type="submit"]');
+            const btn = document.getElementById('submit-btn');
             const originalBtnContent = btn.innerHTML;
-            const id = document.getElementById('username').value;
-            const pw = document.getElementById('password').value;
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mx-auto"></i>';
-            btn.classList.add('opacity-80', 'cursor-not-allowed');
             btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
 
             try {
-                // 로그인 시도
                 const { data, error } = await _supabase
                     .from('users')
                     .select('*')
-                    .eq('username', id)
-                    .eq('password', pw)
+                    .eq('username', username)
+                    .eq('password', password)
                     .single();
 
-                if (error || !data) {
-                    throw new Error("정보가 일치하지 않습니다.");
-                }
+                if (error || !data) throw new Error('Invalid credentials');
 
                 sessionStorage.setItem('currentUser', JSON.stringify(data));
                 
@@ -177,11 +136,10 @@
                 btn.innerHTML = '<i class="fa-solid fa-check mx-auto"></i>';
                 
                 setTimeout(() => {
-                    // ★ [주인님 명령] 경로 수정 완료! ★
                     if (data.role === 'admin' || data.role === 'teacher') {
-                        location.href = 'teacher_main.html'; // 선생님 -> 티처 메인!
+                        location.href = 'teacher_main.html';
                     } else {
-                        location.href = 'student_main.html'; // 학생 -> 스튜던트 메인!
+                        location.href = 'student_main.html';
                     }
                 }, 600);
 

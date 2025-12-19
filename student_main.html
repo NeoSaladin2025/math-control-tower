@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <link rel="manifest" href="site.webmanifest">
+    
+    <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>나의 학습 공간</title>
@@ -21,79 +27,76 @@
         .inbox-blink { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } }
 
-        /* --- ★ V13.5 CHAOS ENGINE CSS (Ported for Student View) ★ --- */
+        /* V13.5 CHAOS ENGINE CSS (Ported for Student View) */
         .emblem-stage-container { perspective: 1000px; overflow: visible !important; z-index: 20; }
-        
-        /* Layer & Effects Stacking System */
         .obj-root { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 0; height: 0; }
         .effect-wrapper { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform, filter; width: 0; height: 0; }
         .obj-orbit, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform; }
-        
-        /* Core Element Support (Blend & Backdrop) */
         .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; mix-blend-mode: normal; }
         .obj-core img { max-width: none; pointer-events: none; }
-
-        /* V13.5 Animation Library */
-        @keyframes heartbeat { 0% {transform: scale(1);} 14% {transform: scale(1.3);} 28% {transform: scale(1);} 42% {transform: scale(1.3);} 70% {transform: scale(1);} }
-        @keyframes rubberBand { 0% {transform: scale3d(1,1,1);} 30% {transform: scale3d(1.25,0.75,1);} 40% {transform: scale3d(0.75,1.25,1);} 50% {transform: scale3d(1.15,0.85,1);} 65% {transform: scale3d(0.95,1.05,1);} 75% {transform: scale3d(1.05,0.95,1);} 100% {transform: scale3d(1,1,1);} }
-        @keyframes swing { 20% {transform: rotate3d(0,0,1,15deg);} 40% {transform: rotate3d(0,0,1,-10deg);} 60% {transform: rotate3d(0,0,1,5deg);} 80% {transform: rotate3d(0,0,1,-5deg);} 100% {transform: rotate3d(0,0,1,0deg);} }
-        @keyframes tada { 0% {transform: scale3d(1,1,1);} 10%, 20% {transform: scale3d(0.9,0.9,0.9) rotate3d(0,0,1,-3deg);} 30%, 50%, 70%, 90% {transform: scale3d(1.1,1.1,1.1) rotate3d(0,0,1,3deg);} 40%, 60%, 80% {transform: scale3d(1.1,1.1,1.1) rotate3d(0,0,1,-3deg);} 100% {transform: scale3d(1,1,1);} }
-        @keyframes wobble { 0% {transform: none} 15% {transform: translate3d(-25%,0,0) rotate3d(0,0,1,-5deg)} 30% {transform: translate3d(20%,0,0) rotate3d(0,0,1,3deg)} 45% {transform: translate3d(-15%,0,0) rotate3d(0,0,1,-3deg)} 60% {transform: translate3d(10%,0,0) rotate3d(0,0,1,2deg)} 75% {transform: translate3d(-5%,0,0) rotate3d(0,0,1,-1deg)} 100% {transform: none} }
-        @keyframes jello { 0%,11.1%,to {transform:translateZ(0)} 22.2% {transform:skewX(-12.5deg) skewY(-12.5deg)} 33.3% {transform:skewX(6.25deg) skewY(6.25deg)} 44.4% {transform:skewX(-3.125deg) skewY(-3.125deg)} 55.5% {transform:skewX(1.5625deg) skewY(1.5625deg)} 66.6% {transform:skewX(-.78125deg) skewY(-.78125deg)} 77.7% {transform:skewX(.390625deg) skewY(.390625deg)} 88.8% {transform:skewX(-.1953125deg) skewY(-.1953125deg)} }
-        @keyframes bounce { 0%, 20%, 53%, 80%, 100% {transform: translate3d(0,0,0);} 40%, 43% {transform: translate3d(0, -30px, 0);} 70% {transform: translate3d(0, -15px, 0);} 90% {transform: translate3d(0,-4px,0);} }
-        @keyframes flip { from {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, -360deg);} 40%, 50% {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, -190deg);} 80% {transform: perspective(400px) scale3d(0.95, 0.95, 0.95) translate3d(0, 0, 0) rotate3d(0, 1, 0, 0deg);} 100% {transform: perspective(400px) scale3d(1, 1, 1) translate3d(0, 0, 0) rotate3d(0, 1, 0, 0deg);} }
-        @keyframes zoomInOut { 0% {transform: scale(1);} 50% {transform: scale(1.5);} 100% {transform: scale(1);} }
-        @keyframes panic { 0% {transform: translate(0,0) rotate(0deg);} 25% {transform: translate(5px,5px) rotate(5deg);} 50% {transform: translate(0,0) rotate(0eg);} 75% {transform: translate(-5px,5px) rotate(-5deg);} 100% {transform: translate(0,0) rotate(0deg);} }
-        @keyframes breath { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
-        @keyframes barrel { 0% {transform: rotateX(0deg);} 100% {transform: rotateX(360deg);} }
-        @keyframes compress { 0% {transform: scaleY(1);} 50% {transform: scaleY(0.5);} 100% {transform: scaleY(1);} }
-        @keyframes blackHole { 0% {transform: scale(1) rotate(0deg);} 50% {transform: scale(0.1) rotate(180deg); opacity: 0.5;} 100% {transform: scale(1) rotate(360deg); opacity: 1;} }
-        @keyframes tornado { 0% {transform: translateX(-50px) rotateY(0deg);} 50% {transform: translateX(50px) rotateY(180deg) scale(1.2);} 100% {transform: translateX(-50px) rotateY(360deg);} }
-        @keyframes teleport { 0% {opacity:1; transform: scale(1);} 49% {opacity:1; transform: scale(0.1);} 50% {opacity:0; transform: scale(0.1);} 51% {opacity:0; transform: scale(1.5);} 52% {opacity:1; transform: scale(1);} 100% {opacity:1;} }
-        @keyframes orbit3d { 0% {transform: rotate3d(1,1,1,0deg);} 100% {transform: rotate3d(1,1,1,360deg);} }
-        @keyframes glitch-skew { 0% {transform: skew(0deg);} 20% {transform: skew(-10deg);} 40% {transform: skew(10deg);} 60% {transform: skew(-5deg);} 80% {transform: skew(5deg);} 100% {transform: skew(0deg);} }
-        @keyframes vibrate { 0% {transform: translate(0);} 20% {transform: translate(-2px, 2px);} 40% {transform: translate(-2px, -2px);} 60% {transform: translate(2px, 2px);} 80% {transform: translate(2px, -2px);} 100% {transform: translate(0);} }
-        @keyframes float-h { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-20px); } }
-        @keyframes pendulum { 0% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
-
-        /* FX */
-        @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -5px 5px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
-        @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(150%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
-        @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 10px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
-        @keyframes shake { 0% { transform: translate(0,0); } 25% { transform: translate(2px, -2px); } 50% { transform: translate(-2px, 2px); } 75% { transform: translate(2px, 2px); } 100% { transform: translate(0,0); } }
-        @keyframes glitch-filter { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
-        @keyframes rainbow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
-        @keyframes blurPulse { 0% { filter: blur(0px); } 50% { filter: blur(4px); } 100% { filter: blur(0px); } }
-        @keyframes invertFlash { 0% { filter: invert(0%); } 50% { filter: invert(100%); } 100% { filter: invert(0%); } }
-        @keyframes sepiaDream { 0% { filter: sepia(0%); } 50% { filter: sepia(100%); } 100% { filter: sepia(0%); } }
-        @keyframes brightnessFlash { 0% { filter: brightness(1); } 50% { filter: brightness(3) drop-shadow(0 0 10px white); } 100% { filter: brightness(1); } }
-        @keyframes grayscalePulse { 0% { filter: grayscale(0%); } 50% { filter: grayscale(100%); } 100% { filter: grayscale(0%); } }
-        @keyframes radioactive { 0% { filter: drop-shadow(0 0 2px lime); } 50% { filter: drop-shadow(0 0 10px #0f0) hue-rotate(90deg); } 100% { filter: drop-shadow(0 0 2px lime); } }
-        @keyframes ice { 0% { filter: drop-shadow(0 0 2px cyan) hue-rotate(180deg) brightness(1.2); } 100% { filter: drop-shadow(0 0 5px white) hue-rotate(180deg) brightness(1.2); } }
-        @keyframes shadowClone { 0% { filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.5)); } 50% { filter: drop-shadow(-5px -5px 0px rgba(255,0,0,0.5)); } 100% { filter: drop-shadow(5px 5px 0px rgba(0,0,0,0.5)); } }
-        @keyframes midas { 0% { filter: sepia(1) saturate(5) brightness(1); } 50% { filter: sepia(1) saturate(5) brightness(1.5) drop-shadow(0 0 5px gold); } 100% { filter: sepia(1) saturate(5) brightness(1); } }
-        @keyframes matrix { 0% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } 50% { filter: drop-shadow(0 0 5px #0f0) hue-rotate(20deg) contrast(2); } 100% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } }
-        @keyframes thermal { 0% { filter: contrast(1.5) hue-rotate(0deg); } 50% { filter: contrast(2) hue-rotate(180deg) invert(1); } 100% { filter: contrast(1.5) hue-rotate(360deg); } }
-        @keyframes hologram { 0% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } 20% { filter: drop-shadow(2px 0 5px cyan) opacity(0.6) blur(1px); } 40% { filter: drop-shadow(-2px 0 5px cyan) opacity(0.8); } 100% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } }
-        @keyframes noir { 0% { filter: grayscale(1) contrast(1.5) brightness(0.8); } 100% { filter: grayscale(1) contrast(2) brightness(0.6); } }
-        @keyframes pixelate { 0% { filter: contrast(1); } 50% { filter: contrast(3) brightness(1.2); } 100% { filter: contrast(1); } }
-        @keyframes underwater { 0% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } 50% { filter: blur(2px) hue-rotate(200deg) brightness(1); } 100% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } }
-
+        
         @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
         @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
-        @keyframes spin-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
-        @keyframes spin-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
 
         /* 모달 스타일 */
         #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
         .modal-content { background: white; width: 100%; max-width: 450px; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-height: 80vh; display: flex; flex-direction: column; }
         .loader { border: 3px solid #f1f5f9; border-top: 3px solid #6366f1; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* 알림 깜빡임 애니메이션 (숙제 알림용) */
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        .homework-blink { animation: pulse-red 2s infinite; position: relative; }
+        .homework-blink::after { content: ''; position: absolute; top: 0; right: 0; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1px solid white; }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 lg:p-8">
-
+<body class="pb-20">
     <script src="config.js"></script>
+
+    <nav class="glass-nav fixed top-0 w-full h-16 z-50 px-5 flex justify-between items-center bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-white font-black">B</div>
+            <span class="font-bold text-slate-700 tracking-tighter">Beyond Math</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="btn-homework-inbox" onclick="openHomeworkModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition flex items-center justify-center relative">
+                <i class="fa-solid fa-book-open"></i>
+            </button>
+            <button onclick="openFeedbackList()" id="btn-feed" class="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center relative"><i class="fa-solid fa-bell"></i></button>
+            <button onclick="logout()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><i class="fa-solid fa-power-off"></i></button>
+        </div>
+    </nav>
+
+    <div id="homework-modal" class="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
+            <div class="p-4 border-b border-slate-100 bg-teal-50 flex justify-between items-center">
+                <h3 class="font-black text-teal-800 flex items-center gap-2"><i class="fa-solid fa-book-open"></i> 선생님의 쪽지(숙제)</h3>
+                <button onclick="closeHomeworkModal()" class="w-8 h-8 rounded-full bg-white text-teal-300 hover:text-teal-600 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="homework-list-body" class="flex-1 overflow-y-auto p-4 space-y-3 bg-white"></div>
+            <div class="p-3 bg-slate-50 border-t border-slate-100 text-center">
+                <button onclick="closeHomeworkModal()" class="w-full py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-teal-200">확인했습니다</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-100 opacity-100">
+            <div id="dm-header" class="p-5 border-b border-slate-100 bg-white flex justify-between items-start">
+                <div>
+                    <span id="dm-badge" class="text-[10px] font-black px-2 py-1 rounded bg-slate-100 text-slate-500 mb-2 inline-block">CATEGORY</span>
+                    <h3 id="dm-title" class="font-black text-lg text-slate-800 leading-tight">Title</h3>
+                    <p id="dm-date" class="text-xs text-slate-400 font-bold mt-1">Date</p>
+                </div>
+                <button onclick="closeDetailModal()" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-slate-600 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="dm-body" class="p-6 overflow-y-auto max-h-[50vh] text-sm font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
+                Content goes here...
+            </div>
+            <div id="dm-footer" class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+                </div>
+        </div>
+    </div>
 
     <div id="modal-overlay">
         <div class="modal-content">
@@ -102,6 +105,23 @@
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl transition">×</button>
             </div>
             <div id="modal-body" class="p-0 overflow-y-auto flex-1 bg-slate-50 custom-scroll"></div>
+        </div>
+    </div>
+    
+    <div id="withdraw-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex justify-center items-center p-6">
+        <div class="bg-white w-full max-w-[320px] rounded-[32px] p-8 text-center shadow-2xl">
+            <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            <h3 class="text-xl font-black text-slate-800">CP 출금 신청</h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-tight">100원 단위로 신청 가능</p>
+            <div class="mt-6 space-y-4 text-left">
+                <div class="bg-slate-50 p-4 rounded-2xl">
+                    <label class="text-[10px] text-slate-400 font-bold block mb-1">WITHDRAWAL AMOUNT</label>
+                    <input type="number" id="withdraw-input" placeholder="0" class="w-full bg-transparent border-b-2 border-slate-200 py-2 text-lg font-black text-slate-800 outline-none focus:border-amber-500">
+                </div>
+                <button id="btn-check" onclick="checkWithdraw()" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-sm transition">금액 확인</button>
+                <button id="btn-send" onclick="sendWithdraw()" disabled class="w-full bg-amber-500 text-white font-black py-4 rounded-2xl text-sm hidden">신청 전송하기</button>
+            </div>
+            <button onclick="closeWithdrawModal()" class="mt-6 text-slate-300 font-bold text-xs underline">창 닫기</button>
         </div>
     </div>
 
@@ -120,7 +140,7 @@
         </div>
     </div>
 
-    <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pt-20 px-5">
         
         <div class="lg:col-span-3 space-y-6">
             <div class="elite-card p-6 relative overflow-visible">
@@ -187,7 +207,7 @@
                 <span id="badge-regular" class="hidden absolute top-3 right-3 bg-red-500 text-white font-bold text-[10px] px-2 py-0.5 rounded-full z-20 shadow-md animate-pulse border border-white/20">0</span>
                 <div class="relative z-10 flex justify-between items-center">
                     <div>
-                        <h2 class="text-2xl font-black mb-1 group-hover:translate-x-1 transition">📝 정규 시작 보관함</h2>
+                        <h2 class="text-2xl font-black mb-1 group-hover:translate-x-1 transition">📝 정규 숙제 보관함</h2>
                         <p class="text-indigo-100 text-xs opacity-90">오늘의 학습 목표를 달성하세요.</p>
                     </div>
                     <div class="text-5xl group-hover:scale-110 transition duration-500 rotate-12">🚀</div>
@@ -233,23 +253,6 @@
         </div>
     </div>
 
-    <div id="withdraw-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex justify-center items-center p-6">
-        <div class="bg-white w-full max-w-[320px] rounded-[32px] p-8 text-center shadow-2xl">
-            <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-            <h3 class="text-xl font-black text-slate-800">CP 출금 신청</h3>
-            <p class="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-tight">100원 단위로 신청 가능</p>
-            <div class="mt-6 space-y-4 text-left">
-                <div class="bg-slate-50 p-4 rounded-2xl">
-                    <label class="text-[10px] text-slate-400 font-bold block mb-1">WITHDRAWAL AMOUNT</label>
-                    <input type="number" id="withdraw-input" placeholder="0" class="w-full bg-transparent border-b-2 border-slate-200 py-2 text-lg font-black text-slate-800 outline-none focus:border-amber-500">
-                </div>
-                <button id="btn-check" onclick="checkWithdraw()" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-sm transition">금액 확인</button>
-                <button id="btn-send" onclick="sendWithdraw()" disabled class="w-full bg-amber-500 text-white font-black py-4 rounded-2xl text-sm hidden">신청 전송하기</button>
-            </div>
-            <button onclick="closeWithdrawModal()" class="mt-6 text-slate-300 font-bold text-xs underline">창 닫기</button>
-        </div>
-    </div>
-
     <script>
         const user = JSON.parse(sessionStorage.getItem('currentUser'));
         if (!user) location.href = 'index.html';
@@ -260,8 +263,206 @@
         window.addEventListener('message', (event) => { if (event.data === 'mission_complete') location.reload(); });
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
 
-        async function init() { await loadUserInfo(); loadBooks(); checkNotifications(); }
+        async function init() { 
+            await loadUserInfo(); 
+            loadBooks(); 
+            checkNotifications(); 
+            checkHomeworks(); 
+        }
 
+        async function checkHomeworks() {
+            const btn = document.getElementById('btn-homework-inbox');
+            const { count, error } = await _supabase.from('homework_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('student_id', user.username) 
+                .eq('is_read', false);
+
+            if (!error && count > 0) {
+                btn.classList.add('homework-blink'); 
+                btn.classList.remove('bg-slate-100', 'text-slate-400');
+                btn.classList.add('bg-teal-100', 'text-teal-600');
+            } else {
+                btn.classList.remove('homework-blink');
+                btn.classList.add('bg-slate-100', 'text-slate-400');
+                btn.classList.remove('bg-teal-100', 'text-teal-600');
+            }
+        }
+
+        async function openHomeworkModal() {
+            const modal = document.getElementById('homework-modal');
+            const listBody = document.getElementById('homework-list-body');
+            modal.classList.remove('hidden');
+
+            listBody.innerHTML = '<div class="text-center py-10 text-teal-500"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+            
+            const { data } = await _supabase.from('homework_messages')
+                .select('*')
+                .eq('student_id', user.username)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (!data || data.length === 0) {
+                listBody.innerHTML = '<div class="text-center py-10 text-slate-300 text-xs font-bold">받은 숙제 메세지가 없습니다.</div>';
+                return;
+            }
+
+            listBody.innerHTML = data.map(msg => {
+                const dateStr = new Date(msg.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+                const readStyle = msg.is_read ? 'opacity-60 bg-slate-50' : 'bg-white border-l-4 border-teal-500 shadow-sm';
+                const iconColor = msg.is_read ? 'text-slate-300' : 'text-teal-500';
+
+                return `
+                <div onclick="markAsRead(${msg.id}, this)" class="p-4 rounded-xl border border-slate-100 mb-2 cursor-pointer transition active:scale-95 ${readStyle}">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-black text-slate-400 tracking-wide">${dateStr}</span>
+                        <i class="fa-solid fa-envelope ${iconColor} text-xs"></i>
+                    </div>
+                    <p class="text-sm font-bold text-slate-700 whitespace-pre-wrap leading-relaxed">${msg.content}</p>
+                </div>`;
+            }).join('');
+        }
+
+        async function markAsRead(id, el) {
+            el.classList.add('opacity-60', 'bg-slate-50');
+            el.classList.remove('bg-white', 'border-l-4', 'border-teal-500', 'shadow-sm');
+            el.querySelector('.fa-envelope').classList.replace('text-teal-500', 'text-slate-300');
+            await _supabase.from('homework_messages').update({ is_read: true }).eq('id', id);
+            checkHomeworks();
+        }
+
+        function closeHomeworkModal() {
+            document.getElementById('homework-modal').classList.add('hidden');
+            checkHomeworks(); 
+        }
+
+        // --- Generic Detail Modal Logic ---
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+            checkNotifications(); // Refresh badges on close
+        }
+
+        // --- Updated Open Lists ---
+        
+        // 1. Special List -> Open Detail -> Go to Mission
+        async function openSpecialList() {
+            openModal('🎁 특별 과제'); 
+            const body = document.getElementById('modal-body'); 
+            body.innerHTML = '<div class="loader m-6"></div>';
+            
+            const { data } = await _supabase.from('assignments')
+                .select('*')
+                .eq('student_id', user.username)
+                .eq('is_special', true)
+                .eq('status', 'assigned')
+                .order('deadline', { ascending: true });
+            
+            if (!data.length) { 
+                body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">없음</div>'; 
+                return; 
+            }
+            
+            // ★ Changed onClick to openSpecialDetail
+            body.innerHTML = data.map(a => `
+                <div onclick="openSpecialDetail('${a.id}', '${a.title.replace(/'/g, "\\'")}', '${a.reward_points}', '${a.deadline}')" class="p-4 border-b hover:bg-slate-50 cursor-pointer flex justify-between">
+                    <div>
+                        <div class="font-bold text-sm">${a.title}</div>
+                        <div class="text-xs text-slate-500">보상: ${a.reward_points}P</div>
+                    </div>
+                    <span>💣</span>
+                </div>`
+            ).join('');
+        }
+
+        function openSpecialDetail(id, title, reward, deadline) {
+            document.getElementById('dm-badge').innerText = 'SPECIAL MISSION';
+            document.getElementById('dm-badge').className = 'text-[10px] font-black px-2 py-1 rounded bg-pink-100 text-pink-600 mb-2 inline-block';
+            document.getElementById('dm-title').innerText = title;
+            document.getElementById('dm-date').innerText = '마감: ' + new Date(deadline).toLocaleString();
+            document.getElementById('dm-body').innerHTML = `<div class="text-center py-6"><div class="text-4xl mb-4">🎁</div><div class="font-bold text-slate-700">미션을 완료하고 <span class="text-amber-500">${reward}P</span>를 획득하세요!</div></div>`;
+            
+            // Footer Action: Go To Mission
+            document.getElementById('dm-footer').innerHTML = `<button onclick="goToMission(${id})" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-pink-200">🔥 미션 도전하기</button>`;
+            
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function goToMission(id) {
+            location.href = `student_mission.html?id=${id}`;
+        }
+
+        // 2. Feedback List -> Open Detail -> Delete
+        async function openFeedbackList() {
+            openModal('📬 통합 메시지함'); 
+            const body = document.getElementById('modal-body'); 
+            body.innerHTML = '<div class="loader m-6"></div>';
+            
+            const { data: solutions } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending');
+            const { data: seasonMsgs } = await _supabase.from('season_messages').select('*').eq('student_id', user.username);
+            const { data: homeworkMsgs } = await _supabase.from('homework_messages').select('*').eq('student_id', user.username);
+
+            const all = [ 
+                ...(solutions || []).map(m => ({ ...m, cat: '숙제', title: `📝 피드백 (No.${m.problem_num})`, content: m.teacher_feedback || '내용 없음' })), 
+                ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌', title: '🏆 시즌 알림', content: m.message })),
+                ...(homeworkMsgs || []).map(m => ({ ...m, cat: '과제알림', title: '🔔 숙제 알림', content: m.content }))
+            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (all.length === 0) { body.innerHTML = '<div class="text-center py-10 text-slate-400">메시지가 없습니다.</div>'; return; }
+            
+            // ★ Changed onClick to openMessageDetail
+            body.innerHTML = all.map(m => {
+                const isRead = m.is_read; 
+                const dateStr = new Date(m.created_at).toLocaleDateString();
+                const bgClass = !isRead ? (m.cat==='숙제'?'bg-blue-50/30':(m.cat==='시즌'?'bg-indigo-50/30':'bg-teal-50/30')) : '';
+                
+                // Safe content escape
+                const safeContent = (m.content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+                
+                return `<div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${bgClass}" onclick="openMessageDetail('${m.cat}', ${m.id}, '${m.title}', '${safeContent}', '${m.created_at}')">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-black text-slate-500">${m.title}</span>
+                        <span class="text-[10px] text-slate-400">${dateStr}</span>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700 whitespace-pre-wrap line-clamp-2">${m.content}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function openMessageDetail(cat, id, title, content, date) {
+            // Mark as Read Immediately
+            markRead(cat, id);
+
+            document.getElementById('dm-badge').innerText = cat.toUpperCase();
+            document.getElementById('dm-badge').className = 'text-[10px] font-black px-2 py-1 rounded bg-slate-100 text-slate-500 mb-2 inline-block';
+            document.getElementById('dm-title').innerText = title;
+            document.getElementById('dm-date').innerText = new Date(date).toLocaleString();
+            document.getElementById('dm-body').innerText = content; // innerText for safety
+            
+            // Footer Action: Delete
+            document.getElementById('dm-footer').innerHTML = `<button onclick="deleteMsgAndClose('${cat}', ${id})" class="w-full bg-slate-200 hover:bg-red-100 hover:text-red-500 text-slate-500 font-bold py-3 rounded-xl transition">🗑️ 삭제하기</button>`;
+            
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        async function markRead(cat, id) { 
+            let table = 'student_solutions'; if (cat === '시즌') table = 'season_messages'; else if (cat === '과제알림') table = 'homework_messages';
+            await _supabase.from(table).update({ is_read: true }).eq('id', id); 
+            // Don't refresh whole list here to avoid modal flicker, just update stats bg
+            checkNotifications(); 
+        }
+
+        async function deleteMsgAndClose(cat, id) {
+            if(!confirm("정말 삭제하시겠습니까?")) return;
+            let table = 'student_solutions'; if (cat === '시즌') table = 'season_messages'; else if (cat === '과제알림') table = 'homework_messages';
+            
+            const { error } = await _supabase.from(table).delete().eq('id', id); 
+            if(error) alert(error.message); 
+            else {
+                closeDetailModal();
+                openFeedbackList(); // Refresh list
+            }
+        }
+
+        // --- Existing Functions ---
         async function loadUserInfo() {
             try {
                 const { data: userData, error: userErr } = await _supabase.from('users').select('*').eq('username', user.username).single();
@@ -289,102 +490,41 @@
                     let progress = Math.min(100, (myXp / currentTier.max_xp) * 100);
                     setTimeout(() => { document.getElementById('xp-bar').style.width = `${progress}%`; }, 300);
 
-                    // ★ V13.5 Engine Call (Replaced V7)
                     if (currentTier.emblem_json && currentTier.emblem_json.layers) {
                         renderEmblem(currentTier.emblem_json.layers, 0.4);
                     }
                 }
-                
                 loadChart(userData.stats || {});
-
             } catch (e) { console.error(e); }
         }
 
-        // --- ★ [CORE] V13.5 CHAOS ENGINE RENDERER (Ported) ★ ---
         function renderEmblem(layers, scaleFactor=0.4) {
             const stage = document.getElementById('emblem-stage');
             stage.innerHTML = ''; 
-            
-            // Sort layers by Z-index (default array order)
             const sorted = [...layers].sort((a,b) => (a.zIndex || 0) - (b.zIndex || 0));
-
             sorted.forEach(l => {
-                const root = document.createElement('div');
-                root.className = 'obj-root';
-                // Centering fix for viewer
-                root.style.left = '50%'; root.style.top = '50%'; 
-
-                // 1. Orbit
+                const root = document.createElement('div'); root.className = 'obj-root'; root.style.left = '50%'; root.style.top = '50%'; 
                 const orbit = document.createElement('div'); orbit.className = 'obj-orbit';
-                if(l.anim.orbit.on) { 
-                    orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius * scaleFactor}px`); 
-                    orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; 
-                }
-
-                // 2. Vital Stack (Multi-Layer Support)
+                if(l.anim.orbit.on) { orbit.style.setProperty('--orbit-r', `${l.anim.orbit.radius * scaleFactor}px`); orbit.style.animation = `orbit-cw ${l.anim.orbit.speed/5}s linear infinite`; }
                 let currentContainer = orbit;
                 if(l.anim.vital && l.anim.vital.length > 0) {
-                    // Compatibility for old format (string array) vs new (object array)
                     let vitals = typeof l.anim.vital[0] === 'string' ? l.anim.vital.map(t=>({type:t, speed:10})) : l.anim.vital;
-                    vitals.forEach(e => {
-                        const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
-                        const speed = (21 - (e.speed || 10)) / 10;
-                        wrapper.style.animation = `${e.type} ${speed}s infinite ease-in-out`;
-                        currentContainer.appendChild(wrapper); currentContainer = wrapper;
-                    });
-                } else if(l.anim.vital && l.anim.vital.on) { // V7 Legacy Support
-                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
-                     wrapper.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`;
-                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
-                }
-
-                // 3. FX Stack
+                    vitals.forEach(e => { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; const speed = (21 - (e.speed || 10)) / 10; wrapper.style.animation = `${e.type} ${speed}s infinite ease-in-out`; currentContainer.appendChild(wrapper); currentContainer = wrapper; });
+                } else if(l.anim.vital && l.anim.vital.on) { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; wrapper.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`; currentContainer.appendChild(wrapper); currentContainer = wrapper; }
                 if(l.anim.fx && l.anim.fx.length > 0) {
                     let fxs = typeof l.anim.fx[0] === 'string' ? l.anim.fx.map(t=>({type:t, speed:10})) : l.anim.fx;
-                    fxs.forEach(e => {
-                        const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
-                        const speed = (21 - (e.speed || 10)) / 10;
-                        wrapper.style.animation = `${e.type} ${speed}s infinite`;
-                        currentContainer.appendChild(wrapper); currentContainer = wrapper;
-                    });
-                } else if(l.anim.fx && l.anim.fx.on) { // V7 Legacy Support
-                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
-                     wrapper.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`;
-                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
-                }
-
-                // 4. Spin
+                    fxs.forEach(e => { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; const speed = (21 - (e.speed || 10)) / 10; wrapper.style.animation = `${e.type} ${speed}s infinite`; currentContainer.appendChild(wrapper); currentContainer = wrapper; });
+                } else if(l.anim.fx && l.anim.fx.on) { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; wrapper.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`; currentContainer.appendChild(wrapper); currentContainer = wrapper; }
                 const spin = document.createElement('div'); spin.className = 'obj-spin';
                 if(l.anim.spin.on) { spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`; }
                 currentContainer.appendChild(spin);
-
-                // 5. Core Element & Blend Modes
                 const core = document.createElement('div'); core.className = 'obj-core';
-                
-                // ★ V13.5 Features
-                if(l.style.blendMode) core.style.mixBlendMode = l.style.blendMode;
-                if(l.style.opacity !== undefined) core.style.opacity = l.style.opacity;
-                if(l.style.backdropFilter && l.style.backdropFilter !== 'none') core.style.backdropFilter = l.style.backdropFilter;
-
-                if (l.type === 'image') {
-                    const img = document.createElement('img'); img.src = l.content;
-                    img.style.width = `${l.style.size * scaleFactor}px`; img.style.height = 'auto';
-                    core.appendChild(img);
-                } else {
+                if(l.style.blendMode) core.style.mixBlendMode = l.style.blendMode; if(l.style.opacity !== undefined) core.style.opacity = l.style.opacity; if(l.style.backdropFilter && l.style.backdropFilter !== 'none') core.style.backdropFilter = l.style.backdropFilter;
+                if (l.type === 'image') { const img = document.createElement('img'); img.src = l.content; img.style.width = `${l.style.size * scaleFactor}px`; img.style.height = 'auto'; core.appendChild(img); } else {
                     core.style.fontSize = `${l.style.size * scaleFactor}px`;
-                    if(l.style.texture !== 'none') {
-                        core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text';
-                        if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)';
-                        else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)';
-                        else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)';
-                        else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)';
-                    } else { core.style.color = l.style.color; }
-                    
-                    if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; 
-                    else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; } 
-                    else core.innerText = l.content;
+                    if(l.style.texture !== 'none') { core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text'; if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)'; else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)'; else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)'; else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)'; } else { core.style.color = l.style.color; }
+                    if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; } else core.innerText = l.content;
                 }
-                
                 spin.appendChild(core); root.appendChild(orbit); stage.appendChild(root);
             });
         }
@@ -393,21 +533,14 @@
         function openWithdrawModal() { document.getElementById('withdraw-modal').classList.remove('hidden'); resetWithdraw(); }
         function closeWithdrawModal() { document.getElementById('withdraw-modal').classList.add('hidden'); }
         function resetWithdraw() {
-            const input = document.getElementById('withdraw-input');
-            input.value = ''; input.disabled = false;
-            document.getElementById('btn-check').classList.remove('hidden');
-            document.getElementById('btn-send').classList.add('hidden');
+            const input = document.getElementById('withdraw-input'); input.value = ''; input.disabled = false; document.getElementById('btn-check').classList.remove('hidden'); document.getElementById('btn-send').classList.add('hidden');
         }
         function checkWithdraw() {
             const val = parseInt(document.getElementById('withdraw-input').value);
             if(!val || val <= 0) return alert("금액을 입력하세요.");
             if(currentUserData && val > currentUserData.cp) return alert(`잔액이 부족합니다. (보유: ${currentUserData.cp} CP)`);
             if(val % 100 !== 0) return alert("100원 단위로만 신청 가능합니다.");
-            document.getElementById('withdraw-input').disabled = true;
-            document.getElementById('btn-check').classList.add('hidden');
-            const btnSend = document.getElementById('btn-send');
-            btnSend.classList.remove('hidden'); btnSend.disabled = false;
-            alert("확인 완료! 전송 버튼을 눌러주세요. ❤️");
+            document.getElementById('withdraw-input').disabled = true; document.getElementById('btn-check').classList.add('hidden'); document.getElementById('btn-send').classList.remove('hidden'); document.getElementById('btn-send').disabled = false; alert("확인 완료! 전송 버튼을 눌러주세요. ❤️");
         }
         async function sendWithdraw() {
             const amount = parseInt(document.getElementById('withdraw-input').value);
@@ -415,26 +548,8 @@
             if (deductErr) return alert("오류: " + deductErr.message);
             const { error: insertErr } = await _supabase.from('cp_withdrawals').insert([{ student_id: user.username, amount: amount, status: 'pending' }]);
             if (insertErr) { await _supabase.rpc('give_points', { p_student_id: user.username, p_xp: 0, p_cp: amount, p_rule_name: '시스템 오류 자동 환불' }); return alert("실패! CP 자동 환불됨."); }
-            alert("신청 완료! 선생님 승인을 기다리세요.");
-            closeWithdrawModal(); loadUserInfo();
+            alert("신청 완료! 선생님 승인을 기다리세요."); closeWithdrawModal(); loadUserInfo();
         }
-
-        async function openFeedbackList() {
-            openModal('📬 통합 메시지함');
-            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>';
-            const { data: solutions } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending');
-            const { data: seasonMsgs } = await _supabase.from('season_messages').select('*').eq('student_id', user.username);
-            const all = [ ...(solutions || []).map(m => ({ ...m, cat: '숙제' })), ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌' })) ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            if (all.length === 0) { body.innerHTML = '<div class="text-center py-10 text-slate-400">메시지가 없습니다.</div>'; return; }
-            body.innerHTML = all.map(m => {
-                const isRead = m.is_read; const dateStr = new Date(m.created_at).toLocaleDateString();
-                const deleteBtn = isRead ? `<button onclick="deleteMsg('${m.cat}', ${m.id})" class="text-slate-300 hover:text-red-500 transition px-2"><i class="fa-solid fa-trash-can"></i></button>` : '';
-                if (m.cat === '시즌') return `<div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-indigo-50/30' : ''}" onclick="markRead('시즌', ${m.id})"><div class="flex justify-between items-start mb-1"><span class="text-[10px] font-black text-indigo-500">🏆 시즌 알림</span><div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div></div><div class="text-sm font-bold text-slate-700">${m.message}</div><div class="mt-2 text-[10px] font-bold text-slate-400">XP ${m.xp_change}, CP ${m.cp_change}</div></div>`;
-                else return `<div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${!isRead ? 'bg-blue-50/30' : ''}" onclick="markRead('숙제', ${m.id})"><div class="flex justify-between items-start mb-1"><span class="text-[10px] font-black text-blue-500">📝 피드백 (No.${m.problem_num})</span><div class="flex items-center gap-1">${deleteBtn}<span class="text-[10px] text-slate-400">${dateStr}</span></div></div><div class="text-sm font-medium text-slate-700">${m.teacher_feedback || '내용 없음'}</div></div>`;
-            }).join('');
-        }
-        async function markRead(cat, id) { await _supabase.from(cat === '시즌' ? 'season_messages' : 'student_solutions').update({ is_read: true }).eq('id', id); checkNotifications(); openFeedbackList(); }
-        async function deleteMsg(cat, id) { event.stopPropagation(); if(!confirm("삭제하시겠습니까?")) return; const { error } = await _supabase.from(cat === '시즌' ? 'season_messages' : 'student_solutions').delete().eq('id', id); if(error) alert(error.message); else openFeedbackList(); }
 
         async function loadBooks() {
             const { data } = await _supabase.from('student_books').select(`workbook_id, workbooks ( id, title, total_problems, grade_level )`).eq('student_id', user.username).order('created_at', { ascending: false });
@@ -454,24 +569,56 @@
             myRadarChart = new Chart(ctx, { type: 'radar', data: { labels: ['연산','독해','추론','패턴','속도','안정','실행','태도'], datasets: [{ data: [s.calc||0, s.read||0, s.logic||0, s.pat||0, s.tmp||0, s.stb||0, s.exec||0, s.att||0], backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#4f46e5', pointRadius: 2 }] }, options: { scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, plugins: { legend: { display: false } }, maintainAspectRatio: false } });
         }
 
+        // --- ★ [MODIFIED] 통합 알림 체크 (숙제함 배지 추가) ★ ---
         async function checkNotifications() {
+            // 1. 특별 과제 (Gift)
             const { count: gift } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned');
             if(gift > 0) { document.getElementById('badge-gift').innerText=gift; document.getElementById('badge-gift').classList.remove('hidden'); }
+            
+            // 2. 통합 메시지 (Feedback + Season + HomeworkMsg)
             const { count: f1 } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('student_id', user.username).neq('status', 'pending').eq('is_read', false);
             const { count: f2 } = await _supabase.from('season_messages').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_read', false);
-            const total = (f1 || 0) + (f2 || 0);
+            const { count: f3 } = await _supabase.from('homework_messages').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_read', false);
+            const total = (f1 || 0) + (f2 || 0) + (f3 || 0);
+            
             if(total > 0) { document.getElementById('badge-feed').innerText=total; document.getElementById('badge-feed').classList.remove('hidden'); document.getElementById('btn-feed').classList.add('inbox-blink'); }
             else { document.getElementById('badge-feed').classList.add('hidden'); document.getElementById('btn-feed').classList.remove('inbox-blink'); }
+
+            // 3. ★ [NEW] 정규 숙제함 배지 (Regular Assignments)
+            // 조건: is_special = false, is_request = false (혹은 null)
+            const { count: regularCount } = await _supabase.from('assignments')
+                .select('*', { count: 'exact', head: true })
+                .eq('student_id', user.username)
+                .eq('is_special', false)
+                .eq('is_request', false) // assuming false for regular
+                .eq('status', 'assigned');
+            
+            if(regularCount > 0) {
+                document.getElementById('badge-regular').innerText = regularCount;
+                document.getElementById('badge-regular').classList.remove('hidden');
+            } else {
+                document.getElementById('badge-regular').classList.add('hidden');
+            }
+
+            // 4. ★ [NEW] 요청 과제함 배지 (Request Assignments)
+            // 조건: is_request = true
+            const { count: requestCount } = await _supabase.from('assignments')
+                .select('*', { count: 'exact', head: true })
+                .eq('student_id', user.username)
+                .eq('is_request', true)
+                .eq('status', 'assigned');
+            
+            if(requestCount > 0) {
+                document.getElementById('badge-request').innerText = requestCount;
+                document.getElementById('badge-request').classList.remove('hidden');
+            } else {
+                document.getElementById('badge-request').classList.add('hidden');
+            }
         }
 
         function openModal(title) { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-title').innerText=title; }
         function closeModal() { document.getElementById('modal-overlay').style.display='none'; checkNotifications(); }
-        async function openSpecialList() {
-            openModal('🎁 특별 과제'); const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader m-6"></div>';
-            const { data } = await _supabase.from('assignments').select('*').eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned').order('deadline', { ascending: true });
-            if (!data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">없음</div>'; return; }
-            body.innerHTML = data.map(a => `<div onclick="goToMission(${a.id})" class="p-4 border-b hover:bg-slate-50 cursor-pointer flex justify-between"><div><div class="font-bold text-sm">${a.title}</div><div class="text-xs text-slate-500">보상: ${a.reward_points}P</div></div><span>💣</span></div>`).join('');
-        }
+        
         function openPwModal() { document.getElementById('pw-modal').classList.remove('hidden'); }
         function closePwModal() { document.getElementById('pw-modal').classList.add('hidden'); }
 

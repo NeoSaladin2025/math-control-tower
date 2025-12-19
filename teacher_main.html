@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <link rel="manifest" href="site.webmanifest">
+    
+    <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>선생님 통합 대시보드 - Beyond The Line</title>
@@ -8,38 +14,70 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* 화이트 톤으로 전면 개편 */
+        /* [Base Style] */
         body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f1f5f9; color: #1e293b; }
         
-        /* 깔끔한 화이트 카드 디자인 */
+        /* [Common Cards] */
         .glass-card { background: white; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .menu-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: 1px solid #e2e8f0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .menu-card:hover { transform: translateY(-3px); border-color: #6366f1; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.1); }
         
-        /* 알림 펄스 (배경색에 맞춰 조정) */
+        /* [Inbox Pulse] */
         .inbox-pulse-red { animation: pulse-red 2s infinite; border-color: #ef4444 !important; background: #fef2f2 !important; }
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         
         .inbox-pulse-yellow { animation: pulse-yellow 2s infinite; border-color: #f59e0b !important; background: #fffbeb !important; }
         @keyframes pulse-yellow { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.2); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
-        /* 학년 버튼 (라이트 스타일) */
-        .grade-btn {
-            min-width: 60px; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 13px; 
-            background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; 
-            transition: all 0.1s; cursor: pointer;
-        }
-        .grade-btn:hover { background: #f1f5f9; color: #475569; }
-        .grade-btn.active {
-            background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #4f46e5; color: white;
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
-        }
-
-        /* 스크롤바 커스텀 (라이트) */
+        /* [Common Utils] */
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #4f46e5; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+        /* [Modal Common] */
+        #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 80vh; display: flex; flex-direction: column; }
+
+        /* --- ★ [Q-Center Specific Styles from '이식용'] ★ --- */
+        #q-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 150; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+        .q-modal-content { background: white; width: 100%; max-width: 1000px; height: 85vh; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+
+        .grade-btn {
+            min-width: 60px; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 13px; 
+            background: white; border: 2px solid #e2e8f0; color: #64748b; 
+            box-shadow: 0 4px 0 #cbd5e1; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+            white-space: nowrap; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .grade-btn:active { transform: translateY(4px); box-shadow: none; }
+        .grade-btn.active {
+            background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #3730a3; color: white; box-shadow: 0 4px 0 #312e81;
+        }
+        .grade-btn.active:active { transform: translateY(4px); box-shadow: none; }
+
+        .q-click-btn {
+            width: 100%; padding: 12px 16px; border-radius: 12px; 
+            background: white; border: 2px solid #e2e8f0; color: #334155;
+            box-shadow: 0 4px 0 #cbd5e1; transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer; text-align: left; position: relative;
+            display: flex; justify-content: space-between; items-center;
+        }
+        .q-click-btn:active { transform: translateY(4px); box-shadow: none; }
+        .q-click-btn:hover { border-color: #6366f1; color: #4338ca; }
+        .q-click-btn.selected {
+            background: #eef2ff; border-color: #6366f1; color: #4338ca;
+            box-shadow: 0 2px 0 #818cf8; transform: translateY(2px);
+        }
+
+        .badge-high { background: #7e22ce; color: white; border: 1px solid #581c87; }
+        .badge-sub { background: #059669; color: white; border: 1px solid #065f46; }
+        .badge-norm { background: #3b82f6; color: white; border: 1px solid #1e40af; }
         
-        .text-glow-indigo { text-shadow: 0 0 10px rgba(99, 102, 241, 0.2); }
+        .card-round-0 { background: white; border: 1px solid #e2e8f0; } 
+        .card-round-1 { background: #f0fdf4; border: 1px solid #86efac; } 
+        .card-round-2 { background: #eff6ff; border: 1px solid #93c5fd; } 
+        .card-round-3 { background: #f1f5f9; border: 1px solid #cbd5e1; opacity: 0.8; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -241,12 +279,25 @@
         </div>
     </div>
 
+    <div id="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-header" class="p-4 text-white flex justify-between items-center shrink-0 shadow-sm">
+                <h3 class="font-bold text-base" id="modal-title">목록</h3>
+                <button onclick="closeModal()" class="text-white/80 hover:text-white text-xl transition">×</button>
+            </div>
+            <div id="modal-body" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50"></div>
+        </div>
+    </div>
+
     <script>
-        /* 기존 로직 100% 유지 */
+        /* Auth & Init */
         const user = JSON.parse(sessionStorage.getItem('currentUser'));
         if (!user || (user.role !== 'teacher' && user.role !== 'admin')) { alert("로그인이 필요합니다."); location.href = 'index.html'; } 
         else { document.getElementById('t-name').innerText = user.name; if (user.username === '곽명용이브' || user.role === 'admin') { document.getElementById('god-menu').classList.remove('hidden'); document.getElementById('god-menu-2').classList.remove('hidden'); } }
 
+        function logout() { sessionStorage.clear(); location.href = 'index.html'; }
+
+        // --- ★ [Q-CENTER LOGIC] Copied from '이식용' (Preserved) ★ ---
         let qDataAll = []; 
         let currentQFilter = 'all';
         let currentTargetQStudent = null;
@@ -299,6 +350,104 @@
             }).join('');
         }
 
+        async function openQModal(sid) {
+            const s = qDataAll.find(x => x.id === sid);
+            if(!s) return;
+            currentTargetQStudent = s;
+
+            document.getElementById('qm-name').innerText = s.name;
+            document.getElementById('qm-info').innerText = `${s.grade} | ${s.tier} (현재 ${s.round}회차 완료)`;
+            document.getElementById('qm-avatar').innerText = s.name[0];
+            
+            const listEl = document.getElementById('qm-list');
+            listEl.innerHTML = '<div class="text-center py-4"><div class="loader"></div></div>';
+
+            const requests = s.questions.map(q => _supabase.from('problem_metadata').select('workbook_id, problem_num, difficulty, is_subjective').match({workbook_id: q.workbook_id, problem_num: q.problem_num}).single());
+            const results = await Promise.all(requests);
+            let metaMap = {};
+            results.forEach(res => { if(res.data) { const k = `${res.data.workbook_id}-${res.data.problem_num}`; metaMap[k] = res.data; } });
+
+            listEl.innerHTML = s.questions.map((q, idx) => {
+                const k = `${q.workbook_id}-${q.problem_num}`;
+                const meta = metaMap[k];
+                let typeBadge = '<span class="badge-norm text-[9px] px-1 rounded">일반</span>';
+                if (meta) { if (meta.difficulty === 'high_rank') typeBadge = '<span class="badge-high text-[9px] px-1 rounded">1등급</span>'; else if (meta.is_subjective) typeBadge = '<span class="badge-sub text-[9px] px-1 rounded">서술형</span>'; }
+
+                return `
+                <div onclick="viewQDetail(${q.workbook_id}, ${q.problem_num}, this)" class="q-click-btn group" data-wb-id="${q.workbook_id}" data-p-num="${q.problem_num}">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1"><span class="text-sm font-black group-hover:text-indigo-600">No. ${q.problem_num}</span>${typeBadge}</div>
+                        <div class="text-[10px] text-slate-400 font-medium">${q.workbooks?.title || '문제집 정보 없음'}</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-indigo-400"></i>
+                </div>`;
+            }).join('');
+
+            document.getElementById('qm-viewer').innerHTML = '<span class="text-slate-400 text-sm font-bold opacity-60">좌측에서 질문을 딸깍! 선택하세요. 👆</span>';
+            document.getElementById('qm-actions').classList.add('hidden');
+            selectedQItem = null;
+            document.getElementById('q-modal-overlay').style.display = 'flex';
+        }
+
+        function closeQModal() { document.getElementById('q-modal-overlay').style.display = 'none'; fetchQuestions(); }
+
+        function viewQDetail(wbId, pNum, el) {
+            document.querySelectorAll('.q-click-btn').forEach(d => d.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedQItem = { wbId, pNum, el };
+            const padded = pNum.toString().padStart(4, '0');
+            const url = `${SUPABASE_URL}/storage/v1/object/public/problems/${wbId}/${padded}.webp`;
+            
+            document.getElementById('qm-viewer').innerHTML = `
+                <div class="text-center w-full h-full flex flex-col items-center justify-center animate-[fadeIn_0.2s]">
+                    <div class="mb-3 text-xs font-bold text-slate-400 bg-white px-3 py-1 rounded-full shadow-sm border">Question Viewer</div>
+                    <img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg bg-white border border-slate-200" onerror="this.src='https://placehold.co/400x300?text=No+Image'">
+                </div>`;
+            document.getElementById('qm-actions').classList.remove('hidden');
+            document.querySelector('input[name="q-action"][value="resolve"]').checked = true;
+        }
+
+        async function confirmQAction() {
+            if (!selectedQItem || !currentTargetQStudent) return;
+            const action = document.querySelector('input[name="q-action"]:checked').value;
+            const btn = document.querySelector('#qm-actions button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...'; btn.disabled = true;
+
+            if (action === 'resolve') {
+                try {
+                    const { error } = await _supabase.rpc('mark_clinic_resolved', { p_student_id: currentTargetQStudent.id, p_wb_id: selectedQItem.wbId, p_prob_num: selectedQItem.pNum });
+                    if (error) throw error;
+                    alert(`✅ [No.${selectedQItem.pNum}] 해결 처리 및 숙제 자동 등록 완료!`);
+                    
+                    const qEl = selectedQItem.el; qEl.style.transition = 'all 0.3s'; qEl.style.opacity = '0'; qEl.style.transform = 'translateX(-50px)';
+                    setTimeout(() => {
+                        qEl.remove();
+                        const idx = currentTargetQStudent.questions.findIndex(q => q.workbook_id === selectedQItem.wbId && q.problem_num === selectedQItem.pNum);
+                        if (idx > -1) currentTargetQStudent.questions.splice(idx, 1);
+                        if (currentTargetQStudent.questions.length === 0) { closeQModal(); } else { openQModal(currentTargetQStudent.id); }
+                    }, 300);
+                } catch(e) { alert("처리 실패: " + e.message); btn.innerHTML = originalText; btn.disabled = false; }
+            } else {
+                alert("⏳ 보류되었습니다.");
+                document.querySelectorAll('.q-click-btn').forEach(d => d.classList.remove('selected'));
+                document.getElementById('qm-viewer').innerHTML = '<span class="text-slate-400 text-sm font-bold opacity-60">보류됨. 다음 질문 선택.</span>';
+                document.getElementById('qm-actions').classList.add('hidden');
+                selectedQItem = null;
+                btn.innerHTML = originalText; btn.disabled = false;
+            }
+        }
+
+        function completeRound() {
+            if(!currentTargetQStudent) return;
+            const sid = currentTargetQStudent.id;
+            clinicRounds[sid] = (clinicRounds[sid] || 0) + 1;
+            sessionStorage.setItem('clinicRounds', JSON.stringify(clinicRounds));
+            alert(`[${currentTargetQStudent.name}] 학생의 ${clinicRounds[sid]}회차 클리닉이 완료되었습니다.`);
+            closeQModal();
+        }
+
+        // --- Inbox Logic (Preserved from '이식받는용2') ---
         async function checkInboxes() {
             const { count: spCount } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('is_special', true).eq('status', 'submitted').is('final_score', null);
             document.getElementById('cnt-special').innerText = spCount || 0;
@@ -308,13 +457,58 @@
             if (gtCount > 0) { document.getElementById('box-giteuk').classList.add('inbox-pulse-yellow'); document.getElementById('badge-giteuk').classList.remove('hidden'); }
         }
 
+        async function openSpecialInbox() {
+            openModal('🎁 스페셜 수신함', 'bg-red-600');
+            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader"></div>';
+            const { data } = await _supabase.from('assignments').select('*').eq('is_special', true).eq('status', 'submitted').is('final_score', null).order('submitted_at', { ascending: true });
+            if (!data || !data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">대기 중인 건이 없습니다.</div>'; return; }
+            body.innerHTML = data.map(a => `<div onclick="openDetail('special')" class="bg-white p-3 rounded-lg border border-red-100 shadow-sm cursor-pointer hover:bg-red-50 transition"><div class="flex justify-between mb-1"><div class="font-bold text-slate-800 text-sm">${a.student_id} <span class="text-xs text-slate-400 font-normal">| ${a.title}</span></div></div><div class="text-[10px] text-slate-400">${new Date(a.submitted_at).toLocaleString()}</div></div>`).join('');
+        }
+
+        async function openGiteukInbox() {
+            openModal('🐥 기특한 수신함', 'bg-amber-500');
+            const body = document.getElementById('modal-body'); body.innerHTML = '<div class="loader"></div>';
+            const { data } = await _supabase.from('student_solutions').select('*').eq('status', 'pending').order('created_at', { ascending: true });
+            if (!data || !data.length) { body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">대기 중인 건이 없습니다.</div>'; return; }
+            body.innerHTML = data.map(s => `<div onclick="openDetail('giteuk')" class="bg-white p-3 rounded-lg border border-amber-100 shadow-sm cursor-pointer hover:bg-amber-50 transition"><div class="flex justify-between mb-1"><div class="font-bold text-slate-800 text-sm">${s.student_id}</div><span class="text-xs font-bold text-indigo-600">No. ${s.problem_num}</span></div><div class="text-[10px] text-slate-400 text-right">${new Date(s.created_at).toLocaleString()}</div></div>`).join('');
+        }
+
+        function openDetail(type) {
+            const w = 1000, h = 900; const left = (screen.width - w) / 2; const top = (screen.height - h) / 2;
+            const url = type === 'special' ? 'manager_check_special.html' : 'manager_challenge.html';
+            window.open(url, '_blank', `width=${w},height=${h},top=${top},left=${left}`);
+            closeModal(); 
+        }
+
+        function openModal(title, headerClass) { 
+            document.getElementById('modal-overlay').style.display = 'flex'; 
+            document.getElementById('modal-title').innerText = title; 
+            document.getElementById('modal-header').className = `p-4 text-white flex justify-between items-center shrink-0 shadow-sm ${headerClass}`; 
+        }
+
+        function closeModal() { 
+            document.getElementById('modal-overlay').style.display = 'none'; 
+            loadData(); 
+        }
+
+        // --- Other Utils ---
         function openPwModal() { document.getElementById('pw-modal').classList.remove('hidden'); }
         function closePwModal() { document.getElementById('pw-modal').classList.add('hidden'); }
         function openGodMode() { window.open('admin_god_stats.html', '_blank', 'width=1250,height=950'); }
         function openManual() { window.open('teacher_manual.html', '_blank', 'width=900,height=800'); }
         
-        /* 세부 로직 함수들 (원본 유지) */
-        // ... (openQModal, confirmQAction 등 기존 로직들 포함되어야 함) ...
+        async function changePassword() {
+            const curPw = document.getElementById('cur-pw').value; const newPw = document.getElementById('new-pw').value; const confirmPw = document.getElementById('confirm-pw').value;
+            if (!curPw || !newPw || !confirmPw) return alert("모든 항목을 입력해주세요.");
+            if (newPw !== confirmPw) return alert("새 비밀번호와 확인이 일치하지 않습니다.");
+            const { data: userData, error: fetchError } = await _supabase.from('users').select('password').eq('username', user.username).single();
+            if (fetchError || !userData) { return alert("회원 정보를 확인할 수 없습니다. (DB 오류)"); }
+            if (userData.password !== curPw) { return alert("현재 비밀번호가 틀렸습니다."); }
+            const { error: rpcError } = await _supabase.rpc('change_password', { p_username: user.username, p_new_password: newPw });
+            if (rpcError) { return alert("변경 실패: " + rpcError.message); }
+            alert("✅ 비밀번호가 성공적으로 변경되었습니다."); closePwModal();
+            document.getElementById('cur-pw').value = ''; document.getElementById('new-pw').value = ''; document.getElementById('confirm-pw').value = '';
+        }
 
         loadData();
     </script>

@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <link rel="manifest" href="site.webmanifest">
+    
+    <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Operation Center - Stamp Edition</title>
+    <title>Weekly Operation Center - Portal Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* [Elite System UI Standard - V19.0 Base] */
+        /* [Elite System UI Standard - Preserved] */
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
         
         /* Grid Structure */
@@ -44,8 +50,6 @@
         .student-item { transition: 0.2s; border: 2px solid transparent; }
         .student-item:hover { background-color: #f1f5f9; }
         .student-item.selected { border-color: #6366f1; background-color: #e0e7ff; }
-        
-        /* Locked Style - Now Clickable for Manual Unlock */
         .student-item.locked { opacity: 0.6; filter: grayscale(1); background: #f8fafc; border-color: #e2e8f0; cursor: help; } 
         .student-item.in-basket { opacity: 0.4; pointer-events: none; border: 2px dashed #cbd5e1; }
 
@@ -104,7 +108,16 @@
                         </div>
                     </div>
                 </div>
-                <button onclick="closeModal('clinic-modal')" class="w-10 h-10 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition text-2xl font-bold">×</button>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="goToHomework()" class="h-10 px-5 bg-amber-400 hover:bg-amber-500 text-white rounded-xl font-black text-sm shadow-sm transition transform active:scale-95 flex items-center gap-2 group">
+                        <i class="fa-solid fa-book group-hover:animate-bounce"></i> <span>숙제 관리</span>
+                    </button>
+                    
+                    <div class="w-px h-6 bg-slate-200 mx-2"></div>
+
+                    <button onclick="closeModal('clinic-modal')" class="w-10 h-10 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition text-2xl font-bold">×</button>
+                </div>
             </div>
 
             <div class="flex-1 flex overflow-hidden bg-slate-100">
@@ -174,10 +187,9 @@
 
     <script>
         /**
-         * [System Core] V21.0 Stamp & Manual Unlock
-         * - Logic: Uses 'last_evaluation_date' in 'class_members' table
-         * - Lock: If last_evaluation_date == Today -> Locked
-         * - Unlock: Click locked item -> Confirm -> Set last_evaluation_date to NULL
+         * [System Core] V22.0 Portal Edition
+         * - Added Homework Management navigation functionality.
+         * - Preserved Stamp, Lock, Manual Unlock, and Fixed Layout logic.
          */
         
         let baseDate = new Date();
@@ -189,7 +201,7 @@
         let selectedStudentData = null;
         let selectedRuleIds = new Set();
         let basketData = {}; 
-        let lockedStudents = new Set(); // Stores IDs of students locked TODAY
+        let lockedStudents = new Set();
 
         const dayMap = { '월요일': 0, '화요일': 1, '수요일': 2, '목요일': 3, '금요일': 4, '토요일': 5, '일요일': 6 };
         const dayNamesEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -220,12 +232,10 @@
             document.getElementById('m-class-title').innerText = name;
             document.getElementById('m-class-time').innerText = time;
 
-            // ★ Fetch Students AND Last Evaluation Date
             const { data: members } = await _supabase.from('class_members')
                 .select('student_id, last_evaluation_date, users(name, grade, tier)') 
                 .eq('class_id', id);
 
-            // ★ Lock Logic: Compare date with today (YYYY-MM-DD)
             const today = new Date().toISOString().split('T')[0];
             
             classStudentsMap = {};
@@ -233,11 +243,9 @@
 
             if (members) {
                 members.forEach(m => {
-                    // Check Stamp
                     if (m.last_evaluation_date === today) {
                         lockedStudents.add(m.student_id);
                     }
-
                     classStudentsMap[m.student_id] = { 
                         id: m.student_id, 
                         name: m.users.name, 
@@ -261,6 +269,14 @@
             toggleSaveBtn();
         }
 
+        /**
+         * [Navigation] Go to Homework Management
+         */
+        function goToHomework() {
+            if(!currentClassId) return alert("수업 정보가 없습니다.");
+            location.href = `class_scheduler_homework.html?class_id=${currentClassId}`;
+        }
+
         // --- Render Student List (With Unlock Trigger) ---
         function renderStudentList() {
             const list = document.getElementById('m-student-list');
@@ -277,17 +293,16 @@
 
                 let classes = "student-item p-3 rounded-xl bg-white border border-slate-100 cursor-pointer flex justify-between items-center mb-2 hover:shadow-sm";
                 let statusIcon = "";
-                let clickAction = `onclick="selectStudent('${id}')"`; // Default action
+                let clickAction = `onclick="selectStudent('${id}')"`;
 
                 if (isLocked) { 
                     classes += " locked"; 
                     statusIcon = `<span class="text-[9px] font-bold bg-slate-200 text-slate-500 px-2 py-0.5 rounded"><i class="fa-solid fa-lock mr-1"></i>완료</span>`;
-                    // ★ Manual Unlock Trigger
                     clickAction = `onclick="manualUnlock('${id}', '${s.name}')"`;
                 } else if (isInBasket) { 
                     classes += " in-basket"; 
                     statusIcon = `<span class="text-[9px] font-bold bg-indigo-100 text-indigo-500 px-2 py-0.5 rounded"><i class="fa-solid fa-basket-shopping mr-1"></i>대기</span>`; 
-                    clickAction = ""; // No action in basket
+                    clickAction = ""; 
                 } else if (isSelected) { 
                     classes += " selected"; 
                 }
@@ -297,16 +312,13 @@
             }).join('');
         }
 
-        // ★ Manual Unlock Function
         async function manualUnlock(studentId, studentName) {
             if(confirm(`[관리자 권한]\n'${studentName}' 학생의 잠금을 해제하시겠습니까?\n(오늘 완료 표시가 사라집니다)`)) {
                 try {
-                    // Clear stamp
                     await _supabase.from('class_members')
                         .update({ last_evaluation_date: null })
                         .match({ class_id: currentClassId, student_id: studentId });
                     
-                    // Refresh
                     lockedStudents.delete(studentId);
                     renderStudentList();
                 } catch(e) {
@@ -323,7 +335,7 @@
             renderStudentList(); renderRuleGrid(); updateAddBtn();
         }
 
-        // --- Rules & Basket (Same as V19) ---
+        // --- Rules & Basket ---
         function renderRuleGrid() {
             const container = document.getElementById('point-options-grid');
             if(!selectedStudentData) { container.innerHTML = `<div class="col-span-2 text-center py-20 text-slate-400 text-xs">왼쪽에서 학생을 선택해주세요.</div>`; return; }
@@ -400,7 +412,7 @@
             document.getElementById('preview-modal').classList.remove('hidden');
         }
 
-        // --- 4. Final Save (Stamp Logic) ---
+        // --- Final Save (Stamp Logic) ---
         function toggleSaveBtn() {
             const chk = document.getElementById('chk-confirm'), btn = document.getElementById('btn-final-save');
             const ready = chk.checked && Object.keys(basketData).length > 0;
@@ -415,7 +427,7 @@
             
             try {
                 const promises = [];
-                const studentIdsToStamp = []; // IDs to stamp
+                const studentIdsToStamp = [];
                 const today = new Date().toISOString().split('T')[0];
 
                 Object.values(basketData).forEach(item => {
@@ -426,10 +438,8 @@
                     });
                 });
 
-                // 1. Give Points
                 await Promise.all(promises);
 
-                // 2. ★ STAMP LOGIC: Update class_members with today's date
                 if(studentIdsToStamp.length > 0) {
                     await _supabase.from('class_members')
                         .update({ last_evaluation_date: today })
