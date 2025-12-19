@@ -2,116 +2,391 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Operation Center - Tier Integrated</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 1.5rem; }
-        .day-column { background: rgba(255,255,255,0.4); border-radius: 20px; border: 1px solid #e2e8f0; min-height: 600px; display: flex; flex-direction: column; padding: 12px; gap: 8px; }
-        .memo-blink { animation: blink 1.5s infinite; cursor: pointer; }
-        @keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        /* [Elite System UI Standard] */
+        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* Grid Layout */
+        .time-slot { height: 100px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; position: relative; box-sizing: border-box; }
+        .day-column { min-width: 140px; flex: 1; position: relative; border-right: 1px solid #e2e8f0; }
+        
+        /* Class Card */
+        .class-card {
+            position: absolute; left: 6px; right: 6px; padding: 10px; border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1, #4f46e5); color: white;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10;
+            overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .class-card:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 20px rgba(79, 70, 229, 0.4); z-index: 20; }
+        
+        /* Modal & Logic Cards */
+        .modal-content { transform: scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        #clinic-modal.show .modal-content { transform: scale(1); opacity: 1; }
+        
+        .option-card { border: 2px solid #e2e8f0; background: white; cursor: pointer; padding: 12px; border-radius: 16px; transition: 0.2s; position: relative; overflow: hidden; }
+        .option-card.selected { border-color: #6366f1; background-color: #f5f3ff; transform: scale(0.98); }
+        .option-card.negative.selected { border-color: #ef4444; background-color: #fef2f2; }
+        
+        /* Multiplier Badge */
+        .multiplier-tag { font-size: 0.7rem; font-weight: 800; background: #1e293b; color: #fff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-left: 4px; }
+        .multiplier-alert { color: #ef4444; background: #fee2e2; } /* High penalty warning */
     </style>
 </head>
-<body>
+<body class="p-6 h-screen flex flex-col box-border">
     <script src="config.js"></script>
 
-    <div class="grid grid-cols-7 gap-3">
-        <div class="text-center font-black text-slate-400 text-xs mb-2">MON</div>
-        <div class="text-center font-black text-slate-400 text-xs mb-2">TUE</div>
-        <div class="text-center font-black text-slate-400 text-xs mb-2">WED</div>
-        <div class="text-center font-black text-slate-400 text-xs mb-2">THU</div>
-        <div class="text-center font-black text-slate-400 text-xs mb-2">FRI</div>
-        <div class="text-center font-black text-blue-400 text-xs mb-2">SAT</div>
-        <div class="text-center font-black text-red-400 text-xs mb-2">SUN</div>
-        
-        <div id="col-월요일" class="day-column"></div>
-        <div id="col-화요일" class="day-column"></div>
-        <div id="col-수요일" class="day-column"></div>
-        <div id="col-목요일" class="day-column"></div>
-        <div id="col-금요일" class="day-column"></div>
-        <div id="col-토요일" class="day-column"></div>
-        <div id="col-일요일" class="day-column"></div>
+    <div class="flex justify-between items-end mb-6 shrink-0">
+        <div>
+            <h1 class="text-3xl font-black text-slate-800 tracking-tighter flex items-center gap-3">
+                <i class="fa-solid fa-calendar-week text-indigo-600"></i> 주간 수업 오퍼레이션
+            </h1>
+            <p class="text-slate-500 font-bold mt-1" id="current-week-range">Loading Date...</p>
+        </div>
+        <div class="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
+            <button onclick="changeWeek(-1)" class="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition text-slate-400"><i class="fa-solid fa-chevron-left"></i></button>
+            <button onclick="setToday()" class="px-4 text-xs font-black text-indigo-600 uppercase tracking-widest">Today</button>
+            <button onclick="changeWeek(1)" class="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition text-slate-400"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
     </div>
 
-    <div id="memo-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex justify-center items-center backdrop-blur-sm">
-        <div class="bg-amber-100 w-[350px] rounded-2xl p-6 shadow-2xl border-t-8 border-amber-400 transform -rotate-1 relative">
-            <button onclick="closeMemo()" class="absolute -top-10 right-0 text-white text-3xl">×</button>
-            <div id="memo-view-list" class="space-y-3">
-                <h3 class="font-black text-slate-800 mb-4 border-b border-amber-200 pb-2">📌 포스트잇</h3>
-                <div id="memo-items" class="max-h-[300px] overflow-y-auto custom-scroll space-y-2"></div>
-                <button onclick="showEditor()" class="w-full bg-amber-400 text-white font-bold py-3 rounded-xl mt-4">새 메모 쓰기</button>
+    <div class="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden flex flex-col flex-1">
+        <div class="flex border-b border-slate-200 bg-slate-50/80 shrink-0 backdrop-blur-sm z-20">
+            <div class="w-20 shrink-0 border-r border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase tracking-tighter bg-white">Time</div>
+            <div class="flex-1 flex" id="day-headers"></div>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scroll relative bg-white">
+            <div class="flex min-h-full">
+                <div class="w-20 shrink-0 border-r border-slate-200 bg-slate-50/30" id="time-labels"></div>
+                <div class="flex-1 flex relative" id="schedule-grid-body"></div>
             </div>
-            <div id="memo-editor" class="hidden space-y-4">
-                <input type="text" id="m-title" placeholder="제목" class="w-full bg-transparent border-b border-amber-300 font-bold outline-none">
-                <textarea id="m-content" rows="5" placeholder="내용..." class="w-full bg-transparent text-sm outline-none resize-none"></textarea>
-                <div class="flex gap-2">
-                    <button onclick="saveMemo()" class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs">저장</button>
-                    <button onclick="hideEditor()" class="flex-1 bg-slate-200 text-slate-600 font-bold py-2 rounded-lg text-xs">취소</button>
+        </div>
+    </div>
+
+    <div id="clinic-modal" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
+        <div class="modal-content bg-white w-full max-w-6xl h-[85vh] rounded-[40px] shadow-2xl flex flex-col overflow-hidden">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div class="flex items-center gap-5">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800" id="m-class-title">Class Name</h2>
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1" id="m-class-time">00:00 - 00:00</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="w-12 h-12 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition text-2xl">×</button>
+            </div>
+
+            <div class="flex-1 flex overflow-hidden">
+                <div class="w-1/3 border-r border-slate-100 flex flex-col bg-white">
+                    <div class="p-6 border-b border-slate-50 flex justify-between items-center">
+                        <span class="text-xs font-black text-slate-400 tracking-widest uppercase">Student List</span>
+                        <span id="m-student-count" class="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-lg font-bold">0</span>
+                    </div>
+                    <div id="m-student-list" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+                </div>
+
+                <div class="flex-1 bg-slate-50/50 p-8 overflow-y-auto flex flex-col">
+                    <div class="mb-6 flex justify-between items-center">
+                        <h3 class="font-black text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-scale-balanced text-indigo-500"></i> 평가 및 처벌 
+                            <span id="current-tier-display" class="hidden ml-2 text-xs bg-slate-800 text-white px-2 py-1 rounded"></span>
+                        </h3>
+                        <div id="target-badge" class="hidden bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-xs font-black border border-indigo-200 animate-pulse">Selected</div>
+                    </div>
+                    <div id="point-options-grid" class="grid grid-cols-2 gap-4"></div>
+                    <div class="mt-auto pt-8 border-t border-slate-200">
+                        <button id="btn-submit-points" onclick="submitPoints()" disabled class="w-full py-5 bg-slate-300 text-white rounded-3xl font-black text-lg shadow-sm transition">학생을 선택하세요</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let classes = [], currentCid = null;
+        /**
+         * [System Core] V15.5 Logic Update
+         * Feature: Tier-based Multiplier Calculation
+         */
+        
+        let baseDate = new Date();
+        let allRules = [];
+        let classStudentsMap = {}; // Cache for student data (including tier)
+        let selectedStudentData = null; // Stores currently selected student object
+        let selectedRuleIds = new Set();
+
+        const dayMap = { '월요일': 0, '화요일': 1, '수요일': 2, '목요일': 3, '금요일': 4, '토요일': 5, '일요일': 6 };
+        const dayNamesEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
         async function init() {
-            const { data: c } = await _supabase.from('classes').select('*');
-            const { data: m } = await _supabase.from('class_memos').select('class_id');
-            classes = c || [];
+            updateWeekDisplay();
+            await loadRules();
+            renderTimeGrid();
+            await fetchClasses();
+        }
+
+        // --- Core Logic: Load Rules & Multipliers ---
+        async function loadRules() {
+            // Fetch rules including the 'tier_multipliers' JSONB column
+            const { data } = await _supabase.from('point_rules').select('*').order('id');
+            allRules = data || [];
+        }
+
+        // --- Core Logic: Student Data (with Tier) ---
+        async function openClinic(id, name, time) {
+            selectedStudentData = null;
+            selectedRuleIds.clear();
+            classStudentsMap = {};
+
+            const modal = document.getElementById('clinic-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('show'), 10);
+
+            document.getElementById('m-class-title').innerText = name;
+            document.getElementById('m-class-time').innerText = time;
+
+            // ★ IMPORTANT: Fetch 'tier' along with other info
+            const { data: members } = await _supabase.from('class_members')
+                .select('student_id, users(name, grade, tier)') // Fetch Tier!
+                .eq('class_id', id);
             
-            const days = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
-            days.forEach(day => {
-                const col = document.getElementById(`col-${day}`);
-                col.innerHTML = classes.filter(cls => cls.day_of_week === day).map(cls => {
-                    const hasMemo = m.some(memo => memo.class_id === cls.id);
+            const list = document.getElementById('m-student-list');
+            document.getElementById('m-student-count').innerText = members ? members.length : 0;
+
+            if (!members || members.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-400 font-medium text-xs">배정된 학생이 없습니다.</div>`;
+            } else {
+                list.innerHTML = members.map(m => {
+                    // Cache student data for logic calculation
+                    classStudentsMap[m.student_id] = { 
+                        id: m.student_id, 
+                        name: m.users.name, 
+                        grade: m.users.grade,
+                        tier: m.users.tier || 'Unranked' // Default if null
+                    };
+
                     return `
-                        <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 relative group">
-                            <div class="text-[9px] font-bold text-indigo-500">${cls.time_slot}</div>
-                            <div class="text-xs font-black text-slate-700 truncate">${cls.name}</div>
-                            ${hasMemo ? `<div onclick="openMemo(${cls.id})" class="memo-blink absolute -top-1 -right-1 bg-amber-400 text-white w-6 h-6 rounded-lg shadow-md flex items-center justify-center"><i class="fa-solid fa-note-sticky text-[10px]"></i></div>` : 
-                                       `<div onclick="openMemo(${cls.id})" class="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 bg-slate-200 text-slate-400 w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer transition"><i class="fa-solid fa-plus text-[10px]"></i></div>`}
-                        </div>`;
+                    <div onclick="selectStudent('${m.student_id}')" id="st-${m.student_id}" 
+                         class="p-4 rounded-2xl bg-slate-50 border border-slate-100 cursor-pointer hover:border-indigo-300 transition flex justify-between items-center group">
+                        <span class="font-bold text-slate-700 group-hover:text-indigo-600 text-sm">${m.users.name}</span>
+                        <div class="flex gap-1">
+                            <span class="text-[9px] font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">${m.users.tier || '-'}</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase bg-white px-2 py-1 rounded-lg border border-slate-100">${m.users.grade}</span>
+                        </div>
+                    </div>`;
                 }).join('');
+            }
+            renderRules(); // Render initial state (no multipliers applied yet)
+            updateSubmitBtn();
+        }
+
+        function selectStudent(id) {
+            selectedStudentData = classStudentsMap[id];
+            
+            // Visual Update
+            document.querySelectorAll('[id^="st-"]').forEach(el => el.classList.remove('border-indigo-600', 'bg-indigo-50', 'ring-2', 'ring-indigo-100'));
+            document.getElementById(`st-${id}`).classList.add('border-indigo-600', 'bg-indigo-50', 'ring-2', 'ring-indigo-100');
+            document.getElementById('target-badge').classList.remove('hidden');
+            
+            // Display Current Tier
+            const tierDisplay = document.getElementById('current-tier-display');
+            tierDisplay.classList.remove('hidden');
+            tierDisplay.innerText = `Target Tier: ${selectedStudentData.tier}`;
+
+            selectedRuleIds.clear();
+            renderRules(); // Re-render rules to show multipliers specific to this student
+            updateSubmitBtn();
+        }
+
+        // --- Core Logic: Rendering Rules with Multipliers ---
+        function renderRules() {
+            const container = document.getElementById('point-options-grid');
+            const studentTier = selectedStudentData ? selectedStudentData.tier : null;
+
+            container.innerHTML = allRules.map(r => {
+                const isSelected = selectedRuleIds.has(r.id);
+                const isNeg = r.xp_change < 0 || r.cp_change < 0;
+                
+                // ★ Calculate Multiplier
+                let multiplier = 1.0;
+                let multiplierBadge = '';
+                
+                if (studentTier && r.tier_multipliers && r.tier_multipliers[studentTier]) {
+                    multiplier = parseFloat(r.tier_multipliers[studentTier]);
+                    if(multiplier !== 1.0) {
+                        const styleClass = multiplier > 1.0 && isNeg ? 'multiplier-alert' : 'multiplier-tag';
+                        multiplierBadge = `<span class="${styleClass}">x${multiplier}</span>`;
+                    }
+                }
+
+                // Apply Multiplier for Display
+                const finalXP = Math.round(r.xp_change * multiplier);
+                const finalCP = Math.round(r.cp_change * multiplier);
+
+                return `
+                <div onclick="toggleRule(${r.id})" class="option-card ${isNeg ? 'negative' : ''} ${isSelected ? 'selected ring-2 ring-indigo-500' : ''}">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wide">${r.category}</span>
+                        <div class="text-right">
+                            <div class="text-xs font-black ${finalXP >= 0 ? 'text-indigo-600' : 'text-red-500'}">
+                                ${finalXP > 0 ? '+' : ''}${finalXP} XP ${multiplierBadge}
+                            </div>
+                            <div class="text-[10px] font-bold text-amber-500">
+                                ${finalCP > 0 ? '+' : ''}${finalCP} CP
+                            </div>
+                        </div>
+                    </div>
+                    <div class="font-black text-sm text-slate-700 leading-tight">${r.name}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleRule(id) {
+            if (!selectedStudentData) return alert("학생을 먼저 선택해주세요.");
+            if (selectedRuleIds.has(id)) selectedRuleIds.delete(id);
+            else selectedRuleIds.add(id);
+            renderRules(); // Refresh to keep UI synced
+            updateSubmitBtn();
+        }
+
+        function updateSubmitBtn() {
+            const btn = document.getElementById('btn-submit-points');
+            if (selectedStudentData && selectedRuleIds.size > 0) {
+                btn.disabled = false;
+                btn.className = "w-full py-5 bg-indigo-600 text-white rounded-3xl font-black text-lg shadow-xl hover:bg-indigo-700 transition active:scale-95";
+                btn.innerText = `${selectedRuleIds.size}건 평가 반영하기`;
+            } else {
+                btn.disabled = true;
+                btn.className = "w-full py-5 bg-slate-300 text-white rounded-3xl font-black text-lg cursor-not-allowed";
+                btn.innerText = "학생과 항목을 선택하세요";
+            }
+        }
+
+        // --- Core Logic: Submission with Calculation ---
+        async function submitPoints() {
+            if (!confirm("평가를 반영하시겠습니까? (배율 자동 적용됨)")) return;
+            
+            const btn = document.getElementById('btn-submit-points');
+            btn.innerText = "처리 중...";
+            
+            try {
+                const promises = [];
+                const studentTier = selectedStudentData.tier;
+
+                selectedRuleIds.forEach(rid => {
+                    const rule = allRules.find(r => r.id === rid);
+                    
+                    // ★ Final Calculation
+                    let multiplier = 1.0;
+                    if (studentTier && rule.tier_multipliers && rule.tier_multipliers[studentTier]) {
+                        multiplier = parseFloat(rule.tier_multipliers[studentTier]);
+                    }
+
+                    const finalXP = Math.round(rule.xp_change * multiplier);
+                    const finalCP = Math.round(rule.cp_change * multiplier);
+                    
+                    // Log for debugging (Elite Mode)
+                    console.log(`Applying Rule: ${rule.name}, Tier: ${studentTier}, Multi: ${multiplier}, XP: ${finalXP}`);
+
+                    promises.push(_supabase.rpc('give_points', {
+                        p_student_id: selectedStudentData.id,
+                        p_xp: finalXP,
+                        p_cp: finalCP,
+                        p_rule_name: `[수업] ${rule.name} (x${multiplier})` // Record multiplier in history
+                    }));
+                });
+
+                await Promise.all(promises);
+                alert("✅ 평가가 반영되었습니다.");
+                
+                // Reset
+                selectedRuleIds.clear();
+                renderRules();
+                updateSubmitBtn();
+            } catch (e) {
+                alert("오류 발생: " + e.message);
+                updateSubmitBtn();
+            }
+        }
+
+        // --- Grid & Date Utils ---
+        function changeWeek(offset) {
+            baseDate.setDate(baseDate.getDate() + (offset * 7));
+            updateWeekDisplay();
+            fetchClasses();
+        }
+        function setToday() {
+            baseDate = new Date();
+            updateWeekDisplay();
+            fetchClasses();
+        }
+        function updateWeekDisplay() {
+            const start = new Date(baseDate);
+            const day = baseDate.getDay();
+            const diff = baseDate.getDate() - day + (day === 0 ? -6 : 1); 
+            start.setDate(diff);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            const formatDate = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+            document.getElementById('current-week-range').innerText = `${formatDate(start)} - ${formatDate(end)}`;
+            renderHeader(start);
+        }
+        function renderHeader(startDate) {
+            const container = document.getElementById('day-headers');
+            let html = '';
+            const todayStr = new Date().toDateString();
+            for(let i=0; i<7; i++) {
+                const d = new Date(startDate);
+                d.setDate(startDate.getDate() + i);
+                const isToday = d.toDateString() === todayStr;
+                html += `<div class="day-column border-r border-slate-200 p-3 text-center ${isToday ? 'bg-indigo-50/50' : ''}"><div class="text-[10px] font-black ${isToday ? 'text-indigo-600' : 'text-slate-400'} tracking-widest mb-1">${dayNamesEng[i]}</div><div class="text-xl font-black ${isToday ? 'text-indigo-700' : 'text-slate-700'}">${d.getDate()}</div></div>`;
+            }
+            container.innerHTML = html;
+        }
+        function renderTimeGrid() {
+            let labels = '';
+            for(let h=13; h<=22; h++) labels += `<div class="h-[100px] flex items-start justify-center pt-2 text-[11px] font-bold text-slate-400 border-b border-slate-100 font-mono">${h}:00</div>`;
+            document.getElementById('time-labels').innerHTML = labels;
+            let body = '';
+            for(let d=0; d<7; d++) {
+                body += `<div class="day-column" id="col-day-${d}">`;
+                for(let h=13; h<=22; h++) body += `<div class="time-slot" data-hour="${h}"></div>`;
+                body += `</div>`;
+            }
+            document.getElementById('schedule-grid-body').innerHTML = body;
+        }
+        async function fetchClasses() {
+            document.querySelectorAll('.class-card').forEach(e => e.remove());
+            const { data: classes, error } = await _supabase.from('classes').select('*');
+            if (error) return;
+            classes.forEach(c => {
+                if (!c.day_of_week || !c.start_time || !c.end_time) return;
+                const colIndex = dayMap[c.day_of_week];
+                if (colIndex === undefined) return;
+                const [startH, startM] = c.start_time.split(':').map(Number);
+                const [endH, endM] = c.end_time.split(':').map(Number);
+                const top = (startH - 13) * 100 + (startM / 60) * 100;
+                const height = ((endH * 60 + endM) - (startH * 60 + startM)) / 60 * 100;
+                const card = document.createElement('div');
+                card.className = "class-card group";
+                card.style.top = `${top}px`;
+                card.style.height = `${height}px`;
+                card.innerHTML = `<div class="flex justify-between items-start"><div class="text-[10px] font-black opacity-80 uppercase tracking-tight leading-none">${c.start_time.slice(0,5)} - ${c.end_time.slice(0,5)}</div>${c.google_folder_id ? '<i class="fa-brands fa-google-drive text-white opacity-50 text-xs"></i>' : ''}</div><div class="text-sm font-black mt-1 leading-tight group-hover:underline underline-offset-2">${c.name}</div>`;
+                card.onclick = () => openClinic(c.id, c.name, `${c.start_time.slice(0,5)} - ${c.end_time.slice(0,5)}`);
+                const column = document.getElementById(`col-day-${colIndex}`);
+                if (column) column.appendChild(card);
             });
         }
-
-        async function openMemo(cid) {
-            currentCid = cid;
-            const { data } = await _supabase.from('class_memos').select('*').eq('class_id', cid).order('created_at', {ascending: false});
-            const container = document.getElementById('memo-items');
-            container.innerHTML = data.length ? data.map(m => `
-                <div class="bg-white/50 p-3 rounded-xl border border-amber-200">
-                    <div class="flex justify-between items-start">
-                        <div class="font-bold text-slate-800 text-xs">${m.title}</div>
-                        <button onclick="deleteMemo(${m.id})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
-                    </div>
-                    <div class="text-[10px] text-slate-600 mt-1 whitespace-pre-wrap">${m.content}</div>
-                </div>
-            `).join('') : '<div class="text-center py-6 text-slate-400 text-[10px]">메모가 없습니다.</div>';
-            
-            document.getElementById('memo-view-list').classList.remove('hidden');
-            document.getElementById('memo-editor').classList.add('hidden');
-            document.getElementById('memo-modal').classList.remove('hidden');
+        function closeModal() {
+            document.getElementById('clinic-modal').classList.remove('show');
+            setTimeout(() => document.getElementById('clinic-modal').classList.add('hidden'), 300);
         }
 
-        function showEditor() { document.getElementById('memo-view-list').classList.add('hidden'); document.getElementById('memo-editor').classList.remove('hidden'); }
-        function hideEditor() { document.getElementById('memo-view-list').classList.remove('hidden'); document.getElementById('memo-editor').classList.add('hidden'); }
-        function closeMemo() { document.getElementById('memo-modal').classList.add('hidden'); }
-
-        async function saveMemo() {
-            const title = document.getElementById('m-title').value;
-            const content = document.getElementById('m-content').value;
-            if(!title) return;
-            await _supabase.from('class_memos').insert({ class_id: currentCid, title, content });
-            document.getElementById('m-title').value = ''; document.getElementById('m-content').value = '';
-            openMemo(currentCid); init();
-        }
-
-        async function deleteMemo(id) {
-            if(confirm("찢어버릴까요?")) { await _supabase.from('class_memos').delete().eq('id', id); openMemo(currentCid); init(); }
-        }
         init();
     </script>
 </body>

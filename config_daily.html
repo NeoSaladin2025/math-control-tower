@@ -2,271 +2,251 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <title>일일 규칙 관리소 - V15.0 Discriminator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 2rem; }
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 2rem; user-select: none; }
         
-        /* [Sexy Toggle Switch] */
+        /* 쫀득한 토글 스위치 */
         .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
         .toggle-checkbox { right: 0; z-index: 1; border-color: #e5e7eb; cursor: pointer; appearance: none; border-width: 0; width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: white; position: absolute; top: 0.125rem; left: 0.125rem; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .toggle-checkbox:checked { left: 1.625rem; }
-        .toggle-label { width: 3rem; height: 1.5rem; background-color: #e5e7eb; border-radius: 9999px; position: relative; cursor: pointer; transition: background-color 0.2s; }
+        .toggle-label { width: 3rem; height: 1.5rem; background-color: #e5e7eb; border-radius: 9999px; position: relative; cursor: pointer; transition: all 0.2s; }
         
-        /* Input Focus Effect */
-        .editable-input:focus { outline: 2px solid #6366f1; background-color: #eef2ff; }
-
-        /* Custom Input Transition */
-        #custom-cat-wrapper { transition: all 0.3s ease-in-out; }
+        /* 스르륵 열리는 애니메이션 */
+        .multiplier-box { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, opacity 0.3s ease-out; opacity: 0; background-color: #f1f5f9; border-radius: 0 0 16px 16px; }
+        .multiplier-box.open { max-height: 500px; opacity: 1; border-top: 1px dashed #cbd5e1; padding: 16px; }
     </style>
 </head>
 <body>
     <script src="config.js"></script>
 
-    <div class="max-w-5xl mx-auto">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
-                <i class="fa-solid fa-sliders text-indigo-500"></i> 데일리 규칙 정밀 제어
-            </h2>
-            <button onclick="saveAllChanges()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2">
-                <i class="fa-solid fa-save"></i> 전체 변경사항 적용
-            </button>
-        </div>
-        
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-indigo-100 mb-6 relative overflow-hidden group">
-            <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
-            <h3 class="font-bold text-xs text-indigo-500 uppercase tracking-wider mb-3 flex justify-between">
-                <span>New Rule Creation</span>
-                <span class="text-[10px] text-slate-400 normal-case">새로운 카테고리가 필요하면 '직접 입력'을 선택하세요.</span>
-            </h3>
+    <div class="max-w-4xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h2 class="text-3xl font-black text-slate-800 flex items-center gap-3">
+                    <i class="fa-solid fa-gavel text-indigo-600"></i> 일일 생활 관리 설정
+                </h2>
+                <p class="text-slate-400 font-bold mt-1 text-sm">티어별 차등 처벌 시스템 (Discriminatory Punishment)</p>
+            </div>
             
-            <div class="flex gap-3 items-center">
-                <div class="w-32 relative">
-                    <select id="new-cat-select" onchange="toggleCustomCat(this.value)" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm bg-slate-50 font-bold text-slate-600 outline-none focus:border-indigo-500 appearance-none">
-                        </select>
-                    <i class="fa-solid fa-caret-down absolute right-3 top-3 text-slate-400 pointer-events-none"></i>
-                </div>
-
-                <div id="custom-cat-wrapper" class="hidden w-32">
-                    <input type="text" id="new-cat-custom" placeholder="새 카테고리" class="w-full border-2 border-indigo-400 rounded-lg p-2.5 text-sm bg-white font-bold text-indigo-700 outline-none placeholder-indigo-300 animate-pulse">
-                </div>
-
-                <input type="text" id="new-name" placeholder="규칙 내용 (예: 숙제 완벽 수행)" class="border border-slate-200 rounded-lg p-2.5 text-sm flex-1 bg-slate-50 focus:bg-white outline-none focus:border-indigo-500 transition">
-                
-                <div class="flex items-center gap-1">
-                    <span class="text-xs font-bold text-blue-500">XP</span>
-                    <input type="number" id="new-xp" placeholder="0" class="border border-slate-200 rounded-lg p-2.5 text-sm w-16 bg-slate-50 focus:bg-white text-center outline-none focus:border-indigo-500 font-bold">
-                </div>
-                <div class="flex items-center gap-1">
-                    <span class="text-xs font-bold text-amber-500">CP</span>
-                    <input type="number" id="new-cp" placeholder="0" class="border border-slate-200 rounded-lg p-2.5 text-sm w-16 bg-slate-50 focus:bg-white text-center outline-none focus:border-indigo-500 font-bold">
-                </div>
-                <button onclick="addRule()" class="bg-slate-800 text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-slate-700 transition active:scale-95 shrink-0">
-                    <i class="fa-solid fa-plus mr-1"></i> 추가
+            <div class="flex gap-2">
+                 <button onclick="addNewRule()" class="bg-white border-2 border-slate-200 hover:border-indigo-400 text-slate-600 font-bold px-6 py-3 rounded-2xl transition shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> 항목 추가
+                </button>
+                <button id="btn-save" onclick="saveAll()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-save"></i> 전체 저장
                 </button>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden min-h-[300px]">
-            <div class="bg-slate-50 px-6 py-3 border-b border-slate-200 flex text-xs font-bold text-slate-500 uppercase tracking-wide">
-                <div class="w-20">ON/OFF</div>
-                <div class="w-28">분류</div>
-                <div class="flex-1">규칙 이름</div>
-                <div class="w-24 text-center">XP</div>
-                <div class="w-24 text-center">CP</div>
-                <div class="w-16 text-center">삭제</div>
-            </div>
-            
-            <div id="rule-list" class="divide-y divide-slate-100">
-                <div class="p-10 text-center text-slate-400 animate-pulse">데이터 로딩 중...</div>
-            </div>
+        <div id="rule-list" class="space-y-4">
+            <div class="text-center py-20 text-slate-400 font-bold animate-pulse">데이터를 불러오는 중...</div>
         </div>
     </div>
 
     <script>
-        let cachedRules = []; 
-        let uniqueCategories = new Set(['출결', '학습', '태도', '시험']); // 기본 구멍들
+        let cachedRules = [];
+        let cachedTiers = []; // 티어 목록 저장용
 
-        // [기능 1] '직접 입력' 선택 시 인풋 박스 노출/숨김
-        function toggleCustomCat(val) {
-            const wrapper = document.getElementById('custom-cat-wrapper');
-            const select = document.getElementById('new-cat-select');
-            
-            if (val === 'CUSTOM_INPUT') {
-                wrapper.classList.remove('hidden');
-                select.parentElement.classList.add('hidden'); // 셀렉트 박스 숨기기
-                document.getElementById('new-cat-custom').focus();
+        async function init() {
+            await loadTiers(); // 티어 목록 먼저 로드
+            await loadRules(); // 규칙 로드
+        }
+
+        // 1. 티어 목록 가져오기 (DB: tier_rules)
+        async function loadTiers() {
+            const { data, error } = await _supabase.from('tier_rules').select('tier_name').order('min_xp', {ascending: true});
+            if (data) {
+                cachedTiers = data.map(t => t.tier_name);
             } else {
-                wrapper.classList.add('hidden');
+                // DB에 티어가 없으면 기본값
+                cachedTiers = ['Bronze', 'Silver', 'Gold', 'Diamond'];
             }
         }
 
-        // [기능 2] '직접 입력' 취소하고 다시 셀렉트로 돌아가기 (ESC 키 등) -> 여기선 심플하게 추가 후 복귀 로직으로 처리
-
+        // 2. 규칙 목록 가져오기
         async function loadRules() {
-            // DB에서 규칙 긁어오기
-            const { data, error } = await _supabase
-                .from('point_rules')
-                .select('*')
-                .order('id', {ascending: false});
-
-            if (error) { console.error(error); return; }
-
-            cachedRules = data;
-
-            // ★ DB에 있는 모든 카테고리를 긁어모아서 Set에 저장 (자동 확장)
-            cachedRules.forEach(r => {
-                if(r.category) uniqueCategories.add(r.category);
-            });
-
-            renderNewRuleOptions(); // 상단 '추가' 패널의 셀렉트 박스 업데이트
-            renderList(); // 메인 리스트 렌더링
+            const { data, error } = await _supabase.from('point_rules').select('*').order('id', {ascending: true});
+            if (error) {
+                console.error(error);
+                alert("로딩 실패!");
+                return;
+            }
+            cachedRules = data || [];
+            renderList();
         }
 
-        // 상단 '카테고리 선택' 박스 렌더링
-        function renderNewRuleOptions() {
-            const select = document.getElementById('new-cat-select');
-            select.innerHTML = '';
-            
-            // 기존 카테고리들
-            Array.from(uniqueCategories).sort().forEach(cat => {
-                select.innerHTML += `<option value="${cat}">${cat}</option>`;
-            });
-
-            // ★ [확장] 섹시한 구멍 뚫기 옵션
-            select.innerHTML += `<option value="CUSTOM_INPUT" class="text-indigo-600 font-bold bg-indigo-50">✨ + 직접 입력 (New)</option>`;
-            
-            // 초기화
-            select.value = Array.from(uniqueCategories)[0];
-            select.parentElement.classList.remove('hidden');
-            document.getElementById('custom-cat-wrapper').classList.add('hidden');
-            document.getElementById('new-cat-custom').value = '';
-        }
-
+        // 3. 리스트 렌더링 (스르륵 기능 포함)
         function renderList() {
             const container = document.getElementById('rule-list');
-            
-            if(!cachedRules.length) { 
-                container.innerHTML = '<div class="p-10 text-center text-slate-400 italic">등록된 규칙이 없습니다.</div>'; 
-                return; 
+            if (cachedRules.length === 0) {
+                container.innerHTML = `<div class="text-center py-20 text-slate-400 font-bold">등록된 규칙이 없습니다.</div>`;
+                return;
             }
 
-            // 카테고리 리스트 (수정 모드용)
-            const catOptions = Array.from(uniqueCategories).sort().map(c => `<option>${c}</option>`).join('');
+            container.innerHTML = cachedRules.map((rule, index) => {
+                const multipliers = rule.tier_multipliers || {};
+                
+                // 티어별 배율 입력창 생성 HTML
+                const tierInputsHtml = cachedTiers.map(tier => {
+                    const val = multipliers[tier] !== undefined ? multipliers[tier] : 1.0;
+                    // 티어 이름에 따라 색상 다르게 (다이아는 무서운 색)
+                    let badgeColor = 'bg-slate-200 text-slate-600';
+                    if(tier.includes('Diamond') || tier.includes('다이아')) badgeColor = 'bg-cyan-100 text-cyan-700 border border-cyan-200';
+                    if(tier.includes('Gold') || tier.includes('골드')) badgeColor = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
 
-            container.innerHTML = cachedRules.map((r, index) => `
-                <div class="flex items-center px-6 py-4 hover:bg-indigo-50/30 transition group">
-                    
-                    <div class="w-20">
-                        <div class="relative inline-block w-12 mr-2 align-middle select-none">
-                            <input type="checkbox" id="toggle-${r.id}" class="toggle-checkbox" ${r.is_active !== false ? 'checked' : ''} onchange="updateCache(${index}, 'is_active', this.checked)">
-                            <label for="toggle-${r.id}" class="toggle-label"></label>
+                    return `
+                    <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
+                        <span class="text-xs font-black uppercase ${badgeColor} px-2 py-1 rounded-md">${tier}</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs font-bold text-slate-400">x</span>
+                            <input type="number" step="0.1" value="${val}" 
+                                onchange="updateMultiplier(${index}, '${tier}', this.value)"
+                                class="w-14 text-right font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded px-1 focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>`;
+                }).join('');
+
+                return `
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition hover:shadow-md group">
+                    <div class="p-5 flex items-center gap-4 relative bg-white z-10">
+                        <div class="cursor-move text-slate-300 hover:text-slate-500"><i class="fa-solid fa-grip-vertical"></i></div>
+                        
+                        <div class="w-24">
+                            <input type="text" value="${rule.category || ''}" placeholder="분류" 
+                                onchange="updateRule(${index}, 'category', this.value)"
+                                class="w-full text-xs font-bold text-slate-500 bg-slate-50 border-none rounded-lg px-2 py-1 text-center focus:ring-2 focus:ring-indigo-100">
+                        </div>
+
+                        <div class="flex-1">
+                            <input type="text" value="${rule.name}" placeholder="규칙 내용 입력" 
+                                onchange="updateRule(${index}, 'name', this.value)"
+                                class="w-full font-bold text-slate-700 text-lg border-none focus:ring-0 placeholder-slate-300 bg-transparent">
+                        </div>
+
+                        <div class="flex gap-2 cursor-pointer" onclick="toggleMultipliers(${index})" title="클릭해서 티어별 차별 설정하기">
+                            <div class="flex flex-col w-20">
+                                <span class="text-[10px] font-bold text-slate-400 text-center uppercase">XP (성장)</span>
+                                <input type="number" value="${rule.xp_change}" 
+                                    onclick="event.stopPropagation()"
+                                    onchange="updateRule(${index}, 'xp_change', this.value)"
+                                    class="text-center font-black ${rule.xp_change >= 0 ? 'text-indigo-600' : 'text-red-500'} bg-slate-50 rounded-lg py-1 border border-slate-100 focus:border-indigo-500">
+                            </div>
+                            <div class="flex flex-col w-20">
+                                <span class="text-[10px] font-bold text-slate-400 text-center uppercase">CP (화폐)</span>
+                                <input type="number" value="${rule.cp_change}" 
+                                    onclick="event.stopPropagation()"
+                                    onchange="updateRule(${index}, 'cp_change', this.value)"
+                                    class="text-center font-black text-amber-500 bg-slate-50 rounded-lg py-1 border border-slate-100 focus:border-amber-400">
+                            </div>
+                            <div class="flex items-center justify-center w-8 text-slate-300 group-hover:text-indigo-500 transition">
+                                <i class="fa-solid fa-chevron-down transform transition" id="arrow-${index}"></i>
+                            </div>
+                        </div>
+
+                        <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="toggle-${index}" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" ${rule.is_active ? 'checked' : ''} onchange="updateRule(${index}, 'is_active', this.checked)"/>
+                            <label for="toggle-${index}" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+
+                        <button onclick="deleteRule(${index})" class="text-slate-300 hover:text-red-500 transition px-2"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+
+                    <div id="multi-box-${index}" class="multiplier-box">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="fa-solid fa-scale-unbalanced text-indigo-500"></i>
+                            <span class="text-xs font-black text-slate-600 uppercase">티어별 차등 적용 배율 (Multiplier)</span>
+                            <span class="text-[10px] text-slate-400 ml-auto">* 1.0은 기본값, 2.0은 2배 적용</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                            ${tierInputsHtml}
                         </div>
                     </div>
-
-                    <div class="w-28 pr-2">
-                        <input type="text" value="${r.category}" onchange="updateCache(${index}, 'category', this.value)" list="cat-list-${r.id}" class="editable-input w-full bg-transparent border border-transparent hover:border-slate-300 rounded px-2 py-1 text-sm font-bold text-slate-600 cursor-pointer focus:bg-white text-center">
-                        <datalist id="cat-list-${r.id}">${catOptions}</datalist>
-                    </div>
-
-                    <div class="flex-1 pr-4">
-                        <input type="text" value="${r.name}" oninput="updateCache(${index}, 'name', this.value)" class="editable-input w-full bg-transparent border-b border-transparent hover:border-slate-300 px-2 py-1 text-sm font-bold text-slate-800 focus:bg-white transition placeholder-slate-300">
-                    </div>
-
-                    <div class="w-24 text-center px-1">
-                        <input type="number" value="${r.xp_change}" oninput="updateCache(${index}, 'xp_change', parseInt(this.value)||0)" class="editable-input w-full text-center bg-transparent border border-transparent hover:border-slate-300 rounded px-1 py-1 text-sm font-bold ${r.xp_change >= 0 ? 'text-blue-600' : 'text-red-500'} focus:bg-white">
-                    </div>
-
-                    <div class="w-24 text-center px-1">
-                        <input type="number" value="${r.cp_change}" oninput="updateCache(${index}, 'cp_change', parseInt(this.value)||0)" class="editable-input w-full text-center bg-transparent border border-transparent hover:border-slate-300 rounded px-1 py-1 text-sm font-bold ${r.cp_change >= 0 ? 'text-amber-600' : 'text-slate-400'} focus:bg-white">
-                    </div>
-
-                    <div class="w-16 text-center">
-                        <button onclick="deleteRule(${r.id})" class="text-slate-300 hover:text-red-500 transition w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center mx-auto">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
-        function updateCache(index, field, value) {
+        // --- 로직 함수들 ---
+
+        function toggleMultipliers(index) {
+            const box = document.getElementById(`multi-box-${index}`);
+            const arrow = document.getElementById(`arrow-${index}`);
+            
+            if (box.classList.contains('open')) {
+                box.classList.remove('open');
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                box.classList.add('open');
+                arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function updateMultiplier(index, tierName, value) {
+            if (!cachedRules[index].tier_multipliers) cachedRules[index].tier_multipliers = {};
+            cachedRules[index].tier_multipliers[tierName] = parseFloat(value);
+        }
+
+        function updateRule(index, field, value) {
+            if (field === 'xp_change' || field === 'cp_change') value = parseInt(value) || 0;
             cachedRules[index][field] = value;
-            // 만약 사용자가 리스트에서 새로운 카테고리를 직접 입력했다면, uniqueCategories에도 추가해주는 센스!
-            if (field === 'category' && value && !uniqueCategories.has(value)) {
-                uniqueCategories.add(value);
+            renderList(); // 색상 갱신 등을 위해 리렌더링 (입력 포커스 이슈 있으면 수정 필요하나 여기선 간편하게)
+        }
+
+        function addNewRule() {
+            cachedRules.push({
+                id: null,
+                category: '기타',
+                name: '',
+                xp_change: 0,
+                cp_change: 0,
+                is_active: true,
+                tier_multipliers: {} // 초기값
+            });
+            renderList();
+        }
+
+        async function deleteRule(index) {
+            const rule = cachedRules[index];
+            if(rule.id) {
+                if(!confirm("이 규칙을 영구 삭제하시겠습니까?")) return;
+                await _supabase.from('point_rules').delete().eq('id', rule.id);
             }
+            cachedRules.splice(index, 1);
+            renderList();
         }
 
-        async function addRule() {
-            const selectEl = document.getElementById('new-cat-select');
-            const customEl = document.getElementById('new-cat-custom');
-            
-            // '직접 입력' 모드인지 확인하여 카테고리 값 결정
-            let cat = selectEl.value === 'CUSTOM_INPUT' ? customEl.value : selectEl.value;
-            
-            const name = document.getElementById('new-name').value;
-            const xp = parseInt(document.getElementById('new-xp').value) || 0;
-            const cp = parseInt(document.getElementById('new-cp').value) || 0;
-            
-            if(!cat.trim()) return alert("카테고리를 입력해주세요!");
-            if(!name.trim()) return alert("규칙 이름을 입력해주세요!");
-
-            const { error } = await _supabase.from('point_rules').insert([
-                { category: cat, name: name, xp_change: xp, cp_change: cp, is_active: true }
-            ]);
-
-            if(error) alert("실패: " + error.message);
-            else {
-                document.getElementById('new-name').value = ''; 
-                document.getElementById('new-xp').value = ''; 
-                document.getElementById('new-cp').value = ''; 
-                
-                // 직접 입력 모드였다면 다시 셀렉트로 복귀
-                if (selectEl.value === 'CUSTOM_INPUT') {
-                    uniqueCategories.add(cat); // 새 구멍 등록!
-                    renderNewRuleOptions(); // 옵션 갱신
-                }
-                loadRules(); 
-            }
-        }
-
-        async function deleteRule(id) { 
-            if(confirm("삭제하시겠습니까?")) { 
-                await _supabase.from('point_rules').delete().eq('id', id); 
-                loadRules(); 
-            } 
-        }
-
-        async function saveAllChanges() {
-            const btn = document.querySelector('button[onclick="saveAllChanges()"]');
+        async function saveAll() {
+            const btn = document.getElementById('btn-save');
             const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
             btn.disabled = true;
 
             try {
+                // 저장할 데이터 포맷팅
                 const payload = cachedRules.map(r => ({
                     id: r.id,
-                    category: r.category, // 수정된 카테고리까지 싹 다 저장
+                    category: r.category,
                     name: r.name,
                     xp_change: r.xp_change,
                     cp_change: r.cp_change,
-                    is_active: r.is_active
+                    is_active: r.is_active,
+                    tier_multipliers: r.tier_multipliers || {} // ★ 배율 정보 함께 저장
                 }));
 
                 const { error } = await _supabase.from('point_rules').upsert(payload);
                 if(error) throw error;
                 
                 btn.innerHTML = '<i class="fa-solid fa-check"></i> 저장 완료!';
-                btn.className = "bg-green-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition transform scale-105 flex items-center gap-2";
+                btn.className = "bg-green-600 text-white font-bold px-8 py-3 rounded-2xl shadow-lg transition transform scale-105 flex items-center gap-2";
+                
                 setTimeout(() => {
-                    btn.className = "bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2";
+                    btn.className = "bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2";
                     btn.innerHTML = originalHtml;
                     btn.disabled = false;
-                    loadRules(); // 저장 후 리로드해서 깔끔하게 정리
+                    loadRules(); 
                 }, 1000);
 
             } catch(e) {
@@ -276,7 +256,7 @@
             }
         }
 
-        loadRules();
+        init();
     </script>
 </body>
 </html>

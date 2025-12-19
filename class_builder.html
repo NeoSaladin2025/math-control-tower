@@ -2,16 +2,17 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>수업 개설 및 배정 센터</title>
+    <title>수업 관리 시스템 - Administrator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
+        /* [Elite System UI] */
         body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 1.5rem; user-select: none; }
+        
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
         
-        /* 쫀득한 학년 버튼 */
         .grade-btn {
             min-width: 65px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 13px; 
             background: white; border: 2px solid #e2e8f0; color: #64748b; 
@@ -22,8 +23,12 @@
             background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #3730a3; color: white; box-shadow: 0 4px 0 #312e81;
         }
 
-        /* 구글 드라이브 뱃지 */
         .drive-badge { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; }
+        .conflict-warning { color: #ef4444; font-size: 11px; font-weight: 800; animation: shake 0.4s ease-in-out; }
+        
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+        @keyframes spawn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        .animate-spawn { animation: spawn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     </style>
 </head>
 <body>
@@ -33,67 +38,72 @@
         <div class="flex justify-between items-center mb-8">
             <div>
                 <h2 class="text-2xl font-black text-slate-800 flex items-center gap-3">
-                    <i class="fa-solid fa-screwdriver-wrench text-indigo-500"></i> 수업 마스터 컨트롤
+                    <i class="fa-solid fa-screwdriver-wrench text-indigo-500"></i> 수업 관리 센터
                 </h2>
-                <p class="text-slate-400 text-xs font-bold mt-1 uppercase tracking-tighter">Class Creation & Student Assignment</p>
+                <p class="text-slate-400 text-xs font-bold mt-1 uppercase tracking-tighter">Integrated Class Management System</p>
             </div>
             <button onclick="openEditModal('create')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2">
-                <i class="fa-solid fa-plus"></i> 새 수업 개설
+                <i class="fa-solid fa-plus"></i> 신규 수업 개설
             </button>
         </div>
 
         <div id="class-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full py-20 text-center text-slate-300 animate-pulse font-bold">수업 데이터를 불러오는 중~</div>
+            <div class="col-span-full py-20 text-center text-slate-400 animate-pulse font-medium">
+                <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>시스템 데이터 동기화 중...
+            </div>
         </div>
     </div>
 
-    <div id="edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center">
-        <div class="bg-white w-[420px] rounded-[32px] shadow-2xl p-8 transform transition-all scale-100 border border-slate-100">
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
+        <div class="bg-white w-full max-w-[450px] rounded-[32px] shadow-2xl p-8 border border-slate-100">
             <div class="flex justify-between items-start mb-6">
                 <div>
-                    <h3 class="text-xl font-black text-slate-800" id="modal-title-text">수업 정보</h3>
+                    <h3 class="text-xl font-black text-slate-800" id="modal-title-text">수업 정보 설정</h3>
                     <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Class Configuration</p>
                 </div>
-                <button onclick="closeModal('edit-modal')" class="text-slate-300 hover:text-slate-500 text-2xl">×</button>
+                <button onclick="closeModal('edit-modal')" class="text-slate-300 hover:text-slate-500 text-2xl transition">×</button>
             </div>
             
             <div class="space-y-5">
                 <div>
-                    <label class="block text-[11px] font-black text-slate-400 mb-1 ml-1 uppercase">수업 명칭</label>
-                    <input type="text" id="cls-name" placeholder="예: 미적분 심화 A반" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold text-slate-700 transition">
+                    <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">수업 명칭</label>
+                    <input type="text" id="cls-name" placeholder="예: 고등 수학(상) 심화반" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold text-slate-700 transition">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[11px] font-black text-slate-400 mb-1 ml-1 uppercase">요일 선택</label>
-                        <select id="cls-day" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700">
-                            <option>월요일</option><option>화요일</option><option>수요일</option>
-                            <option>목요일</option><option>금요일</option><option>토요일</option><option>일요일</option>
+                    <div class="col-span-2">
+                        <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">요일 선택</label>
+                        <select id="cls-day" onchange="validateTime()" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 cursor-pointer">
+                            <option value="월요일">월요일</option><option value="화요일">화요일</option><option value="수요일">수요일</option>
+                            <option value="목요일">목요일</option><option value="금요일">금요일</option><option value="토요일">토요일</option><option value="일요일">일요일</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-black text-slate-400 mb-1 ml-1 uppercase">시간대 선택</label>
-                        <select id="cls-slot" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700">
-                            <option>앞타임</option><option>뒷타임</option>
-                            <option>오전반</option><option>오후반</option><option>저녁반</option>
-                        </select>
+                        <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">시작 시간</label>
+                        <input type="time" id="cls-start" onchange="validateTime()" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 cursor-pointer">
                     </div>
+                    <div>
+                        <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">종료 시간</label>
+                        <input type="time" id="cls-end" onchange="validateTime()" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 cursor-pointer">
+                    </div>
+                </div>
+
+                <div id="time-error" class="hidden conflict-warning bg-red-50 p-3 rounded-xl border border-red-100 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span id="error-msg">시간 충돌 발생</span>
                 </div>
 
                 <div class="bg-indigo-50 p-5 rounded-[24px] border border-indigo-100">
                     <label class="flex items-center gap-2 text-[11px] font-black text-indigo-600 mb-2 uppercase">
-                        <i class="fa-brands fa-google-drive text-sm"></i> 구글 드라이브 연동 (링크 복붙!)
+                        <i class="fa-brands fa-google-drive text-sm"></i> 자료실 연동 (Google Drive)
                     </label>
-                    <input type="text" id="cls-google-id" oninput="extractFolderId(this)" placeholder="여기에 폴더 링크를 붙여넣으세요" class="w-full bg-white border border-white p-4 rounded-xl outline-none focus:ring-2 focus:ring-indigo-400 font-mono text-[11px] shadow-sm text-slate-600">
-                    <div class="mt-3 text-[10px] text-indigo-400 leading-relaxed font-medium italic">
-                        "여기에 공유를 하면 자료실에 연동됩니다"
-                    </div>
+                    <input type="text" id="cls-google-id" oninput="extractFolderId(this)" placeholder="URL 붙여넣기" class="w-full bg-white border border-white p-4 rounded-xl outline-none text-[11px] shadow-sm text-slate-600 font-mono focus:ring-2 focus:ring-indigo-200 transition">
                 </div>
             </div>
 
             <div class="flex gap-3 mt-8">
-                <button onclick="closeModal('edit-modal')" class="flex-1 bg-slate-100 text-slate-400 font-black py-4 rounded-2xl hover:bg-slate-200 transition">CANCEL</button>
-                <button onclick="saveClass()" id="btn-save" class="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition">SAVE CLASS</button>
+                <button onclick="closeModal('edit-modal')" class="flex-1 bg-slate-100 text-slate-400 font-black py-4 rounded-2xl hover:bg-slate-200 transition">취소</button>
+                <button id="btn-save" onclick="saveClass()" disabled class="flex-1 bg-slate-300 text-white font-black py-4 rounded-2xl cursor-not-allowed transition">검증 대기중</button>
             </div>
         </div>
     </div>
@@ -101,10 +111,8 @@
     <div id="assign-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center">
         <div class="bg-white w-[550px] h-[780px] rounded-[40px] shadow-2xl p-8 flex flex-col border border-slate-100">
             <div class="flex justify-between items-start mb-6">
-                <div>
-                    <h3 class="text-2xl font-black text-slate-800" id="assign-modal-title">학생 배정</h3>
-                </div>
-                <button onclick="closeModal('assign-modal')" class="text-slate-300 hover:text-slate-500 text-3xl">×</button>
+                <h3 class="text-2xl font-black text-slate-800" id="assign-modal-title">수강생 배정</h3>
+                <button onclick="closeModal('assign-modal')" class="text-slate-300 hover:text-slate-500 text-3xl transition">×</button>
             </div>
             
             <div class="flex gap-2 overflow-x-auto pb-4 mb-2 shrink-0 scrollbar-hide" id="grade-tabs">
@@ -123,31 +131,58 @@
             </div>
 
             <div class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2" id="student-pool"></div>
-            <button onclick="closeModal('assign-modal')" class="mt-6 w-full bg-slate-800 text-white font-black py-5 rounded-[24px]">설정 완료</button>
+            <button onclick="closeModal('assign-modal')" class="mt-6 w-full bg-slate-800 text-white font-black py-5 rounded-[24px] hover:bg-slate-900 transition shadow-lg active:scale-95">설정 완료</button>
         </div>
     </div>
 
     <script>
+        /**
+         * [Class Management Core Logic]
+         * Provides CRUD operations, time conflict validation, and DB synchronization.
+         */
         let classes = [], students = [], currentClassId = null, currentGrade = 'all', currentMemberSet = new Set();
 
         async function init() {
             try {
-                const { data: c } = await _supabase.from('classes').select('*').order('id', {ascending: false});
-                const { data: s } = await _supabase.from('users').select('username, name, grade').eq('role', 'student').order('name');
-                classes = c || []; students = s || [];
+                // Fetch Classes (Latest first)
+                const { data: c, error: cErr } = await _supabase.from('classes').select('*').order('id', {ascending: false});
+                const { data: s, error: sErr } = await _supabase.from('users').select('username, name, grade').eq('role', 'student').order('name');
+                
+                if (cErr) {
+                    console.error("DB Error:", cErr);
+                    // Provide clear feedback if schema is missing
+                    if(cErr.code === '42P01' || cErr.code === '42703') {
+                        alert("시스템 초기화 필요: 데이터베이스 구조가 최신이 아닙니다. SQL 업데이트를 진행해주세요.");
+                    } else {
+                        alert(`데이터 로드 오류: ${cErr.message}`);
+                    }
+                    throw cErr;
+                }
+                
+                classes = c || []; 
+                students = s || [];
                 renderGrid();
-            } catch(e) { console.error("에러!", e); }
+            } catch(e) { 
+                document.getElementById('class-grid').innerHTML = '<div class="col-span-full py-20 text-center text-red-400 font-bold">시스템 연결 실패</div>';
+            }
         }
 
         function renderGrid() {
             const grid = document.getElementById('class-grid');
-            grid.innerHTML = classes.map(c => `
-                <div class="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all group relative">
+            if (classes.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-400 font-medium">등록된 수업이 없습니다.<br>우측 상단의 버튼을 눌러 개설해주세요.</div>';
+                return;
+            }
+
+            grid.innerHTML = classes.map((c, index) => `
+                <div class="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all group relative animate-spawn" style="animation-delay: ${index * 0.05}s">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase">${c.day_of_week} / ${c.time_slot}</span>
-                        ${c.google_folder_id ? `<span class="drive-badge"><i class="fa-brands fa-google-drive mr-1"></i>Link Active</span>` : ''}
+                        <span class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-wide">
+                            ${c.day_of_week} <span class="mx-1 text-indigo-300">|</span> ${c.start_time || '00:00'} ~ ${c.end_time || '00:00'}
+                        </span>
+                        ${c.google_folder_id ? `<span class="drive-badge"><i class="fa-brands fa-google-drive mr-1"></i>Linked</span>` : ''}
                     </div>
-                    <h4 class="text-lg font-black text-slate-800 mb-6 group-hover:text-indigo-600 transition-colors">${c.name}</h4>
+                    <h4 class="text-lg font-black text-slate-800 mb-6 group-hover:text-indigo-600 transition-colors truncate">${c.name}</h4>
                     <div class="flex justify-between items-center">
                         <button onclick="openAssign(${c.id})" class="text-xs font-black text-indigo-600 bg-indigo-50 px-5 py-2.5 rounded-xl hover:bg-indigo-600 hover:text-white transition transform active:scale-95">배정 관리</button>
                         <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
@@ -155,7 +190,105 @@
                             <button onclick="deleteClass(${c.id})" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </div>
-                </div>`).join('') || '<div class="col-span-full py-20 text-center text-slate-400">데이터가 없습니다.</div>';
+                </div>`).join('');
+        }
+
+        function validateTime() {
+            const day = document.getElementById('cls-day').value;
+            const start = document.getElementById('cls-start').value;
+            const end = document.getElementById('cls-end').value;
+            const errorDiv = document.getElementById('time-error');
+            const errorMsg = document.getElementById('error-msg');
+
+            if (!start || !end) { setSaveButton(false, "시간을 입력하세요"); return; }
+            if (start >= end) { errorDiv.classList.remove('hidden'); errorMsg.innerText = "종료 시간이 시작보다 빨라요!"; setSaveButton(false, "시간 설정 오류"); return; }
+
+            const conflict = classes.find(c => {
+                if (currentClassId && c.id === currentClassId) return false;
+                if (c.day_of_week !== day) return false;
+                return (start < c.end_time) && (end > c.start_time);
+            });
+
+            if (conflict) {
+                errorDiv.classList.remove('hidden');
+                errorMsg.innerText = `[${conflict.name}] 수업과 시간이 겹칩니다.`;
+                setSaveButton(false, "중복 발생");
+            } else {
+                errorDiv.classList.add('hidden');
+                setSaveButton(true, currentClassId ? "수정사항 저장" : "개설 완료");
+            }
+        }
+
+        function setSaveButton(enabled, text) {
+            const btn = document.getElementById('btn-save');
+            btn.disabled = !enabled;
+            btn.innerText = text;
+            btn.className = enabled ? "flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition transform active:scale-95" : "flex-1 bg-slate-300 text-white font-black py-4 rounded-2xl cursor-not-allowed transition";
+        }
+
+        async function openEditModal(mode, id = null) {
+            currentClassId = id;
+            const modal = document.getElementById('edit-modal');
+            const title = document.getElementById('modal-title-text');
+            if(mode === 'update') {
+                const c = classes.find(x => x.id === id);
+                title.innerText = "수업 정보 수정";
+                document.getElementById('cls-name').value = c.name;
+                document.getElementById('cls-day').value = c.day_of_week;
+                document.getElementById('cls-start').value = c.start_time;
+                document.getElementById('cls-end').value = c.end_time;
+                document.getElementById('cls-google-id').value = c.google_folder_id || '';
+            } else {
+                title.innerText = "신규 수업 개설";
+                document.getElementById('cls-name').value = '';
+                document.getElementById('cls-day').value = '월요일';
+                document.getElementById('cls-start').value = '14:00';
+                document.getElementById('cls-end').value = '16:00';
+                document.getElementById('cls-google-id').value = '';
+            }
+            modal.classList.remove('hidden');
+            validateTime();
+        }
+
+        async function saveClass() {
+            const name = document.getElementById('cls-name').value.trim();
+            if(!name) return alert("수업 명칭을 입력해주세요.");
+
+            const payload = { 
+                name, 
+                day_of_week: document.getElementById('cls-day').value, 
+                start_time: document.getElementById('cls-start').value, 
+                end_time: document.getElementById('cls-end').value, 
+                google_folder_id: document.getElementById('cls-google-id').value.trim() || null
+            };
+
+            const btn = document.getElementById('btn-save');
+            const originalText = btn.innerText;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...';
+            btn.disabled = true;
+
+            try {
+                let res;
+                if(currentClassId) {
+                    res = await _supabase.from('classes').update(payload).eq('id', currentClassId).select();
+                } else {
+                    res = await _supabase.from('classes').insert([payload]).select();
+                }
+
+                if(res.error) throw res.error;
+                
+                closeModal('edit-modal');
+                await init(); // Refresh Grid
+                
+            } catch(e) {
+                console.error("Save Failed:", e);
+                // Schema Error Hint
+                if(e.code === '42703') alert("저장 실패: DB에 시간 설정 컬럼이 없습니다. SQL 업데이트를 진행해주세요.");
+                else alert("저장 실패: " + e.message);
+                
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         }
 
         function extractFolderId(el) {
@@ -170,49 +303,20 @@
             }
         }
 
-        async function openEditModal(mode, id = null) {
-            currentClassId = id;
-            const modal = document.getElementById('edit-modal');
-            const title = document.getElementById('modal-title-text');
-            
-            if(mode === 'update') {
-                const c = classes.find(x => x.id === id);
-                title.innerText = "수업 정보 수정";
-                document.getElementById('cls-name').value = c.name;
-                document.getElementById('cls-day').value = c.day_of_week;
-                document.getElementById('cls-slot').value = c.time_slot;
-                document.getElementById('cls-google-id').value = c.google_folder_id || '';
-            } else {
-                title.innerText = "신규 수업 개설";
-                document.getElementById('cls-name').value = '';
-                document.getElementById('cls-google-id').value = '';
-            }
-            modal.classList.remove('hidden');
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        
+        async function deleteClass(id) { 
+            if(confirm("이 수업을 완전히 삭제하시겠습니까?\n(배정된 수강생 정보도 함께 해제됩니다)")) { 
+                const { error } = await _supabase.from('classes').delete().eq('id', id);
+                if(error) alert("삭제 실패: " + error.message);
+                else await init(); 
+            } 
         }
-
-        async function saveClass() {
-            const name = document.getElementById('cls-name').value.trim();
-            const googleId = document.getElementById('cls-google-id').value.trim();
-            if(!name) return alert("이름 필수!");
-
-            const payload = { 
-                name, 
-                day_of_week: document.getElementById('cls-day').value, 
-                time_slot: document.getElementById('cls-slot').value, 
-                google_folder_id: googleId 
-            };
-
-            if(currentClassId) await _supabase.from('classes').update(payload).eq('id', currentClassId);
-            else await _supabase.from('classes').insert([payload]);
-            
-            closeModal('edit-modal');
-            init();
-        }
-
+        
         async function openAssign(cid) {
             currentClassId = cid;
             const cls = classes.find(c => c.id === cid);
-            document.getElementById('assign-modal-title').innerText = `[${cls.name}] 배정`;
+            document.getElementById('assign-modal-title').innerText = `[${cls.name}] 수강생 배정`;
             const { data } = await _supabase.from('class_members').select('student_id').eq('class_id', cid);
             currentMemberSet = new Set(data ? data.map(m => m.student_id) : []);
             filterGrade('all');
@@ -232,32 +336,25 @@
             let filtered = students;
             if(currentGrade !== 'all') filtered = students.filter(s => s.grade === currentGrade);
             if(search) filtered = filtered.filter(s => s.name.toLowerCase().includes(search));
-
             pool.innerHTML = filtered.map(s => {
                 const isMember = currentMemberSet.has(s.username);
-                return `
-                <div class="flex justify-between items-center p-4 rounded-2xl border ${isMember ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'}">
-                    <span class="text-sm font-black text-slate-700">${s.name} <small class="text-indigo-400 ml-1">${s.grade}</small></span>
-                    <button onclick="toggleMembership('${s.username}', this)" class="text-3xl">
-                        ${isMember ? '<i class="fa-solid fa-circle-check text-indigo-600"></i>' : '<i class="fa-solid fa-circle-plus text-slate-200"></i>'}
-                    </button>
-                </div>`;
+                return `<div class="flex justify-between items-center p-4 rounded-2xl border ${isMember ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'} transition-all"><span class="text-sm font-black text-slate-700">${s.name} <small class="text-indigo-400 ml-1 font-bold">${s.grade}</small></span><button onclick="toggleMembership('${s.username}', this)" class="text-3xl hover:scale-110 transition active:scale-95">${isMember ? '<i class="fa-solid fa-circle-check text-indigo-600"></i>' : '<i class="fa-solid fa-circle-plus text-slate-200"></i>'}</button></div>`;
             }).join('');
         }
 
         async function toggleMembership(sid, btn) {
-            if(currentMemberSet.has(sid)) {
-                await _supabase.from('class_members').delete().match({class_id:currentClassId, student_id:sid});
-                currentMemberSet.delete(sid);
-            } else {
-                await _supabase.from('class_members').insert({class_id:currentClassId, student_id:sid});
-                currentMemberSet.add(sid);
-            }
-            renderStudentPool();
+            try {
+                if(currentMemberSet.has(sid)) {
+                    await _supabase.from('class_members').delete().match({class_id:currentClassId, student_id:sid});
+                    currentMemberSet.delete(sid);
+                } else {
+                    await _supabase.from('class_members').insert({class_id:currentClassId, student_id:sid});
+                    currentMemberSet.add(sid);
+                }
+                renderStudentPool();
+            } catch(e) { console.error("Membership Error", e); }
         }
-
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        async function deleteClass(id) { if(confirm("삭제?")) { await _supabase.from('classes').delete().eq('id', id); init(); } }
+        
         init();
     </script>
 </body>
