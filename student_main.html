@@ -17,7 +17,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&family=Rubik+Glitch&family=Bangers&family=Exo+2:ital,wght@1,900&family=Nosifer&family=Creepster&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #334151; user-select: none; }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; } /* 가로 스크롤바 추가 */
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         
         .elite-card { background: white; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #f1f5f9; transition: transform 0.2s; }
         .elite-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
@@ -27,7 +28,7 @@
         .inbox-blink { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } }
 
-        /* V13.5 CHAOS ENGINE CSS (Ported for Student View) */
+        /* V13.5 CHAOS ENGINE CSS */
         .emblem-stage-container { perspective: 1000px; overflow: visible !important; z-index: 20; }
         .obj-root { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 0; height: 0; }
         .effect-wrapper { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform, filter; width: 0; height: 0; }
@@ -44,10 +45,43 @@
         .loader { border: 3px solid #f1f5f9; border-top: 3px solid #6366f1; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* 알림 깜빡임 애니메이션 (숙제 알림용) */
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-        .homework-blink { animation: pulse-red 2s infinite; position: relative; }
-        .homework-blink::after { content: ''; position: absolute; top: 0; right: 0; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1px solid white; }
+        /* [Elite Logic] 숙제 미제출 시 무시무시한 효과 */
+        @keyframes scary-pulse { 
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); border-color: #f87171; transform: scale(1); } 
+            50% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); border-color: #ef4444; transform: scale(1.05); } 
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); border-color: #f87171; transform: scale(1); } 
+        }
+        .homework-scary { 
+            animation: scary-pulse 0.8s infinite !important; 
+            background-color: #fee2e2 !important; 
+            color: #dc2626 !important;
+            border: 2px solid #ef4444 !important;
+            z-index: 50;
+        }
+        .homework-badge {
+            position: absolute; top: -8px; right: -8px; background: #dc2626; color: white;
+            font-size: 11px; font-weight: 900; padding: 3px 7px; border-radius: 99px; border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 60;
+        }
+
+        /* [NEW] Resizable Popup Style */
+        .resizable-popup {
+            width: 80vw; /* 기본 넓게 */
+            height: 85vh; /* 기본 길게 */
+            max-width: 98vw;
+            max-height: 98vh;
+            min-width: 320px;
+            min-height: 400px;
+            resize: both; /* ★ 크기 조절 활성화 */
+            overflow: auto; /* ★ 스크롤바 활성화 */
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border: 1px solid #cbd5e1;
+        }
     </style>
 </head>
 <body class="pb-20">
@@ -59,28 +93,29 @@
             <span class="font-bold text-slate-700 tracking-tighter">Beyond Math</span>
         </div>
         <div class="flex items-center gap-3">
-            <button id="btn-homework-inbox" onclick="openHomeworkModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition flex items-center justify-center relative">
-                <i class="fa-solid fa-book-open"></i>
-            </button>
             <button onclick="openFeedbackList()" id="btn-feed" class="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center relative"><i class="fa-solid fa-bell"></i></button>
             <button onclick="logout()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center"><i class="fa-solid fa-power-off"></i></button>
         </div>
     </nav>
 
-    <div id="homework-modal" class="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
-            <div class="p-4 border-b border-slate-100 bg-teal-50 flex justify-between items-center">
-                <h3 class="font-black text-teal-800 flex items-center gap-2"><i class="fa-solid fa-book-open"></i> 선생님의 쪽지(숙제)</h3>
-                <button onclick="closeHomeworkModal()" class="w-8 h-8 rounded-full bg-white text-teal-300 hover:text-teal-600 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+    <div id="emoji-modal" class="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-[280px] rounded-3xl p-6 shadow-2xl text-center">
+            <h4 class="font-black text-slate-800 mb-4">숙제함 이모지 변경</h4>
+            <div class="grid grid-cols-4 gap-3 mb-6">
+                <button onclick="saveEmoji('📢')" class="text-2xl hover:scale-125 transition">📢</button>
+                <button onclick="saveEmoji('🔥')" class="text-2xl hover:scale-125 transition">🔥</button>
+                <button onclick="saveEmoji('⭐')" class="text-2xl hover:scale-125 transition">⭐</button>
+                <button onclick="saveEmoji('🍀')" class="text-2xl hover:scale-125 transition">🍀</button>
+                <button onclick="saveEmoji('💖')" class="text-2xl hover:scale-125 transition">💖</button>
+                <button onclick="saveEmoji('🐱')" class="text-2xl hover:scale-125 transition">🐱</button>
+                <button onclick="saveEmoji('🎯')" class="text-2xl hover:scale-125 transition">🎯</button>
+                <button onclick="saveEmoji('🚀')" class="text-2xl hover:scale-125 transition">🚀</button>
             </div>
-            <div id="homework-list-body" class="flex-1 overflow-y-auto p-4 space-y-3 bg-white"></div>
-            <div class="p-3 bg-slate-50 border-t border-slate-100 text-center">
-                <button onclick="closeHomeworkModal()" class="w-full py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-teal-200">확인했습니다</button>
-            </div>
+            <button onclick="closeEmojiModal()" class="text-xs font-bold text-slate-400 underline">닫기</button>
         </div>
     </div>
 
-    <div id="detail-modal" class="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="detail-modal" class="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-100 opacity-100">
             <div id="dm-header" class="p-5 border-b border-slate-100 bg-white flex justify-between items-start">
                 <div>
@@ -95,6 +130,16 @@
             </div>
             <div id="dm-footer" class="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
                 </div>
+        </div>
+    </div>
+
+    <div id="homework-popup-modal" class="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="resizable-popup">
+            <div class="absolute top-2 right-2 z-50 flex gap-2">
+                <div class="bg-slate-800/80 text-white text-[10px] px-2 py-1 rounded backdrop-blur pointer-events-none">↘ 드래그하여 크기 조절</div>
+                <button onclick="closeHomeworkPopup()" class="w-8 h-8 bg-white/90 rounded-full text-slate-500 hover:text-red-500 flex items-center justify-center shadow-sm backdrop-blur transition border border-slate-200"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <iframe id="homework-iframe" src="" class="w-full h-full border-none"></iframe>
         </div>
     </div>
 
@@ -157,11 +202,9 @@
                         <div class="text-[9px] text-slate-400 font-bold" id="xp-remain">남은 XP: --</div>
                     </div>
                 </div>
-
                 <div class="relative w-full h-40 flex items-center justify-center my-4 emblem-stage-container">
                     <div id="emblem-stage" class="w-32 h-32 relative flex items-center justify-center transition-transform hover:scale-110 duration-500"></div>
                 </div>
-
                 <div class="space-y-3">
                     <div>
                         <div class="flex justify-between text-[10px] font-bold mb-1">
@@ -172,7 +215,6 @@
                             <div id="xp-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 w-0 transition-all duration-1000"></div>
                         </div>
                     </div>
-                    
                     <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
                         <div>
                             <span class="text-[11px] font-bold text-slate-500 block">현재 자산 (CP)</span>
@@ -190,16 +232,27 @@
         </div>
 
         <div class="lg:col-span-5 space-y-6">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
                 <button onclick="openSpecialList()" id="btn-gift" class="elite-card p-4 flex flex-col items-center justify-center gap-2 hover:bg-pink-50 transition border-l-4 border-l-pink-500 relative">
                     <span class="text-2xl">🎁</span>
-                    <div class="text-sm font-bold text-slate-700">특별 과제함</div>
-                    <span id="badge-gift" class="hidden absolute top-2 right-2 bg-red-500 text-white text-[9px] px-1.5 rounded-full animate-bounce">N</span>
+                    <div class="text-[11px] font-bold text-slate-700">특별 과제함</div>
+                    <span id="badge-gift" class="hidden absolute top-2 right-2 bg-red-500 text-white text-[9px] px-1.5 rounded-full animate-bounce">0</span>
                 </button>
-                <button onclick="openFeedbackList()" id="btn-feed" class="elite-card p-4 flex flex-col items-center justify-center gap-2 hover:bg-blue-50 transition border-l-4 border-l-blue-500 relative">
+
+                <button id="btn-homework-inbox-main" 
+                        onclick="openHomeworkPopup()" 
+                        oncontextmenu="event.preventDefault(); openEmojiModal();"
+                        class="elite-card p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition border-l-4 border-l-slate-400 relative">
+                    <span id="homework-inbox-emoji" class="text-2xl">📢</span>
+                    <div class="text-[11px] font-bold text-slate-700">숙제 알림함</div>
+                    <span id="badge-homework-inbox" class="hidden homework-badge">0</span>
+                    <div class="absolute bottom-1 right-1 opacity-20 text-[6px]">long-press</div>
+                </button>
+
+                <button onclick="openFeedbackList()" id="btn-feed-stat" class="elite-card p-4 flex flex-col items-center justify-center gap-2 hover:bg-blue-50 transition border-l-4 border-l-blue-500 relative">
                     <span class="text-2xl">📬</span>
-                    <div class="text-sm font-bold text-slate-700">메시지함</div>
-                    <span id="badge-feed" class="hidden absolute top-2 right-2 bg-blue-500 text-white text-[9px] px-1.5 rounded-full animate-bounce">N</span>
+                    <div class="text-[11px] font-bold text-slate-700">메시지함</div>
+                    <span id="badge-feed" class="hidden absolute top-2 right-2 bg-blue-500 text-white text-[9px] px-1.5 rounded-full animate-bounce">0</span>
                 </button>
             </div>
             
@@ -244,7 +297,6 @@
                     <div class="text-center py-10"><div class="loader"></div></div>
                 </div>
             </div>
-            
             <div class="text-center pb-4 flex justify-center gap-4">
                 <button onclick="openPwModal()" class="text-xs text-slate-400 hover:text-indigo-500 underline flex items-center gap-1">🔒 비번변경</button>
                 <span class="text-xs text-slate-300">|</span>
@@ -263,236 +315,119 @@
         window.addEventListener('message', (event) => { if (event.data === 'mission_complete') location.reload(); });
         function logout() { sessionStorage.clear(); location.href = 'index.html'; }
 
+        // --- 이모지 커스텀 로직 ---
+        function openEmojiModal() { document.getElementById('emoji-modal').classList.remove('hidden'); }
+        function closeEmojiModal() { document.getElementById('emoji-modal').classList.add('hidden'); }
+        function saveEmoji(emoji) {
+            localStorage.setItem(`emoji_${user.username}`, emoji);
+            document.getElementById('homework-inbox-emoji').innerText = emoji;
+            closeEmojiModal();
+        }
+        function loadSavedEmoji() {
+            const saved = localStorage.getItem(`emoji_${user.username}`);
+            if(saved) document.getElementById('homework-inbox-emoji').innerText = saved;
+        }
+
+        // 롱프레스 감지 (모바일용)
+        let longPressTimer;
+        const mainBtn = document.getElementById('btn-homework-inbox-main');
+        mainBtn.addEventListener('mousedown', () => { longPressTimer = setTimeout(openEmojiModal, 800); });
+        mainBtn.addEventListener('mouseup', () => clearTimeout(longPressTimer));
+        mainBtn.addEventListener('touchstart', () => { longPressTimer = setTimeout(openEmojiModal, 800); });
+        mainBtn.addEventListener('touchend', () => clearTimeout(longPressTimer));
+
         async function init() { 
+            loadSavedEmoji();
             await loadUserInfo(); 
             loadBooks(); 
             checkNotifications(); 
-            checkHomeworks(); 
+            checkHomeworkInbox(); 
+            setInterval(checkNotifications, 30000);
+            setInterval(checkHomeworkInbox, 30000); 
         }
 
-        async function checkHomeworks() {
-            const btn = document.getElementById('btn-homework-inbox');
+        // --- ★ [NEW] Popup Control Functions ★ ---
+        function openHomeworkPopup() {
+            const iframe = document.getElementById('homework-iframe');
+            iframe.src = 'student_homework_inbox.html';
+            document.getElementById('homework-popup-modal').classList.remove('hidden');
+        }
+
+        function closeHomeworkPopup() {
+            document.getElementById('homework-popup-modal').classList.add('hidden');
+            document.getElementById('homework-iframe').src = ''; // 리소스 해제
+            checkHomeworkInbox(); // 닫을 때 배지 갱신 (숙제 했을 수 있으니)
+        }
+
+        // --- ★ [Elite Logic] 숙제 알림함 전용 체크 (미제출 감지) ★ ---
+        async function checkHomeworkInbox() {
+            const btn = document.getElementById('btn-homework-inbox-main');
+            const badge = document.getElementById('badge-homework-inbox');
+            
+            // 미제출(status: pending or incomplete) 조회
             const { count, error } = await _supabase.from('homework_messages')
                 .select('*', { count: 'exact', head: true })
-                .eq('student_id', user.username) 
-                .eq('is_read', false);
+                .eq('student_id', user.username)
+                .or('status.eq.pending,status.eq.incomplete');
 
             if (!error && count > 0) {
-                btn.classList.add('homework-blink'); 
-                btn.classList.remove('bg-slate-100', 'text-slate-400');
-                btn.classList.add('bg-teal-100', 'text-teal-600');
+                // 무시무시한 핏빛 맥동 효과 및 미제출 개수 표시
+                btn.classList.add('homework-scary');
+                btn.classList.remove('hover:bg-slate-50', 'border-l-slate-400');
+                badge.innerText = count;
+                badge.classList.remove('hidden');
             } else {
-                btn.classList.remove('homework-blink');
-                btn.classList.add('bg-slate-100', 'text-slate-400');
-                btn.classList.remove('bg-teal-100', 'text-teal-600');
+                btn.classList.remove('homework-scary');
+                btn.classList.add('hover:bg-slate-50', 'border-l-slate-400');
+                badge.classList.add('hidden');
+                badge.innerText = '0';
             }
         }
 
-        async function openHomeworkModal() {
-            const modal = document.getElementById('homework-modal');
-            const listBody = document.getElementById('homework-list-body');
-            modal.classList.remove('hidden');
-
-            listBody.innerHTML = '<div class="text-center py-10 text-teal-500"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+        // --- ★ [MODIFIED] 통합 알림 체크 (숙제 메시지 제외) ★ ---
+        async function checkNotifications() {
+            const { count: gift } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned');
+            if(gift > 0) { document.getElementById('badge-gift').innerText=gift; document.getElementById('badge-gift').classList.remove('hidden'); }
             
-            const { data } = await _supabase.from('homework_messages')
-                .select('*')
-                .eq('student_id', user.username)
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-            if (!data || data.length === 0) {
-                listBody.innerHTML = '<div class="text-center py-10 text-slate-300 text-xs font-bold">받은 숙제 메세지가 없습니다.</div>';
-                return;
-            }
-
-            listBody.innerHTML = data.map(msg => {
-                const dateStr = new Date(msg.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-                const readStyle = msg.is_read ? 'opacity-60 bg-slate-50' : 'bg-white border-l-4 border-teal-500 shadow-sm';
-                const iconColor = msg.is_read ? 'text-slate-300' : 'text-teal-500';
-
-                return `
-                <div onclick="markAsRead(${msg.id}, this)" class="p-4 rounded-xl border border-slate-100 mb-2 cursor-pointer transition active:scale-95 ${readStyle}">
-                    <div class="flex justify-between items-start mb-1">
-                        <span class="text-[10px] font-black text-slate-400 tracking-wide">${dateStr}</span>
-                        <i class="fa-solid fa-envelope ${iconColor} text-xs"></i>
-                    </div>
-                    <p class="text-sm font-bold text-slate-700 whitespace-pre-wrap leading-relaxed">${msg.content}</p>
-                </div>`;
-            }).join('');
+            // ★ [수정됨] 숙제 메시지(homework_messages) 제외 (피드백/시즌만 카운트)
+            const { count: f1 } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('student_id', user.username).neq('status', 'pending').eq('is_read', false);
+            const { count: f2 } = await _supabase.from('season_messages').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_read', false);
+            
+            const total = (f1 || 0) + (f2 || 0); // homework_messages 제거됨
+            
+            if(total > 0) { document.getElementById('badge-feed').innerText=total; document.getElementById('badge-feed').classList.remove('hidden'); document.getElementById('btn-feed').classList.add('inbox-blink'); }
+            else { document.getElementById('badge-feed').classList.add('hidden'); document.getElementById('btn-feed').classList.remove('inbox-blink'); }
+            
+            const { count: regularCount } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_special', false).eq('is_request', false).eq('status', 'assigned');
+            if(regularCount > 0) { document.getElementById('badge-regular').innerText = regularCount; document.getElementById('badge-regular').classList.remove('hidden'); }
+            else { document.getElementById('badge-regular').classList.add('hidden'); }
+            
+            const { count: requestCount } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_request', true).eq('status', 'assigned');
+            if(requestCount > 0) { document.getElementById('badge-request').innerText = requestCount; document.getElementById('badge-request').classList.remove('hidden'); }
+            else { document.getElementById('badge-request').classList.add('hidden'); }
         }
 
-        async function markAsRead(id, el) {
-            el.classList.add('opacity-60', 'bg-slate-50');
-            el.classList.remove('bg-white', 'border-l-4', 'border-teal-500', 'shadow-sm');
-            el.querySelector('.fa-envelope').classList.replace('text-teal-500', 'text-slate-300');
-            await _supabase.from('homework_messages').update({ is_read: true }).eq('id', id);
-            checkHomeworks();
-        }
-
-        function closeHomeworkModal() {
-            document.getElementById('homework-modal').classList.add('hidden');
-            checkHomeworks(); 
-        }
-
-        // --- Generic Detail Modal Logic ---
-        function closeDetailModal() {
-            document.getElementById('detail-modal').classList.add('hidden');
-            checkNotifications(); // Refresh badges on close
-        }
-
-        // --- Updated Open Lists ---
-        
-        // 1. Special List -> Open Detail -> Go to Mission
-        async function openSpecialList() {
-            openModal('🎁 특별 과제'); 
-            const body = document.getElementById('modal-body'); 
-            body.innerHTML = '<div class="loader m-6"></div>';
-            
-            const { data } = await _supabase.from('assignments')
-                .select('*')
-                .eq('student_id', user.username)
-                .eq('is_special', true)
-                .eq('status', 'assigned')
-                .order('deadline', { ascending: true });
-            
-            if (!data.length) { 
-                body.innerHTML = '<div class="text-center text-slate-400 py-10 text-xs">없음</div>'; 
-                return; 
-            }
-            
-            // ★ Changed onClick to openSpecialDetail
-            body.innerHTML = data.map(a => `
-                <div onclick="openSpecialDetail('${a.id}', '${a.title.replace(/'/g, "\\'")}', '${a.reward_points}', '${a.deadline}')" class="p-4 border-b hover:bg-slate-50 cursor-pointer flex justify-between">
-                    <div>
-                        <div class="font-bold text-sm">${a.title}</div>
-                        <div class="text-xs text-slate-500">보상: ${a.reward_points}P</div>
-                    </div>
-                    <span>💣</span>
-                </div>`
-            ).join('');
-        }
-
-        function openSpecialDetail(id, title, reward, deadline) {
-            document.getElementById('dm-badge').innerText = 'SPECIAL MISSION';
-            document.getElementById('dm-badge').className = 'text-[10px] font-black px-2 py-1 rounded bg-pink-100 text-pink-600 mb-2 inline-block';
-            document.getElementById('dm-title').innerText = title;
-            document.getElementById('dm-date').innerText = '마감: ' + new Date(deadline).toLocaleString();
-            document.getElementById('dm-body').innerHTML = `<div class="text-center py-6"><div class="text-4xl mb-4">🎁</div><div class="font-bold text-slate-700">미션을 완료하고 <span class="text-amber-500">${reward}P</span>를 획득하세요!</div></div>`;
-            
-            // Footer Action: Go To Mission
-            document.getElementById('dm-footer').innerHTML = `<button onclick="goToMission(${id})" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-pink-200">🔥 미션 도전하기</button>`;
-            
-            document.getElementById('detail-modal').classList.remove('hidden');
-        }
-
-        function goToMission(id) {
-            location.href = `student_mission.html?id=${id}`;
-        }
-
-        // 2. Feedback List -> Open Detail -> Delete
-        async function openFeedbackList() {
-            openModal('📬 통합 메시지함'); 
-            const body = document.getElementById('modal-body'); 
-            body.innerHTML = '<div class="loader m-6"></div>';
-            
-            const { data: solutions } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending');
-            const { data: seasonMsgs } = await _supabase.from('season_messages').select('*').eq('student_id', user.username);
-            const { data: homeworkMsgs } = await _supabase.from('homework_messages').select('*').eq('student_id', user.username);
-
-            const all = [ 
-                ...(solutions || []).map(m => ({ ...m, cat: '숙제', title: `📝 피드백 (No.${m.problem_num})`, content: m.teacher_feedback || '내용 없음' })), 
-                ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌', title: '🏆 시즌 알림', content: m.message })),
-                ...(homeworkMsgs || []).map(m => ({ ...m, cat: '과제알림', title: '🔔 숙제 알림', content: m.content }))
-            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-            if (all.length === 0) { body.innerHTML = '<div class="text-center py-10 text-slate-400">메시지가 없습니다.</div>'; return; }
-            
-            // ★ Changed onClick to openMessageDetail
-            body.innerHTML = all.map(m => {
-                const isRead = m.is_read; 
-                const dateStr = new Date(m.created_at).toLocaleDateString();
-                const bgClass = !isRead ? (m.cat==='숙제'?'bg-blue-50/30':(m.cat==='시즌'?'bg-indigo-50/30':'bg-teal-50/30')) : '';
-                
-                // Safe content escape
-                const safeContent = (m.content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n');
-                
-                return `<div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${bgClass}" onclick="openMessageDetail('${m.cat}', ${m.id}, '${m.title}', '${safeContent}', '${m.created_at}')">
-                    <div class="flex justify-between items-start mb-1">
-                        <span class="text-[10px] font-black text-slate-500">${m.title}</span>
-                        <span class="text-[10px] text-slate-400">${dateStr}</span>
-                    </div>
-                    <div class="text-sm font-bold text-slate-700 whitespace-pre-wrap line-clamp-2">${m.content}</div>
-                </div>`;
-            }).join('');
-        }
-
-        async function openMessageDetail(cat, id, title, content, date) {
-            // Mark as Read Immediately
-            markRead(cat, id);
-
-            document.getElementById('dm-badge').innerText = cat.toUpperCase();
-            document.getElementById('dm-badge').className = 'text-[10px] font-black px-2 py-1 rounded bg-slate-100 text-slate-500 mb-2 inline-block';
-            document.getElementById('dm-title').innerText = title;
-            document.getElementById('dm-date').innerText = new Date(date).toLocaleString();
-            document.getElementById('dm-body').innerText = content; // innerText for safety
-            
-            // Footer Action: Delete
-            document.getElementById('dm-footer').innerHTML = `<button onclick="deleteMsgAndClose('${cat}', ${id})" class="w-full bg-slate-200 hover:bg-red-100 hover:text-red-500 text-slate-500 font-bold py-3 rounded-xl transition">🗑️ 삭제하기</button>`;
-            
-            document.getElementById('detail-modal').classList.remove('hidden');
-        }
-
-        async function markRead(cat, id) { 
-            let table = 'student_solutions'; if (cat === '시즌') table = 'season_messages'; else if (cat === '과제알림') table = 'homework_messages';
-            await _supabase.from(table).update({ is_read: true }).eq('id', id); 
-            // Don't refresh whole list here to avoid modal flicker, just update stats bg
-            checkNotifications(); 
-        }
-
-        async function deleteMsgAndClose(cat, id) {
-            if(!confirm("정말 삭제하시겠습니까?")) return;
-            let table = 'student_solutions'; if (cat === '시즌') table = 'season_messages'; else if (cat === '과제알림') table = 'homework_messages';
-            
-            const { error } = await _supabase.from(table).delete().eq('id', id); 
-            if(error) alert(error.message); 
-            else {
-                closeDetailModal();
-                openFeedbackList(); // Refresh list
-            }
-        }
-
-        // --- Existing Functions ---
         async function loadUserInfo() {
             try {
                 const { data: userData, error: userErr } = await _supabase.from('users').select('*').eq('username', user.username).single();
                 if(userErr || !userData) throw new Error("유저 정보 로드 실패");
-
                 currentUserData = userData;
-
                 document.getElementById('s-name').innerText = userData.name;
                 document.getElementById('s-total-lv').innerText = Math.floor((userData.total_xp || 0) / 1000);
                 document.getElementById('s-cp').innerText = (userData.cp || 0).toLocaleString();
                 document.getElementById('s-season-xp').innerText = (userData.season_xp || 0).toLocaleString();
-
                 const { data: season } = await _supabase.from('seasons').select('*').eq('is_current', true).maybeSingle();
                 document.getElementById('s-season-name').innerText = season ? `◈ ${season.season_name}` : '시즌 준비중';
-
                 const { data: allTiers } = await _supabase.from('tier_rules').select('*').order('min_xp');
-                const myXp = userData.season_xp || 0;
-
+                const myXp = userData.season_xp || 0; // [CHECKED] Season XP Used
                 let currentTier = allTiers?.find(t => myXp >= t.min_xp && myXp <= t.max_xp);
                 if (currentTier) {
                     document.getElementById('tier-display-name').innerText = currentTier.tier_name;
                     document.getElementById('s-max-xp').innerText = currentTier.max_xp.toLocaleString();
                     document.getElementById('xp-remain').innerText = `다음 티어까지: ${(currentTier.max_xp - myXp).toLocaleString()} XP`;
-                    
                     let progress = Math.min(100, (myXp / currentTier.max_xp) * 100);
                     setTimeout(() => { document.getElementById('xp-bar').style.width = `${progress}%`; }, 300);
-
-                    if (currentTier.emblem_json && currentTier.emblem_json.layers) {
-                        renderEmblem(currentTier.emblem_json.layers, 0.4);
-                    }
+                    if (currentTier.emblem_json && currentTier.emblem_json.layers) { renderEmblem(currentTier.emblem_json.layers, 0.4); }
                 }
                 loadChart(userData.stats || {});
             } catch (e) { console.error(e); }
@@ -510,117 +445,96 @@
                 if(l.anim.vital && l.anim.vital.length > 0) {
                     let vitals = typeof l.anim.vital[0] === 'string' ? l.anim.vital.map(t=>({type:t, speed:10})) : l.anim.vital;
                     vitals.forEach(e => { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; const speed = (21 - (e.speed || 10)) / 10; wrapper.style.animation = `${e.type} ${speed}s infinite ease-in-out`; currentContainer.appendChild(wrapper); currentContainer = wrapper; });
-                } else if(l.anim.vital && l.anim.vital.on) { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; wrapper.style.animation = `${l.anim.vital.type} ${l.anim.vital.speed/10}s infinite ease-in-out`; currentContainer.appendChild(wrapper); currentContainer = wrapper; }
-                if(l.anim.fx && l.anim.fx.length > 0) {
-                    let fxs = typeof l.anim.fx[0] === 'string' ? l.anim.fx.map(t=>({type:t, speed:10})) : l.anim.fx;
-                    fxs.forEach(e => { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; const speed = (21 - (e.speed || 10)) / 10; wrapper.style.animation = `${e.type} ${speed}s infinite`; currentContainer.appendChild(wrapper); currentContainer = wrapper; });
-                } else if(l.anim.fx && l.anim.fx.on) { const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper'; wrapper.style.animation = `${l.anim.fx.type} ${l.anim.fx.speed/10}s infinite`; currentContainer.appendChild(wrapper); currentContainer = wrapper; }
+                }
                 const spin = document.createElement('div'); spin.className = 'obj-spin';
                 if(l.anim.spin.on) { spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`; }
                 currentContainer.appendChild(spin);
                 const core = document.createElement('div'); core.className = 'obj-core';
-                if(l.style.blendMode) core.style.mixBlendMode = l.style.blendMode; if(l.style.opacity !== undefined) core.style.opacity = l.style.opacity; if(l.style.backdropFilter && l.style.backdropFilter !== 'none') core.style.backdropFilter = l.style.backdropFilter;
                 if (l.type === 'image') { const img = document.createElement('img'); img.src = l.content; img.style.width = `${l.style.size * scaleFactor}px`; img.style.height = 'auto'; core.appendChild(img); } else {
                     core.style.fontSize = `${l.style.size * scaleFactor}px`;
-                    if(l.style.texture !== 'none') { core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text'; if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)'; else if(l.style.texture==='magma') core.style.backgroundImage='linear-gradient(0deg, #ef4444, #000)'; else if(l.style.texture==='silver') core.style.backgroundImage='linear-gradient(135deg, #e2e8f0, #64748b)'; else if(l.style.texture==='neon') core.style.backgroundImage='linear-gradient(90deg, #22d3ee, #a855f7)'; } else { core.style.color = l.style.color; }
+                    if(l.style.texture !== 'none') { core.style.color='transparent'; core.style.backgroundClip='text'; core.style.webkitBackgroundClip='text'; if(l.style.texture==='gold') core.style.backgroundImage='linear-gradient(135deg, #fef08a, #d97706)'; } else { core.style.color = l.style.color; }
                     if(l.type==='icon') core.innerHTML = `<i class="${l.content}"></i>`; else if(l.type==='text') { core.innerText = l.content; core.style.fontFamily = "'Black Han Sans', sans-serif"; } else core.innerText = l.content;
                 }
                 spin.appendChild(core); root.appendChild(orbit); stage.appendChild(root);
             });
         }
 
-        // --- Withdraw Logic ---
-        function openWithdrawModal() { document.getElementById('withdraw-modal').classList.remove('hidden'); resetWithdraw(); }
-        function closeWithdrawModal() { document.getElementById('withdraw-modal').classList.add('hidden'); }
-        function resetWithdraw() {
-            const input = document.getElementById('withdraw-input'); input.value = ''; input.disabled = false; document.getElementById('btn-check').classList.remove('hidden'); document.getElementById('btn-send').classList.add('hidden');
-        }
-        function checkWithdraw() {
-            const val = parseInt(document.getElementById('withdraw-input').value);
-            if(!val || val <= 0) return alert("금액을 입력하세요.");
-            if(currentUserData && val > currentUserData.cp) return alert(`잔액이 부족합니다. (보유: ${currentUserData.cp} CP)`);
-            if(val % 100 !== 0) return alert("100원 단위로만 신청 가능합니다.");
-            document.getElementById('withdraw-input').disabled = true; document.getElementById('btn-check').classList.add('hidden'); document.getElementById('btn-send').classList.remove('hidden'); document.getElementById('btn-send').disabled = false; alert("확인 완료! 전송 버튼을 눌러주세요. ❤️");
-        }
-        async function sendWithdraw() {
-            const amount = parseInt(document.getElementById('withdraw-input').value);
-            const { error: deductErr } = await _supabase.rpc('give_points', { p_student_id: user.username, p_xp: 0, p_cp: -amount, p_rule_name: '💳 CP 출금 신청 (선차감)' });
-            if (deductErr) return alert("오류: " + deductErr.message);
-            const { error: insertErr } = await _supabase.from('cp_withdrawals').insert([{ student_id: user.username, amount: amount, status: 'pending' }]);
-            if (insertErr) { await _supabase.rpc('give_points', { p_student_id: user.username, p_xp: 0, p_cp: amount, p_rule_name: '시스템 오류 자동 환불' }); return alert("실패! CP 자동 환불됨."); }
-            alert("신청 완료! 선생님 승인을 기다리세요."); closeWithdrawModal(); loadUserInfo();
-        }
-
+        function openModal(title) { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-title').innerText=title; }
+        function closeModal() { document.getElementById('modal-overlay').style.display='none'; checkNotifications(); }
+        function openPwModal() { document.getElementById('pw-modal').classList.remove('hidden'); }
+        function closePwModal() { document.getElementById('pw-modal').classList.add('hidden'); }
+        function loadChart(s) { const ctx = document.getElementById('statChart').getContext('2d'); if(myRadarChart) myRadarChart.destroy(); myRadarChart = new Chart(ctx, { type: 'radar', data: { labels: ['연산','독해','추론','패턴','속도','안정','실행','태도'], datasets: [{ data: [s.calc||0, s.read||0, s.logic||0, s.pat||0, s.tmp||0, s.stb||0, s.exec||0, s.att||0], backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#4f46e5', pointRadius: 2 }] }, options: { scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, plugins: { legend: { display: false } }, maintainAspectRatio: false } }); }
+        
         async function loadBooks() {
             const { data } = await _supabase.from('student_books').select(`workbook_id, workbooks ( id, title, total_problems, grade_level )`).eq('student_id', user.username).order('created_at', { ascending: false });
             const list = document.getElementById('book-list'); if (!data || data.length === 0) { list.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">교재 없음</div>`; return; }
-            list.innerHTML = data.map(item => `<div class="bg-white p-4 rounded-2xl border-2 border-slate-100 flex flex-col gap-3 shadow-sm hover:border-indigo-200 transition group"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg border border-indigo-100 shadow-sm"><i class="fa-solid fa-book"></i></div><div class="flex-1 min-w-0"><div class="font-bold text-slate-800 text-sm truncate">${item.workbooks.title}</div><div class="text-[10px] text-slate-400 font-medium">자동화 설정 대기중</div></div></div><div class="flex gap-2 mt-1"><button onclick="requestHomework(${item.workbook_id}, '${item.workbooks.title}')" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5 bg-white border-2 border-indigo-100 text-indigo-600 shadow-[0_3px_0_#e0e7ff] active:shadow-none active:translate-y-[3px] active:border-indigo-200 hover:bg-indigo-50"><span>🙋‍♂️</span> 과제 요청</button><button onclick="openSelfXray(${item.workbook_id})" class="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-100 flex items-center justify-center gap-1.5 bg-white border-2 border-rose-100 text-rose-500 shadow-[0_3px_0_#ffe4e6] active:shadow-none active:translate-y-[3px] active:border-rose-200 hover:bg-rose-50"><span>🩺</span> 진단</button></div></div>`).join('');
-        }
-        async function requestHomework(wbId, wbTitle) {
-            if (!confirm(`[${wbTitle}] 과제 생성?`)) return;
-            const { data: config } = await _supabase.from('auto_homework_config').select('*').eq('student_id', user.username).eq('workbook_id', wbId).single();
-            const amount = config ? config.amount_per_time : 20; 
-            const { error } = await _supabase.rpc('request_assignment_student', { p_student_id: user.username, p_workbook_id: wbId, p_title: `[요청] ${wbTitle}`, p_problem_list: Array.from({length: amount}, (_, i) => i + 1) });
-            if (error) alert("실패: " + error.message); else { alert("✅ 생성 완료!"); location.reload(); }
+            // [RESTORED] Diagnostics Button Logic based on Screenshot
+            list.innerHTML = data.map(item => `<div class="bg-white p-4 rounded-2xl border-2 border-slate-100 flex flex-col gap-3 shadow-sm hover:border-indigo-200 transition group"><div class="flex items-center gap-3"><div class=\"w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold border border-indigo-100 shadow-sm\"><i class=\"fa-solid fa-book\"></i></div><div class=\"flex-1 min-w-0\"><div class=\"font-bold text-slate-800 text-sm truncate\">${item.workbooks.title}</div><div class=\"text-[10px] text-slate-400 font-medium\">자동화 설정 대기중</div></div></div><div class=\"flex gap-2 mt-1\"><button onclick=\"requestHomework(${item.workbook_id}, '${item.workbooks.title}')\" class=\"flex-1 py-2.5 rounded-xl text-xs font-bold bg-white border-2 border-indigo-100 text-indigo-600 shadow-[0_3px_0_#e0e7ff] active:shadow-none active:translate-y-[3px]\"><span>🙋‍♂️</span> 과제 요청</button><button onclick=\"openSelfXray(${item.workbook_id})\" class=\"flex-1 py-2.5 rounded-xl text-xs font-bold bg-white border-2 border-rose-100 text-rose-500 shadow-[0_3px_0_#ffe4e6] active:shadow-none active:translate-y-[3px]\"><span>🩺</span> 진단</button></div></div>`).join('');
         }
 
-        function loadChart(s) {
-            const ctx = document.getElementById('statChart').getContext('2d'); if(myRadarChart) myRadarChart.destroy();
-            myRadarChart = new Chart(ctx, { type: 'radar', data: { labels: ['연산','독해','추론','패턴','속도','안정','실행','태도'], datasets: [{ data: [s.calc||0, s.read||0, s.logic||0, s.pat||0, s.tmp||0, s.stb||0, s.exec||0, s.att||0], backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#4f46e5', pointRadius: 2 }] }, options: { scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, plugins: { legend: { display: false } }, maintainAspectRatio: false } });
+        // --- ★ [MODIFIED] 통합 메시지함 로직 (숙제 메시지 제외) ★ ---
+        async function openFeedbackList() {
+            openModal('📬 통합 메시지함'); 
+            const body = document.getElementById('modal-body'); 
+            body.innerHTML = '<div class="loader m-6"></div>';
+            
+            const { data: solutions } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending');
+            const { data: seasonMsgs } = await _supabase.from('season_messages').select('*').eq('student_id', user.username);
+            
+            // 숙제 메시지 조회 로직 삭제됨 (Purely feedback & season)
+
+            const all = [ 
+                ...(solutions || []).map(m => ({ ...m, cat: '숙제피드백', title: `📝 피드백 (No.${m.problem_num})`, content: m.teacher_feedback || '내용 없음' })), 
+                ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌', title: '🏆 시즌 알림', content: m.message }))
+            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (all.length === 0) { body.innerHTML = '<div class="text-center py-10 text-slate-400">메시지가 없습니다.</div>'; return; }
+            
+            body.innerHTML = all.map(m => {
+                const isRead = m.is_read; 
+                const dateStr = new Date(m.created_at).toLocaleDateString();
+                const bgClass = !isRead ? (m.cat==='숙제피드백'?'bg-blue-50/30':(m.cat==='시즌'?'bg-indigo-50/30':'bg-teal-50/30')) : '';
+                const safeContent = (m.content || '').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+                return `<div class="p-4 border-b hover:bg-slate-50 transition cursor-pointer ${bgClass}" onclick="openMessageDetail('${m.cat}', ${m.id}, '${m.title}', '${safeContent}', '${m.created_at}')">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[10px] font-black text-slate-500">${m.title}</span>
+                        <span class="text-[10px] text-slate-400">${dateStr}</span>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700 whitespace-pre-wrap line-clamp-2">${m.content}</div>
+                </div>`;
+            }).join('');
         }
 
-        // --- ★ [MODIFIED] 통합 알림 체크 (숙제함 배지 추가) ★ ---
-        async function checkNotifications() {
-            // 1. 특별 과제 (Gift)
-            const { count: gift } = await _supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_special', true).eq('status', 'assigned');
-            if(gift > 0) { document.getElementById('badge-gift').innerText=gift; document.getElementById('badge-gift').classList.remove('hidden'); }
-            
-            // 2. 통합 메시지 (Feedback + Season + HomeworkMsg)
-            const { count: f1 } = await _supabase.from('student_solutions').select('*', { count: 'exact', head: true }).eq('student_id', user.username).neq('status', 'pending').eq('is_read', false);
-            const { count: f2 } = await _supabase.from('season_messages').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_read', false);
-            const { count: f3 } = await _supabase.from('homework_messages').select('*', { count: 'exact', head: true }).eq('student_id', user.username).eq('is_read', false);
-            const total = (f1 || 0) + (f2 || 0) + (f3 || 0);
-            
-            if(total > 0) { document.getElementById('badge-feed').innerText=total; document.getElementById('badge-feed').classList.remove('hidden'); document.getElementById('btn-feed').classList.add('inbox-blink'); }
-            else { document.getElementById('badge-feed').classList.add('hidden'); document.getElementById('btn-feed').classList.remove('inbox-blink'); }
-
-            // 3. ★ [NEW] 정규 숙제함 배지 (Regular Assignments)
-            // 조건: is_special = false, is_request = false (혹은 null)
-            const { count: regularCount } = await _supabase.from('assignments')
-                .select('*', { count: 'exact', head: true })
-                .eq('student_id', user.username)
-                .eq('is_special', false)
-                .eq('is_request', false) // assuming false for regular
-                .eq('status', 'assigned');
-            
-            if(regularCount > 0) {
-                document.getElementById('badge-regular').innerText = regularCount;
-                document.getElementById('badge-regular').classList.remove('hidden');
-            } else {
-                document.getElementById('badge-regular').classList.add('hidden');
-            }
-
-            // 4. ★ [NEW] 요청 과제함 배지 (Request Assignments)
-            // 조건: is_request = true
-            const { count: requestCount } = await _supabase.from('assignments')
-                .select('*', { count: 'exact', head: true })
-                .eq('student_id', user.username)
-                .eq('is_request', true)
-                .eq('status', 'assigned');
-            
-            if(requestCount > 0) {
-                document.getElementById('badge-request').innerText = requestCount;
-                document.getElementById('badge-request').classList.remove('hidden');
-            } else {
-                document.getElementById('badge-request').classList.add('hidden');
-            }
+        async function openMessageDetail(cat, id, title, content, date) {
+            markRead(cat, id);
+            document.getElementById('dm-badge').innerText = cat.toUpperCase();
+            document.getElementById('dm-badge').className = 'text-[10px] font-black px-2 py-1 rounded bg-slate-100 text-slate-500 mb-2 inline-block';
+            document.getElementById('dm-title').innerText = title;
+            document.getElementById('dm-date').innerText = new Date(date).toLocaleString();
+            document.getElementById('dm-body').innerText = content;
+            document.getElementById('dm-footer').innerHTML = `<button onclick="deleteMsgAndClose('${cat}', ${id})" class="w-full bg-slate-200 hover:bg-red-100 hover:text-red-500 text-slate-500 font-bold py-3 rounded-xl transition">🗑️ 삭제하기</button>`;
+            document.getElementById('detail-modal').classList.remove('hidden');
         }
 
-        function openModal(title) { document.getElementById('modal-overlay').style.display='flex'; document.getElementById('modal-title').innerText=title; }
-        function closeModal() { document.getElementById('modal-overlay').style.display='none'; checkNotifications(); }
-        
-        function openPwModal() { document.getElementById('pw-modal').classList.remove('hidden'); }
-        function closePwModal() { document.getElementById('pw-modal').classList.add('hidden'); }
+        // [★ REPAIRED] 누락된 함수 복구 (모달 닫기)
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+            checkNotifications();
+        }
+
+        async function markRead(cat, id) { 
+            let table = 'student_solutions'; if (cat === '시즌') table = 'season_messages'; 
+            await _supabase.from(table).update({ is_read: true }).eq('id', id); 
+            checkNotifications(); 
+        }
+
+        async function deleteMsgAndClose(cat, id) {
+            if(!confirm("정말 삭제하시겠습니까?")) return;
+            let table = 'student_solutions'; if (cat === '시즌') table = 'season_messages'; 
+            const { error } = await _supabase.from(table).delete().eq('id', id); 
+            if(error) alert(error.message); 
+            else { closeDetailModal(); openFeedbackList(); }
+        }
 
         init();
     </script>

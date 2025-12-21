@@ -187,9 +187,9 @@
 
     <script>
         /**
-         * [System Core] V22.0 Portal Edition
-         * - Added Homework Management navigation functionality.
-         * - Preserved Stamp, Lock, Manual Unlock, and Fixed Layout logic.
+         * [System Core] V22.5 Portal Edition (Added Homework Sync)
+         * - Preserved all previous logic.
+         * - Added 'studentHomeworkMap' for syncing with homework_messages status.
          */
         
         let baseDate = new Date();
@@ -202,6 +202,8 @@
         let selectedRuleIds = new Set();
         let basketData = {}; 
         let lockedStudents = new Set();
+        let studentTestPassMap = {}; 
+        let studentHomeworkMap = {}; // [NEW] Stores homework status (teacher_approved / teacher_rejected)
 
         const dayMap = { '월요일': 0, '화요일': 1, '수요일': 2, '목요일': 3, '금요일': 4, '토요일': 5, '일요일': 6 };
         const dayNamesEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -232,17 +234,24 @@
             document.getElementById('m-class-title').innerText = name;
             document.getElementById('m-class-time').innerText = time;
 
+            // 1. 학생 명단 가져오기
             const { data: members } = await _supabase.from('class_members')
                 .select('student_id, last_evaluation_date, users(name, grade, tier)') 
                 .eq('class_id', id);
 
             const today = new Date().toISOString().split('T')[0];
+            const todayStart = today + 'T00:00:00';
             
             classStudentsMap = {};
             lockedStudents.clear();
+            studentTestPassMap = {}; 
+            studentHomeworkMap = {}; // Reset
+
+            const studentIds = []; 
 
             if (members) {
                 members.forEach(m => {
+                    studentIds.push(m.student_id); 
                     if (m.last_evaluation_date === today) {
                         lockedStudents.add(m.student_id);
                     }
@@ -253,6 +262,42 @@
                         tier: m.users.tier || 'Unranked' 
                     };
                 });
+            }
+
+            // 2. [Test Logic]
+            if (studentIds.length > 0) {
+                const { data: testRecs } = await _supabase
+                    .from('test_assignment_records')
+                    .select('student_id, status, current_round')
+                    .in('student_id', studentIds)
+                    .gte('updated_at', todayStart);
+
+                if (testRecs) {
+                    testRecs.forEach(r => {
+                        let passes = 0;
+                        if (r.status === 'completed') passes = 99; 
+                        else if (r.current_round > 1) passes = r.current_round - 1;
+                        if ((studentTestPassMap[r.student_id] || 0) < passes) {
+                            studentTestPassMap[r.student_id] = passes;
+                        }
+                    });
+                }
+
+                // 3. [NEW] Homework Status Logic
+                const { data: hwMsgs } = await _supabase
+                    .from('homework_messages')
+                    .select('student_id, status')
+                    .eq('class_id', id)
+                    .gte('created_at', todayStart); // Today's homework messages
+
+                if (hwMsgs) {
+                    hwMsgs.forEach(msg => {
+                        // Priority: teacher_rejected or teacher_approved
+                        if (msg.status === 'teacher_approved' || msg.status === 'teacher_rejected') {
+                            studentHomeworkMap[msg.student_id] = msg.status;
+                        }
+                    });
+                }
             }
             
             renderStudentList();
@@ -330,9 +375,34 @@
         function selectStudent(id) {
             selectedStudentData = classStudentsMap[id];
             selectedRuleIds.clear(); 
+
+            // 1. Diagnostic Test Logic
+            const passCount = studentTestPassMap[id] || 0;
+            if (passCount > 0) {
+                allRules.forEach(r => {
+                    if (r.name === '진단평가1' && passCount >= 1) selectedRuleIds.add(r.id);
+                    if (r.name === '진단평가2' && passCount >= 2) selectedRuleIds.add(r.id);
+                    if (r.name === '진단평가3' && passCount >= 3) selectedRuleIds.add(r.id);
+                    if (r.name === '진단평가4' && passCount >= 4) selectedRuleIds.add(r.id);
+                    if (r.name === '진단평가5' && passCount >= 5) selectedRuleIds.add(r.id);
+                });
+            }
+
+            // 2. [NEW] Homework Status Logic
+            const hwStatus = studentHomeworkMap[id];
+            if (hwStatus) {
+                allRules.forEach(r => {
+                    if (r.name === '숙제 해옴' && hwStatus === 'teacher_approved') selectedRuleIds.add(r.id);
+                    if (r.name === '숙제미이행' && hwStatus === 'teacher_rejected') selectedRuleIds.add(r.id);
+                });
+            }
+
             document.getElementById('target-badge').style.opacity = '1';
             document.getElementById('target-badge').innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${selectedStudentData.name}`;
-            renderStudentList(); renderRuleGrid(); updateAddBtn();
+            
+            renderStudentList(); 
+            renderRuleGrid(); 
+            updateAddBtn();
         }
 
         // --- Rules & Basket ---
@@ -480,7 +550,7 @@
         function updateWeekDisplay() { const s=new Date(baseDate), d=baseDate.getDay(), diff=baseDate.getDate()-d+(d===0?-6:1); s.setDate(diff); const e=new Date(s); e.setDate(s.getDate()+6); document.getElementById('current-week-range').innerText=`${s.toLocaleDateString()} - ${e.toLocaleDateString()}`; renderHeader(s); }
         function renderHeader(s) { let html=''; const t=new Date().toDateString(); for(let i=0;i<7;i++){ const d=new Date(s); d.setDate(s.getDate()+i); const isT=d.toDateString()===t; html+=`<div class="day-column border-r border-slate-200 p-3 text-center ${isT?'bg-indigo-50/50':''}"><div class="text-[10px] font-black ${isT?'text-indigo-600':'text-slate-400'} tracking-widest mb-1">${dayNamesEng[i]}</div><div class="text-xl font-black ${isT?'text-indigo-700':'text-slate-700'}">${d.getDate()}</div></div>`; } document.getElementById('day-headers').innerHTML=html; }
         async function openMemo(e, cid) { e.stopPropagation(); currentMemoClassId = cid; document.getElementById('memo-modal').classList.remove('hidden'); renderMemoList(); }
-        async function renderMemoList() { const list=document.getElementById('memo-list'); const {data}=await _supabase.from('class_memos').select('*').eq('class_id',currentMemoClassId).order('created_at'); list.innerHTML = data&&data.length? data.map(m=>`<div class="bg-white p-3 rounded-xl border border-amber-100 relative group"><p contenteditable="true" onblur="updateMemo(${m.id},this.innerText)" class="text-sm font-bold text-slate-600 outline-none">${m.content}</p><button onclick="deleteMemo(${m.id})" class="absolute top-2 right-2 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button></div>`).join(''):'<div class="text-center text-amber-300 text-xs py-10">메모 없음</div>'; }
+        async function renderMemoList() { const list=document.getElementById('memo-list'); const {data}=await _supabase.from('class_memos').select('*').eq('class_id',currentMemoClassId).order('created_at'); list.innerHTML = data&&data.length? data.map(m=>`<div class="bg-white p-3 rounded-xl border border-amber-100 relative group"><p contenteditable="true" onblur="updateMemo(${m.id},this.innerText)" class="text-sm font-bold text-slate-600 outline-none">${m.content}</p><button onclick="deleteMemo(${m.id})" class="absolute top-2 right-2 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button></div>`).join(''):'<div class="text-center text-amber-300 text-xs py-10\">메모 없음</div>'; }
         async function addMemo() { const inp=document.getElementById('new-memo-input'); if(inp.value.trim()){ await _supabase.from('class_memos').insert({class_id:currentMemoClassId, content:inp.value.trim()}); inp.value=''; renderMemoList(); fetchClasses(); } }
         async function updateMemo(id,v) { await _supabase.from('class_memos').update({content:v}).eq('id',id); }
         async function deleteMemo(id) { if(confirm("삭제?")) { await _supabase.from('class_memos').delete().eq('id',id); renderMemoList(); fetchClasses(); } }

@@ -3,9 +3,7 @@
 <head>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    
     <link rel="manifest" href="site.webmanifest">
-    
     <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,170 +21,247 @@
         .student-item.selected { background-color: #f0fdfa; border-left: 4px solid #0d9488; } 
         .student-item.locked { opacity: 0.6; filter: grayscale(1); background: #f8fafc; cursor: help; } 
         .student-item.in-basket { opacity: 0.5; pointer-events: none; background: #f1f5f9; border: 1px dashed #cbd5e1; }
+        
+        /* Check Mode Status Badges */
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; }
+        .st-pending { background: #f1f5f9; color: #94a3b8; }
+        .st-completed { background: #dcfce7; color: #166534; }
+        .st-incomplete { background: #ffe4e6; color: #be123c; }
 
-        /* History Card (Past Homeworks) */
-        .history-card { 
-            background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 12px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03); position: relative; transition: 0.2s;
-        }
-        .history-card:hover { border-color: #cbd5e1; transform: translateX(2px); }
-        /* Timeline Dot */
-        .history-card::before { content: ''; position: absolute; top: 16px; left: -21px; width: 10px; height: 10px; background: #0d9488; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 1px #e2e8f0; }
-
-        /* Basket Item */
-        .basket-item { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 10px; animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+        /* Mode Tabs */
+        .mode-tab { padding: 0 20px; height: 100%; display: flex; align-items: center; cursor: pointer; font-weight: 700; color: #94a3b8; border-bottom: 3px solid transparent; transition: 0.2s; }
+        .mode-tab:hover { color: #64748b; }
+        .mode-tab.active { color: #0d9488; border-bottom-color: #0d9488; }
 
         /* Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Upload UI Styles */
+        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 15px; text-align: center; transition: 0.2s; background: #f8fafc; }
+        .upload-zone:hover { border-color: #0d9488; background: #f0fdfa; }
+        .img-preview-grid { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
+        .img-thumb-wrapper { position: relative; flex-shrink: 0; width: 60px; height: 60px; }
+        .img-thumb { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .file-tag { font-size: 10px; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
     </style>
 </head>
 <body class="h-screen flex flex-col">
     <script src="config.js"></script>
 
-    <div class="h-20 bg-white border-b border-slate-200 flex justify-between items-center px-8 shrink-0 z-20 shadow-sm">
-        <div class="flex items-center gap-5">
-            <button onclick="history.back()" class="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition hover:text-slate-600">
-                <i class="fa-solid fa-arrow-left text-lg"></i>
+    <div class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shrink-0 z-20 shadow-sm">
+        <div class="flex items-center gap-5 h-full">
+            <button onclick="history.back()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition">
+                <i class="fa-solid fa-arrow-left"></i>
             </button>
-            <div>
-                <h1 class="text-2xl font-black text-slate-800 flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-teal-500 text-white flex items-center justify-center text-lg shadow-lg shadow-teal-200">
-                        <i class="fa-solid fa-book-open"></i>
-                    </div>
-                    숙제 관리 센터
-                </h1>
-                <p class="text-xs text-slate-400 font-bold mt-1 ml-1" id="class-info-display">Loading Class Info...</p>
+            <h1 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-book-open text-teal-500"></i> 숙제 관리 센터
+            </h1>
+            <div class="h-8 w-px bg-slate-200 mx-2"></div>
+            <div class="flex h-full">
+                <div id="tab-assign" class="mode-tab active" onclick="switchMode('assign')">
+                    <i class="fa-solid fa-pen-to-square mr-2"></i> 숙제 출제 (Assign)
+                </div>
+                <div id="tab-check" class="mode-tab" onclick="switchMode('check')">
+                    <i class="fa-solid fa-magnifying-glass mr-2"></i> 숙제 검사 (Review)
+                </div>
             </div>
         </div>
-        <div class="flex gap-3 items-center">
-            <div class="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 text-xs font-bold text-slate-500 flex items-center gap-2">
-                <i class="fa-regular fa-calendar-check text-teal-500"></i> <span id="current-date"></span>
-            </div>
+        <div class="px-4 py-1.5 bg-slate-50 rounded-lg border border-slate-100 text-xs font-bold text-slate-500">
+            <span id="class-info-display">Loading...</span> | <span id="current-date"></span>
         </div>
     </div>
 
-    <div class="flex-1 flex overflow-hidden bg-slate-50">
+    <div class="flex-1 relative overflow-hidden">
         
-        <div class="w-1/4 bg-white border-r border-slate-200 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
-                <span class="text-xs font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-user-group mr-2"></i>수강생 명단</span>
-                <span id="student-count" class="bg-teal-50 text-teal-600 text-[10px] px-2.5 py-1 rounded-lg font-bold border border-teal-100">0</span>
-            </div>
-            <div id="student-list" class="flex-1 overflow-y-auto custom-scroll p-3 space-y-1"></div>
-        </div>
-
-        <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50/50 relative">
-            <div class="p-5 border-b border-slate-200 bg-white shrink-0 h-16 flex justify-between items-center">
-                <span class="text-xs font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-clock-rotate-left mr-2"></i>과거 기록 & 작성</span>
-                <div id="selected-badge" class="opacity-0 transform scale-90 transition-all duration-300 bg-teal-600 text-white px-4 py-1.5 rounded-full text-[11px] font-bold shadow-md shadow-teal-200">
-                    <i class="fa-solid fa-check mr-1.5"></i> 선택됨
+        <div id="view-assign" class="absolute inset-0 flex bg-slate-50 transition-opacity duration-300">
+            <div class="w-1/4 bg-white border-r border-slate-200 flex flex-col z-10">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
+                    <span class="text-xs font-black text-slate-400 tracking-widest uppercase">Target List</span>
+                    <span id="student-count" class="bg-teal-50 text-teal-600 text-[10px] px-2 py-0.5 rounded font-bold">0</span>
                 </div>
+                <div id="student-list" class="flex-1 overflow-y-auto custom-scroll p-2 space-y-1"></div>
             </div>
 
-            <div class="flex-1 overflow-y-auto custom-scroll p-8 relative" id="history-wrapper">
-                <div class="absolute left-8 top-0 bottom-0 w-px bg-slate-200 z-0" style="left: 31px;"></div> <div id="history-panel" class="relative z-10 pl-8 space-y-4">
-                    <div class="text-center py-32 text-slate-300 text-sm font-bold select-none">
-                        <i class="fa-solid fa-arrow-left mb-2 text-2xl opacity-50 block"></i>
-                        좌측 목록에서 학생을 선택해주세요.
+            <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50/50 relative">
+                <div class="p-4 border-b border-slate-200 bg-white shrink-0 h-14 flex justify-between items-center">
+                    <span class="text-xs font-black text-slate-400 tracking-widest uppercase">Content & Materials</span>
+                    <div id="selected-badge" class="opacity-0 transition bg-teal-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">
+                        <i class="fa-solid fa-check mr-1"></i> 선택됨
                     </div>
                 </div>
+                
+                <div class="flex-1 overflow-y-auto custom-scroll p-6 flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs font-black text-slate-500 mb-2">숙제 내용 (텍스트)</label>
+                        <textarea id="homework-input" disabled class="w-full bg-white border-2 border-slate-200 rounded-xl p-4 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-400 resize-none h-32 placeholder:text-slate-300 transition" placeholder="학생에게 전달할 내용을 입력하세요..."></textarea>
+                    </div>
+
+                    <div id="upload-section" class="opacity-50 pointer-events-none transition-opacity duration-300">
+                        <label class="block text-xs font-black text-slate-500 mb-2">선생님 자료 (Showcase)</label>
+                        
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 mb-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-slate-700"><i class="fa-solid fa-camera text-teal-500 mr-1"></i> 손풀이 사진</span>
+                                <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] px-2 py-1 rounded transition font-bold">
+                                    + 추가하기
+                                    <input type="file" id="teacher-img-input" multiple accept="image/*" class="hidden" onchange="handleTeacherImgSelect(this)">
+                                </label>
+                            </div>
+                            <div id="teacher-img-preview" class="img-preview-grid min-h-[60px] bg-slate-50/50 rounded-lg p-2 border border-dashed border-slate-200 justify-center items-center text-xs text-slate-300">
+                                사진 없음
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-slate-700"><i class="fa-solid fa-code text-indigo-500 mr-1"></i> 인터렉티브 풀이 (HTML)</span>
+                                <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] px-2 py-1 rounded transition font-bold">
+                                    + 파일 선택
+                                    <input type="file" id="teacher-html-input" accept=".html" class="hidden" onchange="handleTeacherHtmlSelect(this)">
+                                </label>
+                            </div>
+                            <div id="teacher-html-preview" class="min-h-[40px] bg-slate-50/50 rounded-lg p-2 border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-300">
+                                파일 없음
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white border-t border-slate-200 shrink-0 z-20">
+                    <button id="btn-add-basket" onclick="addToBasket()" disabled class="w-full h-12 bg-slate-100 text-slate-300 rounded-xl transition hover:bg-slate-200 flex items-center justify-center gap-2 font-black text-sm active:scale-95 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-cart-plus"></i> <span>담기</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="p-5 bg-white border-t border-slate-200 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-20">
-                <div class="flex justify-between items-end mb-2">
-                    <label class="text-[11px] font-black text-slate-500 uppercase tracking-wide">New Homework Task</label>
-                    <span class="text-[10px] text-slate-300 font-medium">내용을 입력하고 담기 버튼을 누르세요</span>
+            <div class="w-[30%] bg-white flex flex-col z-10">
+                <div class="p-4 border-b border-slate-100 bg-white shrink-0 h-14 flex justify-between items-center">
+                    <span class="text-xs font-black text-teal-600 tracking-widest uppercase">Basket</span>
+                    <span id="basket-count" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
                 </div>
-                <div class="flex gap-3">
-                    <textarea id="homework-input" disabled class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-teal-400 focus:bg-white focus:border-transparent outline-none resize-none h-24 transition placeholder:text-slate-300 placeholder:font-medium" placeholder="예: 수학익힘책 30~35p 풀고 채점하기..."></textarea>
-                    <button id="btn-add-basket" onclick="addToBasket()" disabled class="w-20 bg-slate-100 text-slate-300 rounded-2xl transition hover:bg-slate-200 hover:text-slate-500 flex flex-col items-center justify-center gap-1 active:scale-95 disabled:cursor-not-allowed">
-                        <i class="fa-solid fa-folder-plus text-xl"></i>
-                        <span class="text-[10px] font-black">담기</span>
+                <div id="basket-list" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-2 bg-slate-50/50"></div>
+                <div class="p-4 border-t border-slate-100 bg-white shrink-0">
+                    <button id="btn-final-save" onclick="finalSave()" disabled class="w-full h-12 bg-slate-200 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed">
+                        <i class="fa-solid fa-paper-plane"></i> <span>전송 및 저장</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="w-[30%] bg-white flex flex-col z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-            <div class="p-5 border-b border-slate-100 bg-white shrink-0 h-16 flex justify-between items-center">
-                <span class="text-xs font-black text-teal-600 tracking-widest uppercase"><i class="fa-solid fa-paper-plane mr-2"></i>발송 대기열</span>
-                <span id="basket-count" class="bg-red-500 text-white text-[10px] px-2.5 py-1 rounded-full font-bold shadow-sm shadow-red-200">0</span>
-            </div>
-
-            <div id="basket-list" class="flex-1 overflow-y-auto custom-scroll p-5 space-y-3 bg-slate-50/50">
-                <div class="text-center py-32 text-slate-300 text-xs font-bold leading-relaxed">
-                    <i class="fa-solid fa-basket-shopping text-3xl mb-3 opacity-30 block"></i>
-                    대기 목록이 비어있습니다.<br>숙제를 담아주세요.
+        <div id="view-check" class="absolute inset-0 flex bg-slate-50 hidden opacity-0 transition-opacity duration-300">
+            <div class="w-1/4 bg-white border-r border-slate-200 flex flex-col z-10">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
+                    <span class="text-xs font-black text-indigo-400 tracking-widest uppercase">Review Targets</span>
+                    <button onclick="loadReviewData()" class="text-xs text-slate-400 hover:text-indigo-500"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <div id="review-student-list" class="flex-1 overflow-y-auto custom-scroll p-2 space-y-1">
+                    <div class="text-center py-10 text-xs text-slate-400">데이터 로딩 중...</div>
                 </div>
             </div>
 
-            <div class="p-6 border-t border-slate-100 bg-white shrink-0">
-                <div class="flex justify-between items-center mb-4">
-                    <span class="text-xs font-bold text-slate-400">총 발송 대상</span>
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-2xl font-black text-slate-800" id="total-target">0</span>
-                        <span class="text-xs font-bold text-slate-400">명</span>
+            <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50/50 relative">
+                <div class="p-4 border-b border-slate-200 bg-white shrink-0 h-14 flex justify-between items-center">
+                    <span class="text-xs font-black text-indigo-500 tracking-widest uppercase">Homework Feed</span>
+                    <div id="rv-badge" class="opacity-0 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">Target Selected</div>
+                </div>
+                <div id="review-detail-panel" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-4">
+                    <div class="h-full flex flex-col items-center justify-center text-slate-400 text-sm font-bold opacity-50">
+                        <i class="fa-solid fa-arrow-left mb-2 text-2xl"></i>
+                        <p>학생을 선택하면 제출 내역이 표시됩니다.</p>
                     </div>
                 </div>
-                <button id="btn-final-save" onclick="finalSave()" disabled class="w-full h-14 bg-slate-200 text-white rounded-2xl font-black text-lg shadow-none transition flex items-center justify-center gap-3 cursor-not-allowed group">
-                    <i class="fa-solid fa-check"></i> <span>전송 및 저장</span>
-                </button>
+            </div>
+
+            <div class="w-[30%] bg-white flex flex-col z-10 border-l border-indigo-100">
+                <div class="p-4 border-b border-indigo-50 bg-indigo-50/30 shrink-0 h-14 flex justify-between items-center">
+                    <span class="text-xs font-black text-indigo-600 tracking-widest uppercase">Judgment Basket</span>
+                    <span id="rv-basket-count" class="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+                <div id="rv-basket-list" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-2 bg-white"></div>
+                <div class="p-4 border-t border-indigo-50 bg-indigo-50/10 shrink-0">
+                    <label class="flex items-center gap-2 mb-3 cursor-pointer select-none justify-center">
+                        <input type="checkbox" id="rv-chk-confirm" onchange="toggleRvSaveBtn()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-xs font-bold text-slate-500">최종 확인 (규칙 적용 및 저장)</span>
+                    </label>
+                    <button id="btn-rv-save" onclick="saveReviews()" disabled class="w-full h-12 bg-slate-300 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed">
+                        <i class="fa-solid fa-gavel"></i> <span>심판 실행 (Execute)</span>
+                    </button>
+                </div>
             </div>
         </div>
+
     </div>
 
     <script>
-        /**
-         * [System Core] V27.0 Simple Text Edition (No UUID)
-         * - Table: 'homework_messages' (columns: id, class_id(text), student_id(text), content(text), created_at)
-         * - Logic: Pure string handling for IDs to prevent UUID syntax errors.
-         */
-
         const urlParams = new URLSearchParams(window.location.search);
-        const currentClassId = urlParams.get('class_id'); // Just a string now!
+        const currentClassId = urlParams.get('class_id');
         const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
         
-        let students = [];
-        let lockedStudentIds = new Set();
-        let basket = {};
+        let students = []; 
+        let pointRules = {}; 
+        
+        let assignBasket = {};
+        let lockedAssignIds = new Set();
         let selectedStudent = null;
-        let className = "Class";
+        let currentTeacherImages = []; 
+        let currentTeacherHtml = null;
+
+        let reviewDataList = []; 
+        let reviewBasket = {}; 
+        let selectedReviewStudentId = null;
 
         document.getElementById('current-date').innerText = todayStr;
         
         async function init() {
-            if (!currentClassId) { alert("잘못된 접근입니다. (Class ID Missing)"); history.back(); return; }
+            if (!currentClassId) { alert("잘못된 접근입니다."); history.back(); return; }
             await loadClassInfo();
+            await loadPointRules();
             await loadStudents();
         }
 
         async function loadClassInfo() {
-            // Note: If 'classes' table uses UUID for 'id', this query might fail if currentClassId is garbage text.
-            // But usually currentClassId comes from the previous page which has valid IDs.
-            // We proceed assuming currentClassId is valid enough to query.
             const { data } = await _supabase.from('classes').select('name').eq('id', currentClassId).single();
+            if (data) document.getElementById('class-info-display').innerText = data.name;
+        }
+
+        async function loadPointRules() {
+            const { data } = await _supabase.from('point_rules').select('id, name');
             if (data) {
-                className = data.name;
-                document.getElementById('class-info-display').innerText = data.name;
+                data.forEach(r => pointRules[r.name] = r.id);
             }
         }
 
+        function switchMode(mode) {
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${mode}`).classList.add('active');
+
+            const vAssign = document.getElementById('view-assign');
+            const vCheck = document.getElementById('view-check');
+
+            if (mode === 'assign') {
+                vCheck.classList.add('hidden', 'opacity-0');
+                vAssign.classList.remove('hidden');
+                setTimeout(() => vAssign.classList.remove('opacity-0'), 10);
+            } else {
+                vAssign.classList.add('hidden', 'opacity-0');
+                vCheck.classList.remove('hidden');
+                setTimeout(() => vCheck.classList.remove('opacity-0'), 10);
+                loadReviewData();
+            }
+        }
+
+        /* ================= PHASE 1: ASSIGN LOGIC ================= */
+        
         async function loadStudents() {
             const { data: members } = await _supabase.from('class_members').select('student_id, users(name, grade)').eq('class_id', currentClassId);
-            
-            // Fetch Today's Logs using Text IDs (No UUID Casting issues)
             const todayISO = new Date().toISOString().split('T')[0];
-            const { data: logs } = await _supabase.from('homework_messages')
-                .select('student_id')
-                .eq('class_id', currentClassId)
-                .gte('created_at', `${todayISO}T00:00:00`);
+            const { data: logs } = await _supabase.from('homework_messages').select('student_id').eq('class_id', currentClassId).gte('created_at', `${todayISO}T00:00:00`);
 
-            lockedStudentIds.clear();
-            if (logs) logs.forEach(log => lockedStudentIds.add(log.student_id));
+            lockedAssignIds.clear();
+            if (logs) logs.forEach(log => lockedAssignIds.add(log.student_id));
 
             students = members ? members.map(m => ({ id: m.student_id, name: m.users.name, grade: m.users.grade })) : [];
             renderStudentList();
@@ -195,188 +270,454 @@
         function renderStudentList() {
             const list = document.getElementById('student-list');
             document.getElementById('student-count').innerText = students.length;
-            if (students.length === 0) { list.innerHTML = `<div class="text-center py-20 text-slate-400 text-xs">학생이 없습니다.</div>`; return; }
+            if (!students.length) { list.innerHTML = `<div class="text-center py-20 text-slate-400 text-xs">학생 없음</div>`; return; }
 
             list.innerHTML = students.map(s => {
-                const isLocked = lockedStudentIds.has(s.id);
-                const isInBasket = basket[s.id] !== undefined;
+                const isLocked = lockedAssignIds.has(s.id);
+                const isInBasket = assignBasket[s.id] !== undefined;
                 const isSelected = selectedStudent && selectedStudent.id === s.id;
+                let classes = "student-item rounded-xl mb-1", icon = `<i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>`, action = `onclick="selectStudent('${s.id}')"`;
 
-                let classes = "student-item rounded-xl mb-1";
-                let statusIcon = `<i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>`;
-                let clickAction = `onclick="selectStudent('${s.id}')"`;
+                if (isLocked) { classes += " locked"; icon = `<span class="text-[9px] bg-slate-100 text-slate-400 px-2 py-1 rounded font-bold"><i class="fa-solid fa-lock mr-1"></i>완료</span>`; action = `onclick="manualUnlock('${s.id}', '${s.name}')"`; }
+                else if (isInBasket) { classes += " in-basket"; icon = `<span class="text-[9px] bg-teal-50 text-teal-600 px-2 py-1 rounded font-bold"><i class="fa-solid fa-check"></i></span>`; action = ""; }
+                else if (isSelected) { classes += " selected"; }
 
-                if (isLocked) {
-                    classes += " locked";
-                    statusIcon = `<span class="text-[9px] bg-slate-100 text-slate-400 px-2 py-1 rounded font-bold border border-slate-200"><i class="fa-solid fa-lock mr-1"></i>완료</span>`;
-                    clickAction = `onclick="manualUnlock('${s.id}', '${s.name}')"`;
-                } else if (isInBasket) {
-                    classes += " in-basket";
-                    statusIcon = `<span class="text-[9px] bg-teal-50 text-teal-600 px-2 py-1 rounded font-bold border border-teal-100"><i class="fa-solid fa-check mr-1"></i>대기</span>`;
-                    clickAction = "";
-                } else if (isSelected) {
-                    classes += " selected";
-                }
-
-                return `
-                <div class="${classes}" ${clickAction}>
-                    <div>
-                        <div class="text-sm font-bold text-slate-700">${s.name}</div>
-                        <div class="text-[10px] text-slate-400 font-bold">${s.grade}</div>
-                    </div>
-                    ${statusIcon}
-                </div>`;
+                return `<div class="${classes}" ${action}><div><div class="text-sm font-bold text-slate-700">${s.name}</div><div class="text-[10px] text-slate-400 font-bold">${s.grade}</div></div>${icon}</div>`;
             }).join('');
         }
 
         async function selectStudent(id) {
             selectedStudent = students.find(s => s.id === id);
+            document.getElementById('selected-badge').style.opacity = '1';
+            document.getElementById('selected-badge').innerHTML = `<i class="fa-solid fa-check mr-1.5"></i> ${selectedStudent.name}`;
             
-            const badge = document.getElementById('selected-badge');
-            badge.style.opacity = '1';
-            badge.style.transform = 'scale(1)';
-            badge.innerHTML = `<i class="fa-solid fa-check mr-1.5"></i> ${selectedStudent.name}`;
-            
-            const input = document.getElementById('homework-input');
-            input.disabled = false; input.value = ''; input.focus();
-            
-            const btn = document.getElementById('btn-add-basket');
-            btn.disabled = false;
-            btn.className = "w-20 bg-teal-500 text-white rounded-2xl shadow-lg shadow-teal-200 hover:bg-teal-600 transition flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer";
+            const input = document.getElementById('homework-input'); 
+            input.disabled = false; 
+            input.value = ''; 
+            input.focus();
 
+            const uploadSec = document.getElementById('upload-section');
+            uploadSec.classList.remove('opacity-50', 'pointer-events-none');
+
+            currentTeacherImages = [];
+            currentTeacherHtml = null;
+            document.getElementById('teacher-img-input').value = '';
+            document.getElementById('teacher-html-input').value = '';
+            renderTeacherPreviews();
+
+            const btn = document.getElementById('btn-add-basket'); 
+            btn.disabled = false; 
+            btn.className = "w-full h-12 bg-teal-500 text-white rounded-xl shadow-lg transition hover:bg-teal-600 flex items-center justify-center gap-2 active:scale-95 cursor-pointer font-black text-sm";
+            
             renderStudentList();
-            await loadHistory(id);
         }
 
-        async function loadHistory(studentId) {
-            const panel = document.getElementById('history-panel');
-            panel.innerHTML = `<div class="text-center py-20 text-teal-500"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i></div>`;
+        function handleTeacherImgSelect(input) {
+            if (input.files) {
+                const files = Array.from(input.files);
+                currentTeacherImages = currentTeacherImages.concat(files);
+                renderTeacherPreviews();
+                input.value = '';
+            }
+        }
 
-            // ★ Load History (Simple Text Match)
-            const { data: history } = await _supabase.from('homework_messages')
-                .select('content, created_at')
-                .eq('class_id', currentClassId)
-                .eq('student_id', studentId)
-                .order('created_at', { ascending: false })
-                .limit(10);
+        function handleTeacherHtmlSelect(input) {
+            if (input.files && input.files[0]) {
+                currentTeacherHtml = input.files[0];
+                renderTeacherPreviews();
+            }
+        }
 
-            if (!history || history.length === 0) {
-                panel.innerHTML = `<div class="text-center py-32 text-slate-300 text-xs font-bold opacity-60">기록된 숙제가 없습니다.<br>오늘의 첫 숙제를 입력하세요!</div>`;
-                return;
+        function renderTeacherPreviews() {
+            const imgContainer = document.getElementById('teacher-img-preview');
+            if (currentTeacherImages.length === 0) {
+                imgContainer.innerHTML = '사진 없음';
+                imgContainer.classList.add('justify-center');
+            } else {
+                imgContainer.classList.remove('justify-center');
+                imgContainer.innerHTML = currentTeacherImages.map((f, i) => `
+                    <div class="img-thumb-wrapper">
+                        <img src="${URL.createObjectURL(f)}" class="img-thumb">
+                        <button onclick="removeTeacherImg(${i})" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[8px] border border-white">&times;</button>
+                    </div>
+                `).join('');
             }
 
-            panel.innerHTML = history.map(h => {
-                const date = new Date(h.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-                return `
-                <div class="history-card">
-                    <div class="text-[10px] font-black text-teal-600 mb-1.5 uppercase tracking-wide">${date}</div>
-                    <div class="text-sm font-bold text-slate-700 whitespace-pre-wrap leading-relaxed">${h.content}</div>
-                </div>`;
-            }).join('');
+            const htmlContainer = document.getElementById('teacher-html-preview');
+            if (!currentTeacherHtml) {
+                htmlContainer.innerHTML = '파일 없음';
+                htmlContainer.className = "min-h-[40px] bg-slate-50/50 rounded-lg p-2 border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-300";
+            } else {
+                htmlContainer.innerHTML = `
+                    <div class="file-tag">
+                        <i class="fa-brands fa-html5"></i> ${currentTeacherHtml.name}
+                        <button onclick="removeTeacherHtml()" class="ml-2 hover:text-red-500">&times;</button>
+                    </div>`;
+                htmlContainer.className = "min-h-[40px] bg-indigo-50/50 rounded-lg p-2 border border-indigo-200";
+            }
         }
+
+        window.removeTeacherImg = (idx) => { currentTeacherImages.splice(idx, 1); renderTeacherPreviews(); };
+        window.removeTeacherHtml = () => { currentTeacherHtml = null; document.getElementById('teacher-html-input').value = ''; renderTeacherPreviews(); };
 
         function addToBasket() {
             const content = document.getElementById('homework-input').value.trim();
-            if (!content) return alert("숙제 내용을 입력해주세요.");
+            if (!content && currentTeacherImages.length === 0 && !currentTeacherHtml) return alert("내용이나 자료를 입력하세요.");
             
-            basket[selectedStudent.id] = { name: selectedStudent.name, content: content };
-            
-            selectedStudent = null;
+            assignBasket[selectedStudent.id] = { 
+                name: selectedStudent.name, 
+                content: content,
+                images: [...currentTeacherImages], 
+                html: currentTeacherHtml
+            };
+
+            selectedStudent = null; 
             document.getElementById('homework-input').value = ''; 
-            document.getElementById('homework-input').disabled = true;
+            document.getElementById('homework-input').disabled = true; 
+            
+            currentTeacherImages = [];
+            currentTeacherHtml = null;
+            renderTeacherPreviews();
+            document.getElementById('upload-section').classList.add('opacity-50', 'pointer-events-none');
+
             document.getElementById('btn-add-basket').disabled = true;
-            document.getElementById('btn-add-basket').className = "w-20 bg-slate-100 text-slate-300 rounded-2xl transition flex flex-col items-center justify-center gap-1 cursor-not-allowed";
+            document.getElementById('btn-add-basket').className = "w-full h-12 bg-slate-100 text-slate-300 rounded-xl transition flex items-center justify-center gap-2 font-black text-sm cursor-not-allowed";
             document.getElementById('selected-badge').style.opacity = '0';
-            document.getElementById('history-panel').innerHTML = `<div class="text-center py-32 text-slate-300 text-sm font-bold select-none"><i class="fa-solid fa-arrow-left mb-2 text-2xl opacity-50 block"></i>좌측 목록에서 학생을 선택해주세요.</div>`;
             
             renderStudentList(); 
-            renderBasket();
+            renderAssignBasket();
         }
 
-        function removeFromBasket(id) { 
-            delete basket[id]; 
-            renderBasket(); 
-            renderStudentList(); 
-        }
+        function removeAssignBasket(id) { delete assignBasket[id]; renderAssignBasket(); renderStudentList(); }
 
-        function renderBasket() {
-            const list = document.getElementById('basket-list');
-            const ids = Object.keys(basket);
-            
+        function renderAssignBasket() {
+            const list = document.getElementById('basket-list'); const ids = Object.keys(assignBasket);
             document.getElementById('basket-count').innerText = ids.length;
-            document.getElementById('total-target').innerText = ids.length;
+            const btn = document.getElementById('btn-final-save');
+            
+            if (ids.length > 0) { btn.disabled = false; btn.className = "w-full h-12 bg-teal-500 hover:bg-teal-600 text-white rounded-xl font-black text-sm shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"; }
+            else { btn.disabled = true; btn.className = "w-full h-12 bg-slate-200 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed"; list.innerHTML = `<div class="text-center py-20 text-slate-300 text-xs">대기 목록 비어있음</div>`; return; }
 
-            const btnSave = document.getElementById('btn-final-save');
-            if (ids.length > 0) {
-                btnSave.disabled = false;
-                btnSave.className = "w-full h-14 bg-teal-500 hover:bg-teal-600 text-white rounded-2xl font-black text-lg shadow-lg shadow-teal-200 transition flex items-center justify-center gap-3 active:scale-95 cursor-pointer";
-            } else {
-                btnSave.disabled = true;
-                btnSave.className = "w-full h-14 bg-slate-200 text-white rounded-2xl font-black text-lg shadow-none transition flex items-center justify-center gap-3 cursor-not-allowed";
-                list.innerHTML = `<div class="text-center py-32 text-slate-300 text-xs font-bold leading-relaxed"><i class="fa-solid fa-basket-shopping text-3xl mb-3 opacity-30 block"></i>대기 목록이 비어있습니다.<br>숙제를 담아주세요.</div>`;
-                return;
-            }
-
-            list.innerHTML = ids.map(id => {
-                const item = basket[id];
-                return `
-                <div class="basket-item relative group">
-                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-50">
-                        <span class="font-bold text-slate-700 text-sm flex items-center gap-2">
-                            <i class="fa-solid fa-user-tag text-slate-300"></i> ${item.name}
-                        </span>
-                        <button onclick="removeFromBasket('${id}')" class="w-6 h-6 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition flex items-center justify-center">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                    <div class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 whitespace-pre-wrap font-medium leading-relaxed">${item.content}</div>
-                </div>`;
+            list.innerHTML = ids.map(id => { 
+                const i = assignBasket[id]; 
+                const fileCnt = i.images.length + (i.html ? 1 : 0);
+                const fileBadge = fileCnt > 0 ? `<span class="bg-indigo-100 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">+자료 ${fileCnt}개</span>` : '';
+                return `<div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm relative group"><div class="flex justify-between mb-1"><span class="font-bold text-xs text-slate-700 flex items-center">${i.name} ${fileBadge}</span><button onclick="removeAssignBasket('${id}')" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button></div><div class="text-[10px] text-slate-500 line-clamp-2">${i.content || '(자료만 전송)'}</div></div>`; 
             }).join('');
         }
 
         async function finalSave() {
-            const ids = Object.keys(basket);
-            if (ids.length === 0) return;
-            if (!confirm(`총 ${ids.length}명에게 숙제를 전송하고 저장하시겠습니까?`)) return;
-
+            if(!confirm("전송하시겠습니까?")) return;
             const btn = document.getElementById('btn-final-save');
-            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>전송 중...</span>`;
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 전송 중...`;
+            btn.disabled = true;
 
+            const ids = Object.keys(assignBasket);
+            
             try {
-                const payload = [];
-                ids.forEach(id => {
-                    const item = basket[id];
-                    // ★ PURE TEXT INSERT (Safe for any ID string)
-                    payload.push({
-                        class_id: currentClassId, // Stored as Text
-                        student_id: id,           // Stored as Text
+                for (const id of ids) {
+                    const item = assignBasket[id];
+                    let imgUrls = [];
+                    let htmlUrl = null;
+
+                    // 1. Upload Images (Safe Name + Public URL)
+                    if (item.images.length > 0) {
+                        for (const file of item.images) {
+                            const fileExt = file.name.split('.').pop();
+                            // [CRITICAL FIX] Use Random Safe Name for Storage
+                            const safeName = `teacher_uploads/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+                            
+                            const { error: upErr } = await _supabase.storage.from('homework_evidence').upload(safeName, file);
+                            if (upErr) throw upErr;
+                            
+                            const { data: pubData } = _supabase.storage.from('homework_evidence').getPublicUrl(safeName);
+                            imgUrls.push(pubData.publicUrl);
+                        }
+                    }
+
+                    // 2. Upload HTML (Safe Name + CONTENT TYPE)
+                    if (item.html) {
+                        // [CRITICAL FIX] Use Random Safe Name + Force Content-Type 'text/html'
+                        const safeName = `teacher_uploads/html/${Date.now()}_${Math.random().toString(36).substring(2)}.html`;
+                        
+                        const { error: upErr } = await _supabase.storage.from('homework_evidence').upload(safeName, item.html, {
+                            contentType: 'text/html; charset=utf-8', // ★ Force HTML rendering
+                            upsert: false
+                        });
+                        
+                        if (upErr) throw upErr;
+                        
+                        const { data: pubData } = _supabase.storage.from('homework_evidence').getPublicUrl(safeName);
+                        htmlUrl = pubData.publicUrl;
+                    }
+
+                    // 3. Insert DB
+                    const { error } = await _supabase.from('homework_messages').insert({
+                        class_id: currentClassId,
+                        student_id: id,
                         content: item.content,
-                        is_read: false
+                        is_read: false,
+                        teacher_images: imgUrls.length > 0 ? imgUrls : null,
+                        teacher_html: htmlUrl
                     });
-                });
+                    if (error) throw error;
+                }
 
-                const { error } = await _supabase.from('homework_messages').insert(payload);
-
-                if (error) throw error;
-
-                basket = {};
+                alert("완료되었습니다!");
+                assignBasket = {};
                 await loadStudents();
-                renderBasket();
-                renderStudentList();
-                
-                alert("✅ 숙제가 성공적으로 전송되었습니다!");
+                renderAssignBasket();
 
             } catch (e) {
-                alert("오류 발생: " + e.message);
-                renderBasket();
+                console.error(e);
+                alert("전송 실패: " + e.message);
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>전송 및 저장</span>`;
             }
         }
 
-        async function manualUnlock(studentId, studentName) {
-            if(!confirm(`[관리자 권한]\n'${studentName}' 학생의 잠금을 해제하시겠습니까?\n(이미 저장된 기록은 유지되지만, 추가 숙제를 입력할 수 있습니다.)`)) return;
-            lockedStudentIds.delete(studentId);
-            renderStudentList();
-            alert("잠금이 해제되었습니다.");
+        async function manualUnlock(sid, name) {
+            if(confirm(`${name} 잠금 해제?`)) { lockedAssignIds.delete(sid); renderStudentList(); }
+        }
+
+        /* ================= PHASE 2: REVIEW LOGIC ================= */
+
+        async function loadReviewData() {
+            const list = document.getElementById('review-student-list');
+            list.innerHTML = '<div class="text-center py-10 text-indigo-400"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+            const { data: members } = await _supabase.from('class_members').select('student_id, users(name, grade)').eq('class_id', currentClassId);
+            
+            const dateLimit = new Date(); dateLimit.setDate(dateLimit.getDate() - 14);
+            const { data: msgs } = await _supabase.from('homework_messages')
+                .select('*')
+                .eq('class_id', currentClassId)
+                .gte('created_at', dateLimit.toISOString())
+                .eq('is_deleted', false)
+                .order('created_at', { ascending: false });
+
+            reviewDataList = [];
+            if (members && msgs) {
+                members.forEach(m => {
+                    const studentMsgs = msgs.filter(msg => msg.student_id === m.student_id);
+                    if (studentMsgs.length > 0) {
+                        reviewDataList.push({
+                            student: { id: m.student_id, name: m.users.name, grade: m.users.grade },
+                            messages: studentMsgs
+                        });
+                    }
+                });
+            }
+            renderReviewList();
+        }
+
+        function renderReviewList() {
+            const list = document.getElementById('review-student-list');
+            if (!reviewDataList.length) { list.innerHTML = `<div class="text-center py-20 text-slate-400 text-xs">검사할 숙제가 없습니다.</div>`; return; }
+
+            list.innerHTML = reviewDataList.map(item => {
+                const s = item.student;
+                const isSelected = selectedReviewStudentId === s.id;
+                const count = item.messages.length;
+                let classes = "student-item rounded-xl mb-1 border-l-4 border-transparent";
+                if (isSelected) classes += " selected border-indigo-500";
+
+                return `
+                <div class="${classes}" onclick="selectReviewStudent('${s.id}')">
+                    <div>
+                        <div class="text-sm font-bold text-slate-700">${s.name}</div>
+                        <div class="text-[10px] text-slate-400 font-bold">${s.grade}</div>
+                    </div>
+                    <span class="bg-indigo-100 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-full">${count}건</span>
+                </div>`;
+            }).join('');
+        }
+
+        function selectReviewStudent(sid) {
+            selectedReviewStudentId = sid;
+            const data = reviewDataList.find(x => x.student.id === sid);
+            
+            const badge = document.getElementById('rv-badge');
+            badge.style.opacity = '1';
+            badge.innerText = `Target: ${data.student.name}`;
+
+            const panel = document.getElementById('review-detail-panel');
+            renderReviewList();
+
+            if (!data || !data.messages.length) {
+                panel.innerHTML = `<div class="text-center py-20 text-slate-400">숙제가 없습니다.</div>`;
+                return;
+            }
+
+            panel.innerHTML = data.messages.map(m => {
+                const date = new Date(m.created_at).toLocaleDateString();
+                const submittedAt = m.submitted_at ? new Date(m.submitted_at).toLocaleString() : '-';
+                const isReviewed = (m.status === 'teacher_approved' || m.status === 'teacher_rejected' || m.status === 'completed');
+                
+                let statusUi = '';
+                if (m.status === 'completed') statusUi = `<div class="mt-2 text-xs font-black text-emerald-600 bg-emerald-50 p-2 rounded-lg"><i class="fa-solid fa-circle-check"></i> 학생 제출 완료 (${submittedAt})</div>`;
+                else if (m.status === 'incomplete') statusUi = `<div class="mt-2 bg-rose-50 p-2 rounded-lg"><div class="text-xs font-black text-rose-600"><i class="fa-solid fa-circle-exclamation"></i> 미완료 사유:</div><div class="text-[11px] text-rose-500 mt-1">${m.reason || '없음'}</div></div>`;
+                else if (m.status === 'teacher_approved') statusUi = `<div class="mt-2 text-xs font-black text-blue-600 bg-blue-50 p-2 rounded-lg"><i class="fa-solid fa-check-double"></i> 선생님 승인 완료</div>`;
+                else if (m.status === 'teacher_rejected') statusUi = `<div class="mt-2 text-xs font-black text-red-600 bg-red-50 p-2 rounded-lg"><i class="fa-solid fa-ban"></i> 미이행 처리됨</div>`;
+                else statusUi = `<div class="mt-2 text-xs font-black text-slate-400 bg-slate-100 p-2 rounded-lg"><i class="fa-solid fa-hourglass-half"></i> 제출 대기중</div>`;
+
+                let imgUi = '';
+                if (m.proof_images && m.proof_images.length > 0) {
+                    imgUi = `<div class="img-grid">${m.proof_images.map(url => `<img src="${url}" class="img-thumb" onclick="window.open('${url}', '_blank')">`).join('')}</div>`;
+                }
+
+                const inBasket = reviewBasket[m.id];
+                let cardBorder = inBasket ? (inBasket.decision === 'approve' ? 'border-emerald-400 ring-1 ring-emerald-400' : 'border-rose-400 ring-1 ring-rose-400') : 'border-slate-200';
+                if (isProcessed && !inBasket) cardBorder = 'border-slate-300 bg-slate-50 opacity-80';
+
+                let btns = '';
+                if (!isProcessed) {
+                    btns = `
+                        <button onclick="judgeHomework('${m.id}', 'approve')" class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-500 hover:text-white transition flex items-center justify-center" title="승인"><i class="fa-solid fa-check"></i></button>
+                        <button onclick="judgeHomework('${m.id}', 'reject')" class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 hover:bg-rose-500 hover:text-white transition flex items-center justify-center" title="미이행"><i class="fa-solid fa-xmark"></i></button>
+                    `;
+                } else {
+                    btns = `<span class="text-[10px] font-bold text-slate-400 bg-slate-200 px-2 py-1 rounded">처리완료</span>`;
+                }
+                btns += `<button onclick="deleteHomeworkMsg('${m.id}', ${m.proof_images && m.proof_images.length > 0})" class="w-8 h-8 rounded-lg bg-slate-200 text-slate-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center ml-2" title="DB 영구 삭제"><i class="fa-regular fa-trash-can"></i></button>`;
+
+                return `
+                <div class="bg-white border ${cardBorder} rounded-xl p-4 shadow-sm relative transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-black text-slate-400 flex items-center gap-1"><i class="fa-regular fa-calendar"></i> ${date}</span>
+                        <div class="flex gap-1 items-center">${btns}</div>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700 whitespace-pre-wrap mb-2">${m.content}</div>
+                    ${imgUi}
+                    ${statusUi}
+                </div>`;
+            }).join('');
+        }
+
+        function judgeHomework(msgId, decision) {
+            let targetMsg, targetStudent;
+            for (const item of reviewDataList) {
+                const found = item.messages.find(m => m.id == msgId);
+                if (found) { targetMsg = found; targetStudent = item.student; break; }
+            }
+            if (!targetMsg) return;
+
+            let ruleName = decision === 'approve' ? "숙제 해옴" : "숙제미이행";
+            let displayStatus = decision === 'approve' ? "승인 (Pass)" : "미이행 (Fail)";
+            let ruleId = pointRules[ruleName];
+
+            reviewBasket[msgId] = {
+                studentName: targetStudent.name,
+                msgId: msgId,
+                decision: decision,
+                ruleId: ruleId,
+                displayStatus: displayStatus,
+                ruleName: ruleName
+            };
+
+            renderReviewBasket();
+            selectReviewStudent(targetStudent.id);
+        }
+
+        function renderReviewBasket() {
+            const list = document.getElementById('rv-basket-list');
+            const ids = Object.keys(reviewBasket);
+            document.getElementById('rv-basket-count').innerText = ids.length;
+            toggleRvSaveBtn();
+
+            if (!ids.length) { list.innerHTML = `<div class="text-center py-20 text-slate-300 text-xs">비어있음</div>`; return; }
+
+            list.innerHTML = ids.map(id => {
+                const item = reviewBasket[id];
+                const colorClass = item.decision === 'approve' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-rose-600 bg-rose-50 border-rose-100';
+                return `<div class="p-3 rounded-xl border mb-2 relative group ${colorClass}">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-xs text-slate-700">${item.studentName}</span>
+                        <button onclick="removeRvBasket('${id}')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-minus"></i></button>
+                    </div>
+                    <div class="text-[10px] font-black uppercase flex items-center gap-1">${item.displayStatus}<span class="ml-auto opacity-70">ID:${item.msgId}</span></div>
+                </div>`;
+            }).join('');
+        }
+
+        function removeRvBasket(id) {
+            delete reviewBasket[id];
+            renderReviewBasket();
+            if (selectedReviewStudentId) selectReviewStudent(selectedReviewStudentId);
+        }
+
+        function toggleRvSaveBtn() {
+            const chk = document.getElementById('rv-chk-confirm');
+            const btn = document.getElementById('btn-rv-save');
+            if (chk.checked && Object.keys(reviewBasket).length > 0) {
+                btn.disabled = false;
+                btn.className = "w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-lg transition flex items-center justify-center gap-2 cursor-pointer";
+            } else {
+                btn.disabled = true;
+                btn.className = "w-full h-12 bg-slate-300 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed";
+            }
+        }
+
+        async function deleteHomeworkMsg(msgId, hasFiles) {
+            if (!confirm("⚠️ 경고: 영구 삭제하시겠습니까? (복구 불가)")) return;
+            if (!confirm("정말 확실합니까?")) return;
+
+            if (hasFiles) {
+                const { data: list } = await _supabase.storage.from('homework_evidence').list(msgId.toString());
+                if (list && list.length > 0) {
+                    const filesToRemove = list.map(x => `${msgId}/${x.name}`);
+                    await _supabase.storage.from('homework_evidence').remove(filesToRemove);
+                }
+            }
+
+            const { error } = await _supabase.from('homework_messages').delete().eq('id', msgId);
+            if (error) alert("삭제 실패: " + error.message);
+            else {
+                alert("삭제되었습니다.");
+                for (const item of reviewDataList) {
+                    const idx = item.messages.findIndex(m => m.id == msgId);
+                    if (idx > -1) {
+                        item.messages.splice(idx, 1);
+                        break;
+                    }
+                }
+                if (selectedReviewStudentId) selectReviewStudent(selectedReviewStudentId);
+                else renderReviewList();
+            }
+        }
+
+        async function saveReviews() {
+            if (!confirm("최종 반영하시겠습니까?")) return;
+            const btn = document.getElementById('btn-rv-save');
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 처리 중...`;
+
+            const ids = Object.keys(reviewBasket);
+            let successCnt = 0;
+
+            for (const id of ids) {
+                const item = reviewBasket[id];
+                let sid = null;
+                for(const d of reviewDataList) { if(d.messages.find(m=>m.id == item.msgId)) { sid = d.student.id; break; } }
+
+                if (sid && item.ruleId) {
+                    const { data: ruleData } = await _supabase.from('point_rules').select('xp_change, cp_change').eq('id', item.ruleId).single();
+                    if (ruleData) {
+                        await _supabase.rpc('give_points', { p_student_id: sid, p_xp: ruleData.xp_change, p_cp: ruleData.cp_change, p_rule_name: `[숙제] ${item.ruleName}` });
+                    }
+                }
+                const newStatus = item.decision === 'approve' ? 'teacher_approved' : 'teacher_rejected';
+                await _supabase.from('homework_messages').update({ status: newStatus }).eq('id', item.msgId);
+                successCnt++;
+            }
+
+            alert(`총 ${successCnt}건 처리 완료되었습니다.`);
+            reviewBasket = {};
+            await loadReviewData();
+            if (selectedReviewStudentId) selectReviewStudent(selectedReviewStudentId);
+            
+            document.getElementById('rv-chk-confirm').checked = false;
+            toggleRvSaveBtn();
+            btn.innerHTML = `<i class="fa-solid fa-gavel"></i> <span>심판 실행 (Execute)</span>`;
         }
 
         init();

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>숙제 알림함 - Elite Learning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="config.js"></script>
+
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; color: #1e293b; user-select: none; /* 텍스트 선택 방지 */ }
+        .inbox-card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; border: 1px solid #e2e8f0; position: relative; overflow: hidden; }
+        .inbox-card:active { transform: scale(0.98); }
+        
+        /* 안 읽은 메시지 효과 */
+        @keyframes pulse-blood {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); border-color: #fca5a5; }
+            70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); border-color: #ef4444; }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); border-color: #fca5a5; }
+        }
+        .unread-msg { animation: pulse-blood 2s infinite; background-color: #fef2f2; border-left: 4px solid #ef4444; }
+        .unread-dot { height: 8px; width: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+        /* Modal Styles */
+        #msg-modal, #secure-viewer { backdrop-filter: blur(5px); }
+        .modal-content { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Custom Radio */
+        .radio-label { cursor: pointer; transition: 0.2s; }
+        .radio-input:checked + .radio-tile { background-color: #f1f5f9; border-color: #6366f1; color: #6366f1; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1); }
+        .radio-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px; transition: 0.2s; }
+
+        /* Image Upload Styles */
+        .img-preview-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-top: 10px; }
+        .img-preview-wrapper { position: relative; flex-shrink: 0; width: 60px; height: 60px; }
+        .img-preview { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .img-remove-btn { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; border: 2px solid white; z-index: 10; }
+
+        /* Teacher Materials Styles */
+        .teacher-material-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 8px; }
+        .tm-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 2px solid #e0e7ff; cursor: pointer; transition: transform 0.2s; }
+        .tm-thumb:hover { transform: scale(1.05); border-color: #6366f1; }
+        .tm-html-btn { width: 100%; height: 40px; background: #e0f2fe; color: #0369a1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-bold; cursor: pointer; border: 1px solid #bae6fd; transition: 0.2s; }
+        .tm-html-btn:hover { background: #bae6fd; }
+
+        /* Secure Viewer */
+        #secure-content-area { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+        #secure-content-area img { pointer-events: none; }
+    </style>
+</head>
+<body class="pb-24" oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
+
+    <header class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200 px-5 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <button onclick="history.back()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1 class="text-lg font-black text-slate-800 tracking-tight">숙제 알림함</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="sort-select" onchange="loadMessages()" class="bg-slate-100 text-xs font-bold text-slate-600 rounded-lg px-2 py-1.5 outline-none border-none">
+                <option value="new">최신순</option>
+                <option value="old">오래된순</option>
+                <option value="unread">안 읽은 순</option>
+            </select>
+        </div>
+    </header>
+
+    <main class="p-5 space-y-4" id="inbox-list">
+        <div class="text-center py-20 text-slate-400 text-xs">
+            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-indigo-500"></i><br>
+            숙제 데이터를 불러오는 중...
+        </div>
+    </main>
+
+    <div id="msg-modal" class="fixed inset-0 z-[100] bg-black/60 hidden flex items-end justify-center sm:items-center p-0 sm:p-4">
+        <div class="modal-content bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            
+            <div class="p-5 border-b border-slate-100 flex justify-between items-start bg-slate-50">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="m-status-badge" class="text-[10px] font-black px-2 py-0.5 rounded bg-slate-200 text-slate-500">PENDING</span>
+                        <span id="m-date" class="text-[10px] font-bold text-slate-400">YYYY.MM.DD</span>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-800 leading-tight">선생님의 메시지</h3>
+                </div>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-white text-slate-400 hover:text-slate-600 flex items-center justify-center shadow-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1 custom-scroll">
+                <div id="m-content" class="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-wrap mb-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100"></div>
+
+                <div id="teacher-materials" class="mb-8 hidden">
+                    <label class="block text-xs font-black text-indigo-500 uppercase mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-star"></i> 선생님 시크릿 노트
+                    </label>
+                    <div id="tm-container" class="bg-indigo-50/30 rounded-xl p-3 border border-indigo-100">
+                        </div>
+                </div>
+
+                <div id="action-area" class="border-t border-slate-100 pt-6">
+                    <label class="block text-xs font-black text-slate-400 uppercase mb-3">제출 상태 확인 (Self-Check)</label>
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <label class="radio-label">
+                            <input type="radio" name="hw-status" value="completed" class="radio-input hidden" onchange="toggleReasonArea()">
+                            <div class="radio-tile hover:border-emerald-400">
+                                <i class="fa-solid fa-circle-check text-2xl text-emerald-500 mb-1"></i>
+                                <span class="text-xs font-bold text-slate-600">완료함</span>
+                            </div>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="hw-status" value="incomplete" class="radio-input hidden" onchange="toggleReasonArea()">
+                            <div class="radio-tile hover:border-rose-400">
+                                <i class="fa-solid fa-circle-exclamation text-2xl text-rose-500 mb-1"></i>
+                                <span class="text-xs font-bold text-slate-600">미완료 / 문제있음</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div id="reason-area" class="hidden animate-fade-in mb-4">
+                        <textarea id="reason-input" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500 transition resize-none h-24" placeholder="미완료 사유를 솔직하게 적어주세요. (예: 너무 어려워요, 시간이 부족했어요)"></textarea>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-xs font-black text-slate-400 uppercase mb-2">풀이 인증샷 (선택)</label>
+                        <div class="flex gap-2 items-center">
+                            <label class="w-16 h-16 flex-shrink-0 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:text-indigo-500 transition text-slate-400 active:scale-95">
+                                <i class="fa-solid fa-camera text-lg"></i>
+                                <span class="text-[8px] font-bold mt-1">추가</span>
+                                <input type="file" id="file-input" multiple accept="image/*" class="hidden" onchange="handleFileSelect(this)">
+                            </label>
+                            <div id="preview-container" class="img-preview-container mt-0 flex-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-white flex gap-3">
+                <button onclick="softDeleteMessage()" class="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex items-center justify-center text-lg">
+                    <i class="fa-regular fa-trash-can"></i>
+                </button>
+                <button id="btn-submit" onclick="submitHomework()" disabled class="flex-1 h-12 bg-slate-300 text-white rounded-xl font-black text-sm shadow-sm transition flex items-center justify-center gap-2 cursor-not-allowed">
+                    <span>제출하기</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="secure-viewer" class="fixed inset-0 z-[200] bg-black/95 hidden flex flex-col items-center justify-center" onclick="closeSecureViewer()">
+        <button class="absolute top-4 right-4 text-white/50 hover:text-white text-3xl font-bold z-[210]">&times;</button>
+        <div id="secure-content-area" class="max-w-full max-h-full p-4 overflow-auto flex items-center justify-center w-full h-full" onclick="event.stopPropagation()">
+            </div>
+        <div class="absolute bottom-4 text-white/30 text-[10px] font-bold select-none">
+            SECURITY MODE: CAPTURE DISABLED
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user) location.href = 'index.html';
+
+        let allMessages = [];
+        let currentMsgId = null;
+        let selectedFiles = [];
+
+        // --- 보안 스크립트 ---
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', function(e) {
+            if (e.keyCode == 123 || 
+                (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || 
+                (e.ctrlKey && (e.keyCode == 85 || e.keyCode == 83 || e.keyCode == 80))) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const check = setInterval(() => { if (typeof _supabase !== 'undefined') { clearInterval(check); loadMessages(); } }, 100);
+        });
+
+        async function loadMessages() {
+            const list = document.getElementById('inbox-list');
+            const sortType = document.getElementById('sort-select').value;
+
+            const { data, error } = await _supabase
+                .from('homework_messages')
+                .select('*')
+                .eq('student_id', user.username)
+                .eq('is_deleted', false)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false });
+
+            if (error) { list.innerHTML = `<div class="text-center py-20 text-red-400 text-xs">Error: ${error.message}</div>`; return; }
+            allMessages = data || [];
+            
+            if (sortType === 'old') allMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            else if (sortType === 'unread') allMessages.sort((a, b) => (a.is_read === b.is_read) ? 0 : a.is_read ? 1 : -1);
+            else allMessages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            renderList(allMessages);
+        }
+
+        function renderList(messages) {
+            const list = document.getElementById('inbox-list');
+            if (messages.length === 0) { list.innerHTML = `<div class="text-center py-32 opacity-50"><i class="fa-solid fa-inbox text-4xl text-slate-300 mb-4"></i><p class="text-sm text-slate-400 font-bold">남은 숙제가 없습니다.</p></div>`; return; }
+
+            list.innerHTML = messages.map(msg => {
+                const dateStr = new Date(msg.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour:'2-digit', minute:'2-digit' });
+                return `
+                <div onclick="openModal(${msg.id})" class="inbox-card p-5 cursor-pointer flex gap-4 ${!msg.is_read ? 'unread-msg' : ''}">
+                    <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0 border border-indigo-100"><i class="fa-solid fa-envelope"></i></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start mb-1">
+                            <div class="flex items-center gap-2">${!msg.is_read ? '<span class="unread-dot"></span>' : ''}<span class="text-xs font-black text-slate-400">${dateStr}</span></div>
+                            <span class="text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded">대기중</span>
+                        </div>
+                        <p class="text-sm font-bold text-slate-800 line-clamp-2 leading-snug">${msg.content}</p>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function openModal(id) {
+            const msg = allMessages.find(m => m.id === id);
+            if (!msg) return;
+
+            currentMsgId = id;
+            document.getElementById('m-date').innerText = new Date(msg.created_at).toLocaleString();
+            document.getElementById('m-content').innerText = msg.content;
+            document.getElementById('m-status-badge').innerText = "PENDING";
+
+            const tmSection = document.getElementById('teacher-materials');
+            const tmContainer = document.getElementById('tm-container');
+            tmContainer.innerHTML = '';
+            
+            let hasMaterials = false;
+
+            if (msg.teacher_images && msg.teacher_images.length > 0) {
+                hasMaterials = true;
+                let imgGrid = '<div class="teacher-material-grid">';
+                msg.teacher_images.forEach(url => {
+                    imgGrid += `<img src="${url}" onclick="openSecureViewer('image', '${url}')" class="tm-thumb">`;
+                });
+                imgGrid += '</div>';
+                tmContainer.innerHTML += imgGrid;
+            }
+
+            if (msg.teacher_html) {
+                hasMaterials = true;
+                tmContainer.innerHTML += `
+                    <div onclick="openSecureViewer('html', '${msg.teacher_html}')" class="tm-html-btn mt-2">
+                        <i class="fa-solid fa-flask text-indigo-500 mr-2"></i> 시크릿 풀이 열기 (Interactive)
+                    </div>`;
+            }
+
+            if (hasMaterials) tmSection.classList.remove('hidden');
+            else tmSection.classList.add('hidden');
+
+            // Reset UI
+            document.querySelectorAll('input[name="hw-status"]').forEach(el => el.checked = false);
+            document.getElementById('reason-input').value = '';
+            document.getElementById('reason-area').classList.add('hidden');
+            selectedFiles = [];
+            renderPreviews();
+            document.getElementById('file-input').value = '';
+            checkSubmitButton();
+
+            if (!msg.is_read) await _supabase.from('homework_messages').update({ is_read: true }).eq('id', id);
+            document.getElementById('msg-modal').classList.remove('hidden');
+        }
+
+        // [★ CORE FIX] Fetch URL content -> Create Blob -> Force HTML render
+        async function openSecureViewer(type, url) {
+            const area = document.getElementById('secure-content-area');
+            area.innerHTML = '<div class="text-white font-bold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> 로딩 중...</div>';
+            document.getElementById('secure-viewer').classList.remove('hidden');
+
+            try {
+                if (type === 'image') {
+                    area.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain rounded shadow-2xl select-none" oncontextmenu="return false">`;
+                } else if (type === 'html') {
+                    // 1. Fetch Raw Content
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Load failed");
+                    const text = await response.text();
+
+                    // 2. Create Blob with enforced HTML type
+                    const blob = new Blob([text], { type: 'text/html; charset=utf-8' });
+                    const blobUrl = URL.createObjectURL(blob);
+
+                    // 3. Inject Blob URL into Iframe
+                    area.innerHTML = `<iframe src="${blobUrl}" class="w-full h-full bg-white rounded-lg shadow-2xl border-none" sandbox="allow-scripts allow-same-origin"></iframe>`;
+                }
+            } catch (e) {
+                area.innerHTML = '<div class="text-red-400 font-bold">자료를 불러오는데 실패했습니다.</div>';
+                console.error(e);
+            }
+        }
+
+        function closeSecureViewer() {
+            document.getElementById('secure-viewer').classList.add('hidden');
+            document.getElementById('secure-content-area').innerHTML = '';
+        }
+
+        function closeModal() { document.getElementById('msg-modal').classList.add('hidden'); loadMessages(); }
+
+        function toggleReasonArea() {
+            const status = document.querySelector('input[name="hw-status"]:checked')?.value;
+            const area = document.getElementById('reason-area');
+            if (status === 'incomplete') { area.classList.remove('hidden'); document.getElementById('reason-input').focus(); } 
+            else area.classList.add('hidden');
+            checkSubmitButton();
+        }
+
+        document.getElementById('reason-input').addEventListener('input', checkSubmitButton);
+
+        function handleFileSelect(input) {
+            if (input.files && input.files.length > 0) {
+                selectedFiles = selectedFiles.concat(Array.from(input.files));
+                renderPreviews();
+                input.value = '';
+            }
+        }
+
+        function renderPreviews() {
+            const container = document.getElementById('preview-container');
+            container.innerHTML = selectedFiles.map((file, index) => `
+                <div class="img-preview-wrapper">
+                    <img src="${URL.createObjectURL(file)}" class="img-preview">
+                    <div onclick="removeFile(${index})" class="img-remove-btn"><i class="fa-solid fa-xmark"></i></div>
+                </div>
+            `).join('');
+        }
+
+        window.removeFile = (idx) => { selectedFiles.splice(idx, 1); renderPreviews(); };
+
+        function checkSubmitButton() {
+            const btn = document.getElementById('btn-submit');
+            const status = document.querySelector('input[name="hw-status"]:checked')?.value;
+            const reason = document.getElementById('reason-input').value.trim();
+            let isValid = (status === 'completed') || (status === 'incomplete' && reason.length > 0);
+            
+            if (isValid) {
+                btn.disabled = false;
+                btn.className = "flex-1 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2 cursor-pointer active:scale-95";
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>제출하기</span>`;
+            } else {
+                btn.disabled = true;
+                btn.className = "flex-1 h-12 bg-slate-300 text-white rounded-xl font-black text-sm shadow-sm transition flex items-center justify-center gap-2 cursor-not-allowed";
+                btn.innerHTML = `<span>제출하기</span>`;
+            }
+        }
+
+        async function submitHomework() {
+            if (!currentMsgId) return;
+            const status = document.querySelector('input[name="hw-status"]:checked')?.value;
+            const reason = document.getElementById('reason-input').value.trim();
+            const btn = document.getElementById('btn-submit');
+            
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 업로드 중...`;
+            btn.disabled = true;
+
+            try {
+                let uploadedUrls = [];
+                if (selectedFiles.length > 0) {
+                    for (const file of selectedFiles) {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${currentMsgId}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+                        const { data, error } = await _supabase.storage.from('homework_evidence').upload(fileName, file);
+                        if (error) throw error;
+                        const { data: publicData } = _supabase.storage.from('homework_evidence').getPublicUrl(fileName);
+                        uploadedUrls.push(publicData.publicUrl);
+                    }
+                }
+
+                const { error } = await _supabase.rpc('submit_homework_message', {
+                    p_msg_id: currentMsgId,
+                    p_status: status,
+                    p_reason: (status === 'incomplete' ? reason : null),
+                    p_images: uploadedUrls.length > 0 ? uploadedUrls : null
+                });
+
+                if (error) throw error;
+                alert("✅ 제출되었습니다!");
+                closeModal();
+
+            } catch (e) {
+                console.error(e);
+                alert("제출 실패: " + e.message);
+                checkSubmitButton();
+            }
+        }
+
+        async function softDeleteMessage() {
+            if (!currentMsgId) return;
+            if (!confirm("정말 보관함에서 삭제하시겠습니까?\n(선생님 기록에는 유지됩니다)")) return;
+            const { error } = await _supabase.rpc('soft_delete_homework_message', { p_msg_id: currentMsgId });
+            if (error) alert("삭제 실패: " + error.message);
+            else closeModal();
+        }
+    </script>
+</body>
+</html>

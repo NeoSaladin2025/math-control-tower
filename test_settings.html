@@ -1,228 +1,323 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    
-    <link rel="manifest" href="site.webmanifest">
-    
-    <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
-    <title>진단평가 세부 설정 - 엘리트 컨트롤</title>
+    <title>교재 생성 (Workbook Factory) v2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        /* 시스템 메인 테마: 다크 인디고 & 사이버네틱 스타일 */
-        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #0f172a; color: #f8fafc; overflow: hidden; height: 100vh; display: flex; padding: 30px; gap: 30px; }
-        .glass-panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.05); }
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        
-        /* 카테고리 카드 스타일 */
-        .cat-card { transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
-        .cat-card:hover { background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.3); transform: translateX(5px); }
-        .cat-card.active { background: rgba(99, 102, 241, 0.2); border-left: 4px solid #6366f1; border-color: rgba(99, 102, 241, 0.5); }
+    <script src="config.js"></script>
 
-        /* 입력 폼 애니메이션 */
-        .mode-container { display: none; animation: fadeIn 0.3s ease-out; }
-        .mode-container.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap');
+        
+        body { 
+            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+            height: 100vh; 
+            overflow: hidden; 
+            display: flex;
+            padding: 24px;
+            gap: 24px;
+        }
+
+        /* Glass Panel Style */
+        .glass-panel { 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255,255,255,0.05); 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Input Styles */
+        .pro-input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: white;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: 0.2s;
+            width: 100%;
+        }
+        .pro-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+
+        /* Scrollbar */
+        .custom-scroll { overflow-y: auto; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+
+        /* Unit Row Item */
+        .unit-row {
+            display: flex; gap: 8px; margin-bottom: 8px; align-items: center;
+            opacity: 0; animation: fadeIn 0.3s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* List Item */
+        .list-item {
+            padding: 12px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
+            border: 1px solid transparent; margin-bottom: 6px;
+        }
+        .list-item:hover { background: rgba(255,255,255,0.05); }
+        .list-item.active { background: rgba(99,102,241,0.2); border-color: #6366f1; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            color: white; font-weight: 700; transition: 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .tag-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #334155; color: #94a3b8; }
     </style>
 </head>
 <body>
 
-    <script src="config.js"></script>
-
-    <div class="w-1/3 flex flex-col glass-panel rounded-[40px] overflow-hidden shadow-2xl">
-        <div class="p-8 border-b border-white/5 bg-white/5">
-            <h2 class="text-xl font-black flex items-center gap-3">
-                <i class="fa-solid fa-list-check text-indigo-400"></i> 대상 카테고리
-            </h2>
-            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Select Category to Configure</p>
+    <div class="w-1/4 glass-panel p-5">
+        <div class="mb-6">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">1. Select Platform</h2>
+            <select id="sel-platform" onchange="loadWorkbooks(this.value)" class="pro-input">
+                <option value="">플랫폼(카테고리) 선택...</option>
+                </select>
         </div>
-        <div id="category-list" class="flex-1 overflow-y-auto custom-scroll p-6 space-y-3">
-            <div class="text-center py-20 opacity-30 italic text-sm">Loading Categories...</div>
+
+        <div class="flex-1 flex flex-col min-h-0">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Workbook List</h2>
+                <button onclick="resetForm()" class="text-xs text-indigo-400 hover:text-white transition"><i class="fa-solid fa-plus"></i> New</button>
+            </div>
+            <div id="list-workbook" class="flex-1 custom-scroll space-y-1 pr-1">
+                <div class="text-center py-10 text-xs text-slate-600">플랫폼을 선택하세요.</div>
+            </div>
         </div>
     </div>
 
-    <div class="flex-1 glass-panel rounded-[40px] overflow-hidden flex flex-col shadow-2xl relative">
-        <div id="lock-overlay" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-all duration-500">
-            <div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-4 border border-white/10 shadow-2xl">
-                <i class="fa-solid fa-lock text-3xl text-slate-600"></i>
+    <div class="w-3/4 glass-panel p-6 relative">
+        <div class="flex gap-4 mb-6 border-b border-slate-700 pb-6">
+            <div class="flex-1">
+                <label class="block text-xs font-bold text-slate-400 mb-1">교재명 (Workbook Title)</label>
+                <input type="text" id="inp-title" class="pro-input text-lg font-bold text-white bg-slate-800" placeholder="예: [매쓰플랫] 고1-1 개념원리">
             </div>
-            <p class="text-slate-400 font-bold tracking-tight">좌측에서 설정할 카테고리를 선택하세요.</p>
+            <div class="w-32">
+                <label class="block text-xs font-bold text-slate-400 mb-1">학년 (Grade)</label>
+                <select id="sel-grade" class="pro-input text-sm">
+                    <option value="중1">중1</option><option value="중2">중2</option><option value="중3">중3</option>
+                    <option value="고1">고1</option><option value="고2">고2</option><option value="고3">고3</option>
+                </select>
+            </div>
+            <div class="w-32">
+                <label class="block text-xs font-bold text-slate-400 mb-1">학기 (Semester)</label>
+                <select id="sel-semester" class="pro-input text-sm">
+                    <option value="1학기">1학기</option><option value="2학기">2학기</option>
+                    <option value="여름방학">여름방학</option><option value="겨울방학">겨울방학</option>
+                </select>
+            </div>
         </div>
 
-        <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/5 shrink-0">
-            <div>
-                <h2 id="selected-cat-name" class="text-2xl font-black tracking-tight text-white">세부 범위 설정</h2>
-                <div id="mode-badge" class="mt-1 inline-block"></div>
+        <div class="flex-1 flex flex-col min-h-0">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol"></i> 단원 목차 (Table of Contents)
+                </h2>
+                <button onclick="addUnitRow()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white transition">
+                    <i class="fa-solid fa-plus"></i> 단원 추가
+                </button>
             </div>
-            <button onclick="saveSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-8 py-3 rounded-2xl transition shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center gap-2">
-                <i class="fa-solid fa-cloud-arrow-up"></i> 설정값 저장
+            
+            <div class="flex gap-2 text-[10px] text-slate-500 font-bold uppercase mb-2 px-2">
+                <div class="w-24">Code (ID)</div>
+                <div class="flex-1">Unit Title</div>
+                <div class="w-8 text-center">Del</div>
+            </div>
+
+            <div id="unit-container" class="flex-1 custom-scroll pb-10">
+                </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-700 flex justify-between items-center">
+            <div class="text-xs text-slate-500">
+                <span id="status-msg">Ready to build.</span>
+            </div>
+            <button onclick="saveWorkbook()" class="btn-primary px-8 py-3 rounded-xl shadow-lg flex items-center gap-2">
+                <i class="fa-solid fa-save"></i> 뼈대 저장 (Save Skeleton)
             </button>
         </div>
-
-        <div class="flex-1 overflow-y-auto custom-scroll p-8 space-y-10">
-            <section class="grid grid-cols-2 gap-6">
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Limit Time (Minutes)</label>
-                    <input type="number" id="limit-time" class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 font-black text-indigo-400 outline-none focus:border-indigo-500 transition" placeholder="60">
-                </div>
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Passing Score (%)</label>
-                    <input type="number" id="pass-score" class="w-full bg-slate-800/50 border border-slate-700 rounded-2xl p-4 font-black text-emerald-400 outline-none focus:border-emerald-500 transition" placeholder="80">
-                </div>
-            </section>
-
-            <hr class="border-white/5">
-
-            <section>
-                <div id="mode-internal" class="mode-container space-y-6">
-                    <div class="flex items-center gap-3 mb-2">
-                        <i class="fa-solid fa-book-bookmark text-emerald-400"></i>
-                        <h3 class="text-lg font-black text-white">시스템 등록 교재 동기화</h3>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Select Workbook</label>
-                        <select id="workbook-select" class="w-full bg-slate-800/80 border border-slate-700 rounded-2xl p-4 font-bold text-slate-200 outline-none focus:border-indigo-500 cursor-pointer">
-                            <option value="">교재를 선택하세요</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="mode-external" class="mode-container space-y-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-diagram-predecessor text-amber-400"></i>
-                            <h3 class="text-lg font-black text-white">커스텀 단원 족보 생성</h3>
-                        </div>
-                        <button onclick="addUnitRow()" class="text-xs font-bold bg-white/5 hover:bg-white/10 text-slate-300 px-4 py-2 rounded-xl border border-white/10 transition">
-                            <i class="fa-solid fa-plus mr-1"></i> 단원 추가
-                        </button>
-                    </div>
-                    <div id="unit-list" class="space-y-3"></div>
-                </div>
-            </section>
-        </div>
+        
+        <input type="hidden" id="hdn-master-id">
     </div>
 
     <script>
-        let selectedCategoryId = null;
-        let selectedCategoryMode = null;
-
-        init();
-        async function init() {
-            await fetchCategories();
-            await fetchWorkbooks();
-        }
-
-        async function fetchCategories() {
-            const list = document.getElementById('category-list');
-            const { data, error } = await _supabase.from('test_category').select('*').order('created_at', { ascending: false });
-            if (error) return;
-            list.innerHTML = data.map(cat => `
-                <div onclick="selectCategory('${cat.test_id}', '${cat.name}', ${cat.is_internal}, this)" class="cat-card glass-panel p-5 rounded-3xl">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${cat.is_internal ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'} uppercase">
-                            ${cat.is_internal ? 'Internal' : 'External'}
-                        </span>
-                    </div>
-                    <h4 class="font-black text-white mt-2">${cat.name}</h4>
-                </div>
-            `).join('');
-        }
-
-        async function fetchWorkbooks() {
-            const sel = document.getElementById('workbook-select');
-            const { data } = await _supabase.from('workbooks').select('id, title').order('title');
-            if (data) sel.innerHTML = '<option value="">교재를 선택하세요</option>' + data.map(w => `<option value="${w.id}">${w.title}</option>`).join('');
-        }
-
-        function selectCategory(id, name, isInternal, el) {
-            document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-
-            selectedCategoryId = id;
-            selectedCategoryMode = isInternal ? 'internal' : 'external';
-
-            document.getElementById('selected-cat-name').innerText = name;
-            document.getElementById('mode-badge').innerHTML = `<span class="text-[10px] font-black px-3 py-1 rounded-full ${isInternal ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'} uppercase tracking-widest">${isInternal ? 'Internal Mode' : 'External Mode'}</span>`;
-
-            // 잠금 해제 로직
-            const overlay = document.getElementById('lock-overlay');
-            overlay.style.opacity = '0';
-            setTimeout(() => { overlay.style.display = 'none'; }, 500);
-
-            document.querySelectorAll('.mode-container').forEach(m => m.classList.remove('active'));
-            document.getElementById(`mode-${selectedCategoryMode}`).classList.add('active');
-
-            loadCategorySettings(id);
-        }
-
-        function addUnitRow(code = '', title = '') {
-            const container = document.getElementById('unit-list');
-            const div = document.createElement('div');
-            div.className = 'flex gap-3 animate-[fadeIn_0.2s]';
-            div.innerHTML = `
-                <input type="text" class="unit-code w-24 bg-slate-900 border border-slate-700 rounded-xl p-3 text-center font-black text-amber-400 outline-none focus:border-amber-500" placeholder="111" value="${code}" maxlength="3">
-                <input type="text" class="unit-title flex-1 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm font-bold text-slate-300 outline-none focus:border-indigo-500" placeholder="단원명을 입력하세요" value="${title}">
-                <button onclick="this.parentElement.remove()" class="text-slate-600 hover:text-red-500 transition px-2"><i class="fa-solid fa-xmark"></i></button>
-            `;
-            container.appendChild(div);
-        }
-
-        async function loadCategorySettings(testId) {
-            // 필드 초기화
-            document.getElementById('limit-time').value = '';
-            document.getElementById('pass-score').value = '';
-            document.getElementById('unit-list').innerHTML = '';
-            document.getElementById('workbook-select').value = '';
-
-            const { data, error } = await _supabase.from('test_master').select('*').eq('test_id', testId).maybeSingle();
-            if (data) {
-                document.getElementById('limit-time').value = data.limit_time;
-                document.getElementById('pass-score').value = data.pass_score;
-                if (selectedCategoryMode === 'internal') {
-                    document.getElementById('workbook-select').value = data.range_data.workbook_id || '';
-                } else if (data.range_data.units) {
-                    data.range_data.units.forEach(u => addUnitRow(u.code, u.title));
+        /*
+         * [Elite Secretary Logic - Daughter #2]
+         * UUID 제거 완료. 직관적인 BigInt ID 사용.
+         * 교재명(Title) 중심의 데이터 구조.
+         */
+        
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            const check = setInterval(() => {
+                if (typeof _supabase !== 'undefined') {
+                    clearInterval(check);
+                    initPage();
                 }
+            }, 100);
+        });
+
+        async function initPage() {
+            // 1. 카테고리(플랫폼) 로드 - test_category 테이블
+            const { data: cats, error } = await _supabase.from('test_category').select('*').order('name');
+            if (cats) {
+                const sel = document.getElementById('sel-platform');
+                sel.innerHTML = '<option value="">플랫폼(카테고리) 선택...</option>' + 
+                                cats.map(c => `<option value="${c.test_id}">${c.name}</option>`).join('');
+            }
+            addUnitRow(); // 기본 행 하나 추가
+        }
+
+        // 플랫폼 선택 시 해당 플랫폼의 교재 목록 로드
+        async function loadWorkbooks(platformId) {
+            const list = document.getElementById('list-workbook');
+            list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
+            resetForm(); // 입력폼 초기화
+
+            if (!platformId) {
+                list.innerHTML = '<div class="text-center py-10 text-xs text-slate-600">플랫폼을 선택하세요.</div>';
+                return;
+            }
+
+            // test_master 테이블 조회 (test_id 기준)
+            const { data, error } = await _supabase.from('test_master')
+                .select('*')
+                .eq('test_id', platformId)
+                .order('updated_at', { ascending: false });
+
+            if (data && data.length > 0) {
+                list.innerHTML = data.map(wb => `
+                    <div class="list-item bg-slate-800/50" onclick='loadDetail(${JSON.stringify(wb)})'>
+                        <div class="text-sm font-bold text-slate-200 mb-1">${wb.title}</div>
+                        <div class="flex gap-2">
+                            <span class="tag-badge">${wb.grade || '-'}</span>
+                            <span class="tag-badge">${wb.semester || '-'}</span>
+                            <span class="tag-badge text-indigo-400">${(wb.range_data || []).length} Units</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500">등록된 교재가 없습니다.<br>새로 생성해주세요.</div>';
             }
         }
 
-        async function saveSettings() {
-            if (!selectedCategoryId) return;
+        // 교재 상세 불러오기 (수정 모드)
+        function loadDetail(wb) {
+            document.getElementById('hdn-master-id').value = wb.id; // BigInt ID
+            document.getElementById('inp-title').value = wb.title;
+            document.getElementById('sel-grade').value = wb.grade || '고1';
+            document.getElementById('sel-semester').value = wb.semester || '1학기';
 
-            const time = parseInt(document.getElementById('limit-time').value) || 60;
-            const pass = parseInt(document.getElementById('pass-score').value) || 80;
-            let rangeData = {};
-
-            if (selectedCategoryMode === 'internal') {
-                const wbId = document.getElementById('workbook-select').value;
-                if (!wbId) return alert("연동할 교재를 선택해주세요.");
-                rangeData = { workbook_id: wbId };
+            // 단원 리스트 렌더링
+            const container = document.getElementById('unit-container');
+            container.innerHTML = '';
+            
+            const units = wb.range_data || [];
+            if (units.length > 0) {
+                units.forEach(u => addUnitRow(u.code, u.title));
             } else {
-                const rows = document.querySelectorAll('#unit-list > div');
-                const units = Array.from(rows).map(row => ({
-                    code: row.querySelector('.unit-code').value,
-                    title: row.querySelector('.unit-title').value
-                })).filter(u => u.code && u.title);
-                if (units.length === 0) return alert("최소 하나 이상의 단원을 등록해주세요.");
-                rangeData = { units: units };
+                addUnitRow();
             }
 
-            // DB Upsert
-            const { error } = await _supabase.from('test_master').upsert({
-                test_id: selectedCategoryId,
-                limit_time: time,
-                pass_score: pass,
-                range_data: rangeData
-            }, { onConflict: 'test_id' });
+            // UI Highlight
+            document.querySelectorAll('#list-workbook .list-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            setStatus(`Editing: ${wb.title}`);
+        }
 
-            if (error) alert("저장 실패: " + error.message);
-            else alert("✅ 설정값이 카테고리에 성공적으로 저장되었습니다.");
+        // 폼 초기화 (신규 생성 모드)
+        function resetForm() {
+            document.getElementById('hdn-master-id').value = '';
+            document.getElementById('inp-title').value = '';
+            document.getElementById('sel-grade').selectedIndex = 0;
+            document.getElementById('sel-semester').selectedIndex = 0;
+            document.getElementById('unit-container').innerHTML = '';
+            addUnitRow();
+            setStatus('New Workbook Mode');
+            
+            document.querySelectorAll('#list-workbook .list-item').forEach(el => el.classList.remove('active'));
+        }
+
+        // 단원 입력 행 추가
+        function addUnitRow(code = '', title = '') {
+            const div = document.createElement('div');
+            div.className = 'unit-row';
+            div.innerHTML = `
+                <input type="text" class="pro-input w-24 text-center font-mono text-xs unit-code" placeholder="101" value="${code}">
+                <input type="text" class="pro-input flex-1 text-sm unit-title" placeholder="단원명 (예: 다항식의 연산)" value="${title}">
+                <button onclick="this.parentElement.remove()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-red-400 transition">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+            document.getElementById('unit-container').appendChild(div);
+            // 새로 추가된 행의 첫 인풋에 포커스
+            if (!code) div.querySelector('.unit-code').focus();
+        }
+
+        // 저장 로직 (RPC 호출)
+        async function saveWorkbook() {
+            const platformId = document.getElementById('sel-platform').value;
+            if (!platformId) return alert("플랫폼을 먼저 선택해주세요.");
+
+            const id = document.getElementById('hdn-master-id').value || null; // 수정 시 ID, 신규 시 null
+            const title = document.getElementById('inp-title').value.trim();
+            const grade = document.getElementById('sel-grade').value;
+            const semester = document.getElementById('sel-semester').value;
+
+            if (!title) return alert("교재명(Title)은 필수입니다.");
+
+            // 단원 데이터 수집
+            const rows = document.querySelectorAll('.unit-row');
+            const rangeData = [];
+            rows.forEach(row => {
+                const c = row.querySelector('.unit-code').value.trim();
+                const t = row.querySelector('.unit-title').value.trim();
+                if (c && t) rangeData.push({ code: c, title: t });
+            });
+
+            if (rangeData.length === 0) return alert("최소 1개 이상의 단원을 입력해주세요.");
+
+            if (!confirm(`${title}\n총 ${rangeData.length}개 단원\n저장하시겠습니까?`)) return;
+
+            try {
+                // RPC 호출: rpc_upsert_test_master
+                const { data, error } = await _supabase.rpc('rpc_upsert_test_master', {
+                    p_id: id,
+                    p_test_id: platformId,
+                    p_title: title,
+                    p_grade: grade,
+                    p_semester: semester,
+                    p_range_data: rangeData
+                });
+
+                if (error) throw error;
+
+                alert("✅ 교재 뼈대가 저장되었습니다!");
+                loadWorkbooks(platformId); // 목록 갱신
+
+            } catch (e) {
+                console.error(e);
+                alert("저장 실패: " + e.message);
+            }
+        }
+
+        function setStatus(msg) {
+            document.getElementById('status-msg').innerText = msg;
         }
     </script>
 </body>
