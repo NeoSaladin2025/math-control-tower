@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROOT ACCESS: Bulk File Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="config.js"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        .admin-card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; transition: 0.2s; }
+        .admin-card:hover { border-color: #6366f1; box-shadow: 0 0 20px rgba(99, 102, 241, 0.1); }
+        .input-dark { background: #0f172a; border: 1px solid #334155; color: white; border-radius: 12px; padding: 10px; font-size: 14px; outline: none; }
+        .input-dark:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        
+        .bulk-area { 
+            border: 3px dashed #475569; 
+            background: #0f172a; 
+            color: #94a3b8; 
+            font-family: monospace; 
+            transition: all 0.3s;
+            resize: none;
+        }
+        .bulk-area.drag-over { 
+            border-color: #6366f1; 
+            background: #1e1b4b; 
+            color: #e2e8f0;
+            transform: scale(1.01);
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+        }
+        
+        .custom-scroll { overflow-y: auto; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-8">
+
+    <header class="flex justify-between items-center mb-10 border-b border-slate-800 pb-6">
+        <div>
+            <h1 class="text-3xl font-black text-indigo-400 tracking-tighter flex items-center gap-3">
+                <i class="fa-solid fa-skull-crossbones"></i> BULK FILE MASTER
+            </h1>
+            <p class="text-slate-500 text-xs font-bold mt-1 uppercase tracking-widest">Admin Root Access: Inventory Management</p>
+        </div>
+        <button onclick="location.href='teacher_main.html'" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-2 rounded-xl text-sm font-bold transition border border-slate-700">Back to Main</button>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <div class="lg:col-span-5 space-y-6">
+            <div class="admin-card p-6">
+                <h3 class="text-sm font-black mb-4 flex items-center gap-2 text-indigo-400">
+                    <i class="fa-solid fa-layer-group"></i> 파일 이름 훔쳐오기 (Drag & Drop)
+                </h3>
+                <p class="text-[10px] text-slate-500 mb-3 leading-tight">탐색기에서 파일들을 선택해 이 박스에 **툭! 던지세요.**<br>이름만 쏙 골라내서 줄을 세워드릴게요!! 하아앙! ❤️</p>
+                
+                <textarea id="bulk-input" 
+                          class="w-full h-48 input-dark bulk-area mb-4 p-4 text-xs" 
+                          placeholder="여기에 파일들을 직접 던지거나 리스트를 붙여넣으세요!&#10;파일명만 추출해서 자동으로 엔터 처리합니다... ❤️"
+                          ondragover="handleDragOver(event)"
+                          ondragleave="handleDragLeave(event)"
+                          ondrop="handleDrop(event)"></textarea>
+
+                <button onclick="bulkRegister()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> 미등록 파일 일괄 스캔
+                </button>
+            </div>
+            
+            <div id="edit-form-area" class="admin-card p-6 opacity-40 pointer-events-none transition-all duration-300">
+                <h3 class="text-sm font-black mb-6 flex items-center gap-2 text-emerald-400">
+                    <i class="fa-solid fa-tag"></i> 선택 파일 정밀 설정 (Assign)
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Selected File Path</label>
+                        <input type="text" id="f-name" class="input-dark bg-slate-800" readonly>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Display Menu Name</label>
+                        <input type="text" id="f-display" class="input-dark" placeholder="예: 실시간 오답 분석기">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Description (설명)</label>
+                        <textarea id="f-desc" class="input-dark h-20 resize-none text-xs" placeholder="용도를 설명해주세요."></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Category</label>
+                            <select id="f-cat" class="input-dark text-xs">
+                                <option value="수업관리">수업관리</option>
+                                <option value="학생관리">학생관리</option>
+                                <option value="문제집/출제">문제집/출제</option>
+                                <option value="시스템설정">시스템설정</option>
+                                <option value="기타">기타</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Target User</label>
+                            <select id="f-target" class="input-dark text-xs">
+                                <option value="teacher">선생님 (Teacher)</option>
+                                <option value="student">학생 (Student)</option>
+                                <option value="admin">관리자 (Admin)</option>
+                                <option value="common">공용 (Common)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="updateFileDetail()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-xl shadow-lg transition active:scale-95">
+                            인벤토리에 각인하기 (SAVE & ACTIVATE)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7">
+            <div class="admin-card p-6 h-[calc(100vh-200px)] flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-black flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-stacked text-indigo-400"></i> 올파일 인벤토리
+                    </h3>
+                    <div class="flex gap-4 items-center">
+                        <div class="text-[10px] font-bold text-slate-500 tracking-widest uppercase"><span id="file-count" class="text-indigo-400">0</span> Files</div>
+                        <button onclick="loadInventory()" class="text-slate-500 hover:text-white transition"><i class="fa-solid fa-rotate"></i></button>
+                    </div>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto pr-2 custom-scroll space-y-2" id="file-list-area">
+                    <div class="text-center py-20 text-slate-700 italic">데이터 로딩 중...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || user.role !== 'admin') { alert("ROOT 권한이 없습니다!! 💢"); location.href = 'teacher_main.html'; }
+
+        let editingId = null;
+
+        document.addEventListener('DOMContentLoaded', loadInventory);
+
+        // --- [Core Drag & Name Extraction Logic] ---
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+        
+        async function handleDrop(e) {
+            e.preventDefault();
+            const el = e.currentTarget;
+            el.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                const names = Array.from(files).map(f => f.name).filter(n => n.includes('.html'));
+                if (names.length === 0) return alert("HTML 파일이 하나도 없네요 주인님?! 💦");
+                insertToTextArea(names.join('\n'), el);
+                alert(`하아앙! ❤️ 주인님이 던져주신 ${names.length}개의 파일 이름을 훔쳐왔어요!!`);
+                return;
+            }
+
+            const text = e.dataTransfer.getData("text");
+            if (text) {
+                const refined = text.split(/[\s,;]+/).map(n => n.trim()).filter(n => n.length > 0 && n.includes('.html'));
+                insertToTextArea(refined.join('\n'), el);
+            }
+        }
+
+        function insertToTextArea(text, targetEl) {
+            if (targetEl.value.trim().length > 0) targetEl.value += '\n' + text;
+            else targetEl.value = text;
+        }
+
+        document.getElementById('bulk-input').addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const refined = text.split(/[\s,;]+/).map(n => n.trim()).filter(n => n.length > 0).join('\n');
+            insertToTextArea(refined, e.target);
+        });
+
+        // --- [Inventory DB Logic] ---
+        async function bulkRegister() {
+            const input = document.getElementById('bulk-input').value.trim();
+            if (!input) return alert("파일명을 입력하세요!! 💢");
+
+            const fileNames = [...new Set(input.split('\n').map(n => n.trim()).filter(n => n.length > 0))];
+            
+            const payload = fileNames.map(name => ({
+                file_name: name,
+                display_name: name,
+                category: '기타',
+                target_user: 'teacher',
+                is_active: false // 기본적으로는 비활성 상태 (주인님이 컨펌해야 활성)
+            }));
+
+            const { error } = await _supabase
+                .from('all_file_inventory')
+                .upsert(payload, { onConflict: 'file_name', ignoreDuplicates: true });
+
+            if (error) {
+                alert("등록 실패: " + error.message);
+            } else {
+                alert(`✅ 등록 완료! 이미 있던 파일은 퉤! 했습니다. ❤️`);
+                document.getElementById('bulk-input').value = '';
+                loadInventory();
+            }
+        }
+
+        async function loadInventory() {
+            const { data, error } = await _supabase.from('all_file_inventory').select('*').order('created_at', { ascending: false });
+            if (error) return console.error(error);
+            document.getElementById('file-count').innerText = data.length;
+            renderList(data);
+        }
+
+        function renderList(list) {
+            const area = document.getElementById('file-list-area');
+            if (list.length === 0) { area.innerHTML = `<div class="text-center py-20 text-slate-700 text-sm">인벤토리가 비어있습니다.</div>`; return; }
+
+            area.innerHTML = list.map(f => {
+                const isConfigured = f.display_name !== f.file_name;
+                const isActive = f.is_active; // [★ NEW] 활성 상태 확인
+                const targetTag = f.target_user === 'teacher' ? 'bg-indigo-900/50 text-indigo-300' : 
+                                 (f.target_user === 'student' ? 'bg-emerald-900/50 text-emerald-300' : 'bg-slate-800 text-slate-500');
+                
+                return `
+                <div class="p-4 bg-slate-900/40 border ${editingId === f.id ? 'border-indigo-500 bg-slate-800' : 'border-slate-800'} rounded-2xl flex justify-between items-center group hover:border-slate-600 transition">
+                    <div class="flex items-center gap-4 cursor-pointer flex-1" onclick="selectForEdit(${JSON.stringify(f).replace(/"/g, '&quot;')})">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center ${isActive ? 'text-indigo-400' : 'text-slate-600'} transition">
+                            <i class="${isConfigured ? 'fa-solid fa-file-circle-check' : 'fa-solid fa-file-code'}"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-black ${isActive ? 'text-slate-100' : 'text-slate-500'}">${f.display_name}</span>
+                                <span class="text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${targetTag}">${f.target_user}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${f.file_name}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div onclick="toggleActive(${f.id}, ${isActive})" class="cursor-pointer w-10 h-5 rounded-full relative transition-colors duration-200 ${isActive ? 'bg-indigo-600' : 'bg-slate-700'}">
+                            <div class="absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-200 ${isActive ? 'left-6' : 'left-1'}"></div>
+                        </div>
+                        
+                        <button onclick="deleteFile(event, ${f.id})" class="text-slate-700 hover:text-rose-500 transition px-2"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // [★ NEW] Toggle Active Function
+        async function toggleActive(id, currentStatus) {
+            const { error } = await _supabase
+                .from('all_file_inventory')
+                .update({ is_active: !currentStatus })
+                .eq('id', id);
+            
+            if (error) alert("상태 변경 실패: " + error.message);
+            else loadInventory();
+        }
+
+        function selectForEdit(f) {
+            editingId = f.id;
+            const area = document.getElementById('edit-form-area');
+            area.classList.remove('opacity-40', 'pointer-events-none');
+            
+            document.getElementById('f-name').value = f.file_name;
+            document.getElementById('f-display').value = f.display_name === f.file_name ? '' : f.display_name;
+            document.getElementById('f-desc').value = f.description || '';
+            document.getElementById('f-cat').value = f.category || '기타';
+            document.getElementById('f-target').value = f.target_user || 'teacher';
+            
+            loadInventory();
+        }
+
+        async function updateFileDetail() {
+            if (!editingId) return;
+            const payload = {
+                display_name: document.getElementById('f-display').value.trim() || document.getElementById('f-name').value,
+                description: document.getElementById('f-desc').value.trim(),
+                category: document.getElementById('f-cat').value,
+                target_user: document.getElementById('f-target').value,
+                is_active: true // [★ NEW] 저장(각인) 시 자동으로 활성화(ON)
+            };
+
+            const { error } = await _supabase.from('all_file_inventory').update(payload).eq('id', editingId);
+            if (error) alert("저장 실패: " + error.message);
+            else {
+                alert("✅ 인벤토리에 성공적으로 각인되었습니다!! (ON 상태로 전환됨) ❤️");
+                loadInventory();
+            }
+        }
+
+        async function deleteFile(e, id) {
+            e.stopPropagation();
+            if (!confirm("정말 이 파일을 인벤토리에서 말살하시겠습니까?!")) return;
+            const { error } = await _supabase.from('all_file_inventory').delete().eq('id', id);
+            if (error) alert(error.message); else loadInventory();
+        }
+    </script>
+</body>
+</html>

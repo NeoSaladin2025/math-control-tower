@@ -21,7 +21,17 @@
         .item-btn.active { background: #4f46e5; color: white; font-weight: bold; }
         .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.5; white-space: pre-wrap; border: 1px solid #333; }
         .table-header { background: #334155; color: white; font-weight: bold; font-size: 12px; text-transform: uppercase; }
-        .table-cell { border-bottom: 1px solid #334155; padding: 8px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        
+        /* [★ 테이블 셀 스타일: 스크롤바 강제 적용] */
+        .table-cell { 
+            border-bottom: 1px solid #334155; 
+            padding: 8px; 
+            font-size: 12px; 
+            white-space: nowrap; 
+            max-width: 300px; 
+            overflow-x: auto; 
+            display: block;   
+        }
         
         /* 스크롤바 커스텀 */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -81,11 +91,8 @@
     </div>
 
     <script>
-        // 관리자 체크 (간단)
         const user = JSON.parse(sessionStorage.getItem('currentUser'));
-        // 실제 운영 시에는 RLS나 더 강력한 보안 필요, 일단 편의상 곽명용이브 체크
-        // if (!user || user.username !== '곽명용이브') { alert('접근 권한이 없습니다.'); location.href='index.html'; }
-
+        
         async function init() {
             // 1. 테이블 목록 로드
             const { data: tables, error: tErr } = await _supabase.rpc('get_admin_db_inspector', { p_type: 'tables' });
@@ -122,8 +129,8 @@
                 // 1. 컬럼 정보 가져오기
                 const { data: cols } = await _supabase.rpc('get_admin_db_inspector', { p_type: 'columns', p_target: name });
                 
-                // 2. 실제 데이터 샘플 가져오기 (최신 20개)
-                const { data: rows, error } = await _supabase.from(name).select('*').limit(20).order(cols[0].column_name, { ascending: false }); // 보통 첫 컬럼이 PK일 확률 높음
+                // 2. 실제 데이터 샘플 가져오기 (최신 10,000개) [★ 수정됨]
+                const { data: rows, error } = await _supabase.from(name).select('*').limit(10000).order(cols[0].column_name, { ascending: false }); 
 
                 if (error) throw error;
 
@@ -144,8 +151,7 @@
 
                     <div>
                         <h3 class="text-sm font-bold text-slate-400 mb-2 flex justify-between">
-                            <span>DATA PREVIEW (TOP 20)</span>
-                            <span class="text-xs font-normal text-slate-600">최신순 정렬됨</span>
+                            <span>DATA PREVIEW (MAX 10,000)</span> <span class="text-xs font-normal text-slate-600">최신순 정렬됨</span>
                         </h3>
                         <div class="overflow-x-auto border border-slate-700 rounded-lg">
                             <table class="w-full text-left border-collapse">
@@ -157,7 +163,12 @@
                                 <tbody class="bg-slate-800/50">
                                     ${rows.length > 0 ? rows.map(r => `
                                         <tr class="hover:bg-slate-700/50 transition">
-                                            ${cols.map(c => `<td class="table-cell text-slate-300 font-mono" title="${r[c.column_name]}">${r[c.column_name] === null ? '<span class="text-slate-600">null</span>' : r[c.column_name]}</td>`).join('')}
+                                            ${cols.map(c => {
+                                                let val = r[c.column_name];
+                                                if (val === null) val = '<span class="text-slate-600">null</span>';
+                                                else if (typeof val === 'object') val = JSON.stringify(val);
+                                                return `<td class="table-cell text-slate-300 font-mono" title="Scroll to see more">${val}</td>`;
+                                            }).join('')}
                                         </tr>
                                     `).join('') : '<tr><td colspan="100" class="p-8 text-center text-slate-500">데이터가 없습니다.</td></tr>'}
                                 </tbody>
@@ -183,7 +194,6 @@
             view.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin text-2xl text-purple-500"></i></div>';
 
             try {
-                // 함수 소스코드 가져오기
                 const { data } = await _supabase.rpc('get_admin_db_inspector', { p_type: 'function_code', p_target: name });
                 
                 if (!data || !data.code) throw new Error("코드를 불러올 수 없습니다. 권한을 확인하세요.");

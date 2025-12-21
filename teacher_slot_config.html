@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite Slot Configuration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="config.js"></script>
+    <style>
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .slot-btn { border: 2px solid #e2e8f0; transition: 0.2s; cursor: pointer; position: relative; }
+        .slot-btn.active { border-color: #6366f1; background: #eef2ff; color: #4338ca; transform: scale(1.05); z-index: 10; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.2); }
+        .menu-item { transition: 0.2s; border: 1px solid #f1f5f9; background: white; cursor: pointer; }
+        .menu-item:hover { border-color: #6366f1; background: #f8faff; }
+        .menu-item.selected { border-color: #10b981; background: #ecfdf5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tighter flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i> MY QUICK SLOT CONFIG
+                </h1>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">나만의 맞춤형 메뉴 슬롯 설정</p>
+            </div>
+            <button onclick="window.close()" class="text-xs font-bold text-slate-400 underline hover:text-slate-600">설정창 닫기</button>
+        </header>
+
+        <div class="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm mb-8">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded">STEP 1</span>
+                <h3 class="font-black text-slate-700 text-sm">설정할 슬롯 번호를 선택하세요</h3>
+            </div>
+            <div class="grid grid-cols-4 md:grid-cols-8 gap-3" id="slot-selector">
+                </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm h-[500px] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded">STEP 2</span>
+                    <h3 class="font-black text-slate-700 text-sm">연결할 메뉴를 선택하세요</h3>
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+                    <input type="text" id="menu-search" oninput="filterMenus()" placeholder="메뉴 검색..." class="pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full text-xs outline-none focus:border-indigo-300 transition w-48">
+                </div>
+            </div>
+
+            <div id="menu-list-area" class="flex-1 overflow-y-auto pr-2 space-y-2">
+                <div class="text-center py-20 text-slate-300 italic">
+                    <i class="fa-solid fa-spinner fa-spin mr-2"></i> 데이터 로딩 중...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user) { alert("로그인 세션이 만료되었습니다."); window.close(); }
+
+        let activeSlotIndex = 0; // 0~7
+        let allTeacherMenus = [];
+        let myCurrentSlots = Array(8).fill(null);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadMySlots();
+            await loadMenuInventory();
+            renderSlotSelector();
+        });
+
+        // 1. 내가 현재 사용중인 슬롯 정보 가져오기
+        async function loadMySlots() {
+            const { data, error } = await _supabase
+                .from('teacher_custom_slots')
+                .select('*')
+                .eq('teacher_id', user.username)
+                .order('slot_index', { ascending: true });
+
+            if (data) {
+                data.forEach(item => {
+                    if(item.slot_index >= 0 && item.slot_index < 8) myCurrentSlots[item.slot_index] = item;
+                });
+            }
+        }
+
+        // 2. [★ 핵심 수정] 관리자가 허락(ON)한 메뉴만 가져오기!!
+        async function loadMenuInventory() {
+            const { data, error } = await _supabase
+                .from('all_file_inventory')
+                .select('*')
+                .eq('is_active', true) // ★★★ 주인님의 허락(ON) 필터링!! ★★★
+                .in('target_user', ['teacher', 'common'])
+                .order('display_name', { ascending: true });
+
+            if (error) {
+                console.error("Load Menu Error:", error);
+                document.getElementById('menu-list-area').innerHTML = `<div class="text-center py-20 text-red-400">데이터 로드 실패</div>`;
+                return;
+            }
+
+            if (data) {
+                allTeacherMenus = data;
+                renderMenuList(data);
+            }
+        }
+
+        // 3. 슬롯 선택기 렌더링
+        function renderSlotSelector() {
+            const container = document.getElementById('slot-selector');
+            container.innerHTML = myCurrentSlots.map((slot, i) => `
+                <div onclick="selectSlot(${i})" class="slot-btn h-16 rounded-2xl flex flex-col items-center justify-center ${activeSlotIndex === i ? 'active' : ''}">
+                    <span class="text-[8px] font-black opacity-50 mb-1">SLOT ${i+1}</span>
+                    <div class="text-[10px] font-black text-center line-clamp-1 px-1">
+                        ${slot ? slot.display_name : '<i class="fa-solid fa-plus opacity-30"></i>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectSlot(idx) {
+            activeSlotIndex = idx;
+            renderSlotSelector();
+            renderMenuList(allTeacherMenus); // 리스트 갱신 (선택 표시 위해)
+        }
+
+        // 4. 메뉴 리스트 렌더링
+        function renderMenuList(list) {
+            const area = document.getElementById('menu-list-area');
+            if (!list || list.length === 0) { 
+                area.innerHTML = `<div class="text-center py-20 text-slate-300 text-xs">
+                    활성화된 메뉴가 없습니다.<br>관리자에게 문의하세요.
+                </div>`; 
+                return; 
+            }
+
+            area.innerHTML = list.map(m => {
+                // 현재 활성화된 슬롯에 꽂혀있는 메뉴인지 확인
+                const isSelected = myCurrentSlots[activeSlotIndex] && myCurrentSlots[activeSlotIndex].file_name === m.file_name;
+                
+                return `
+                <div onclick="assignMenuToSlot(${JSON.stringify(m).replace(/"/g, '&quot;')})" 
+                     class="menu-item p-4 rounded-2xl flex justify-between items-center group ${isSelected ? 'selected' : ''}">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-lg text-slate-400 group-hover:text-indigo-500 transition">
+                            <i class="${m.icon || 'fa-solid fa-file'}"></i>
+                        </div>
+                        <div>
+                            <div class="font-black text-slate-700 text-sm">${m.display_name}</div>
+                            <div class="text-[10px] text-slate-400 font-bold tracking-tight line-clamp-1">${m.description || '설명 없음'}</div>
+                        </div>
+                    </div>
+                    <div class="text-indigo-400 opacity-0 group-hover:opacity-100 transition">
+                        <i class="fa-solid fa-circle-arrow-right text-xl"></i>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // 5. 슬롯에 메뉴 할당 및 DB 저장
+        async function assignMenuToSlot(menu) {
+            // [UX 개선] 이미 같은 메뉴가 박혀있으면 물어보지 않고 리턴 (또는 해제 로직? 일단은 유지)
+            if (myCurrentSlots[activeSlotIndex] && myCurrentSlots[activeSlotIndex].file_name === menu.file_name) {
+                return; 
+            }
+
+            const confirmed = confirm(`[슬롯 ${activeSlotIndex + 1}]에 '${menu.display_name}' 메뉴를 장착하시겠습니까?`);
+            if (!confirmed) return;
+
+            const payload = {
+                teacher_id: user.username,
+                slot_index: activeSlotIndex,
+                file_name: menu.file_name,
+                display_name: menu.display_name,
+                icon: menu.icon,
+                category: menu.category
+            };
+
+            const { error } = await _supabase
+                .from('teacher_custom_slots')
+                .upsert(payload, { onConflict: 'teacher_id, slot_index' });
+
+            if (error) {
+                alert("장착 실패: " + error.message);
+            } else {
+                // 로컬 상태 즉시 업데이트 (DB 다시 안 불러오고)
+                myCurrentSlots[activeSlotIndex] = payload;
+                renderSlotSelector();
+                renderMenuList(allTeacherMenus); // 하이라이트 갱신
+                
+                // 부모창(메인)의 슬롯 새로고침 시도
+                if (window.opener && !window.opener.closed && typeof window.opener.loadCustomSlots === 'function') {
+                    window.opener.loadCustomSlots();
+                }
+            }
+        }
+
+        function filterMenus() {
+            const keyword = document.getElementById('menu-search').value.toLowerCase();
+            const filtered = allTeacherMenus.filter(m => 
+                m.display_name.toLowerCase().includes(keyword) || 
+                (m.description && m.description.toLowerCase().includes(keyword)) ||
+                m.category.toLowerCase().includes(keyword)
+            );
+            renderMenuList(filtered);
+        }
+    </script>
+</body>
+</html>
