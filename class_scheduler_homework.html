@@ -420,33 +420,26 @@
                     let imgUrls = [];
                     let htmlUrl = null;
 
-                    // 1. Upload Images (Safe Name + Public URL)
+                    // 1. Upload Images
                     if (item.images.length > 0) {
                         for (const file of item.images) {
                             const fileExt = file.name.split('.').pop();
-                            // [CRITICAL FIX] Use Random Safe Name for Storage
                             const safeName = `teacher_uploads/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-                            
                             const { error: upErr } = await _supabase.storage.from('homework_evidence').upload(safeName, file);
                             if (upErr) throw upErr;
-                            
                             const { data: pubData } = _supabase.storage.from('homework_evidence').getPublicUrl(safeName);
                             imgUrls.push(pubData.publicUrl);
                         }
                     }
 
-                    // 2. Upload HTML (Safe Name + CONTENT TYPE)
+                    // 2. Upload HTML
                     if (item.html) {
-                        // [CRITICAL FIX] Use Random Safe Name + Force Content-Type 'text/html'
                         const safeName = `teacher_uploads/html/${Date.now()}_${Math.random().toString(36).substring(2)}.html`;
-                        
                         const { error: upErr } = await _supabase.storage.from('homework_evidence').upload(safeName, item.html, {
-                            contentType: 'text/html; charset=utf-8', // ★ Force HTML rendering
+                            contentType: 'text/html; charset=utf-8',
                             upsert: false
                         });
-                        
                         if (upErr) throw upErr;
-                        
                         const { data: pubData } = _supabase.storage.from('homework_evidence').getPublicUrl(safeName);
                         htmlUrl = pubData.publicUrl;
                     }
@@ -459,6 +452,7 @@
                         is_read: false,
                         teacher_images: imgUrls.length > 0 ? imgUrls : null,
                         teacher_html: htmlUrl
+                        // is_deleted is usually NULL by default, do not set it here.
                     });
                     if (error) throw error;
                 }
@@ -480,35 +474,59 @@
             if(confirm(`${name} 잠금 해제?`)) { lockedAssignIds.delete(sid); renderStudentList(); }
         }
 
-        /* ================= PHASE 2: REVIEW LOGIC ================= */
+        /* ================= PHASE 2: REVIEW LOGIC (FIXED) ================= */
 
         async function loadReviewData() {
             const list = document.getElementById('review-student-list');
             list.innerHTML = '<div class="text-center py-10 text-indigo-400"><i class="fa-solid fa-spinner fa-spin"></i></div>';
 
-            const { data: members } = await _supabase.from('class_members').select('student_id, users(name, grade)').eq('class_id', currentClassId);
-            
-            const dateLimit = new Date(); dateLimit.setDate(dateLimit.getDate() - 14);
-            const { data: msgs } = await _supabase.from('homework_messages')
-                .select('*')
-                .eq('class_id', currentClassId)
-                .gte('created_at', dateLimit.toISOString())
-                .eq('is_deleted', false)
-                .order('created_at', { ascending: false });
+            try {
+                // 1. 멤버 로딩
+                const { data: members, error: memErr } = await _supabase
+                    .from('class_members')
+                    .select('student_id, users(name, grade)')
+                    .eq('class_id', currentClassId);
 
-            reviewDataList = [];
-            if (members && msgs) {
-                members.forEach(m => {
-                    const studentMsgs = msgs.filter(msg => msg.student_id === m.student_id);
-                    if (studentMsgs.length > 0) {
-                        reviewDataList.push({
-                            student: { id: m.student_id, name: m.users.name, grade: m.users.grade },
-                            messages: studentMsgs
-                        });
-                    }
-                });
+                if (memErr) throw memErr;
+
+                // 2. 메시지 로딩 (30일치로 확장, is_deleted 필터 제거)
+                const dateLimit = new Date(); 
+                dateLimit.setDate(dateLimit.getDate() - 30); // 넉넉하게 30일 전
+                
+                // [FIX] is_deleted 체크 제거 (DB에서 NULL일 확률 높음)
+                const { data: msgs, error: msgErr } = await _supabase
+                    .from('homework_messages')
+                    .select('*')
+                    .eq('class_id', currentClassId)
+                    .gte('created_at', dateLimit.toISOString())
+                    .order('created_at', { ascending: false });
+
+                if (msgErr) throw msgErr;
+
+                console.log("Fetched Msgs (Debug):", msgs);
+
+                reviewDataList = [];
+                if (members && msgs) {
+                    members.forEach(m => {
+                        // [FIX] 메모리 상에서 null과 false를 모두 통과시키고 true만 거름
+                        const studentMsgs = msgs.filter(msg => 
+                            msg.student_id === m.student_id && msg.is_deleted !== true
+                        );
+
+                        if (studentMsgs.length > 0) {
+                            reviewDataList.push({
+                                student: { id: m.student_id, name: m.users.name, grade: m.users.grade },
+                                messages: studentMsgs
+                            });
+                        }
+                    });
+                }
+                renderReviewList();
+
+            } catch (err) {
+                console.error("Load Review Error:", err);
+                list.innerHTML = `<div class="text-center py-10 text-rose-400 text-xs">오류 발생: ${err.message}</div>`;
             }
-            renderReviewList();
         }
 
         function renderReviewList() {
@@ -552,7 +570,7 @@
             panel.innerHTML = data.messages.map(m => {
                 const date = new Date(m.created_at).toLocaleDateString();
                 const submittedAt = m.submitted_at ? new Date(m.submitted_at).toLocaleString() : '-';
-                const isReviewed = (m.status === 'teacher_approved' || m.status === 'teacher_rejected' || m.status === 'completed');
+                const isProcessed = (m.status === 'teacher_approved' || m.status === 'teacher_rejected');
                 
                 let statusUi = '';
                 if (m.status === 'completed') statusUi = `<div class="mt-2 text-xs font-black text-emerald-600 bg-emerald-50 p-2 rounded-lg"><i class="fa-solid fa-circle-check"></i> 학생 제출 완료 (${submittedAt})</div>`;
