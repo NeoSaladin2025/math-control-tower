@@ -3,11 +3,13 @@
 <head>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
     <link rel="manifest" href="site.webmanifest">
+    
     <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Emblem Atelier (V16.5 SECRET GARDEN)</title>
+    <title>Math Emblem Atelier (V13.5 Alchemist)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -33,11 +35,11 @@
 
         .effect-wrapper { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform, filter, opacity; width: 0; height: 0; }
         .obj-orbit, .obj-spin { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; will-change: transform; }
+        
         .obj-core { position: relative; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; white-space: nowrap; -webkit-user-select: none; user-select: none; }
         .obj-core img { pointer-events: none; -webkit-user-drag: none; max-width: none; }
 
-        /* --- VITAL ANIMATIONS (Motion) --- */
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
+        /* --- [EXPANDED] Vital Animations (Physics/Motion) --- */
         @keyframes heartbeat { 0% {transform: scale(1);} 14% {transform: scale(1.3);} 28% {transform: scale(1);} 42% {transform: scale(1.3);} 70% {transform: scale(1);} }
         @keyframes rubberBand { 0% {transform: scale3d(1,1,1);} 30% {transform: scale3d(1.25,0.75,1);} 40% {transform: scale3d(0.75,1.25,1);} 50% {transform: scale3d(1.15,0.85,1);} 65% {transform: scale3d(0.95,1.05,1);} 75% {transform: scale3d(1.05,0.95,1);} 100% {transform: scale3d(1,1,1);} }
         @keyframes swing { 20% {transform: rotate3d(0,0,1,15deg);} 40% {transform: rotate3d(0,0,1,-10deg);} 60% {transform: rotate3d(0,0,1,5deg);} 80% {transform: rotate3d(0,0,1,-5deg);} 100% {transform: rotate3d(0,0,1,0deg);} }
@@ -59,14 +61,8 @@
         @keyframes vibrate { 0% {transform: translate(0);} 20% {transform: translate(-2px, 2px);} 40% {transform: translate(-2px, -2px);} 60% {transform: translate(2px, 2px);} 80% {transform: translate(2px, -2px);} 100% {transform: translate(0);} }
         @keyframes float-h { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-20px); } }
         @keyframes pendulum { 0% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
-        @keyframes quake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
-        @keyframes stretch { 0% { transform: scale(1, 1); } 50% { transform: scale(1.5, 0.5); } 100% { transform: scale(1, 1); } }
-        @keyframes spiral { 0% { transform: rotate(0deg) scale(1) translateX(10px); } 50% { transform: rotate(180deg) scale(0.5) translateX(10px); } 100% { transform: rotate(360deg) scale(1) translateX(10px); } }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-        @keyframes scan-h { 0% { transform: translateX(-10%); } 50% { transform: translateX(10%); } 100% { transform: translateX(-10%); } }
-        @keyframes zigzag { 0% { transform: translate(0,0); } 25% { transform: translate(10px, -10px); } 50% { transform: translate(0, -20px); } 75% { transform: translate(-10px, -10px); } 100% { transform: translate(0,0); } }
 
-        /* --- FX ANIMATIONS (Visual) --- */
+        /* --- [EXPANDED] FX Animations (Visuals) --- */
         @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -5px 5px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
         @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(150%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
         @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 10px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
@@ -85,26 +81,20 @@
         @keyframes thermal { 0% { filter: contrast(1.5) hue-rotate(0deg); } 50% { filter: contrast(2) hue-rotate(180deg) invert(1); } 100% { filter: contrast(1.5) hue-rotate(360deg); } }
         @keyframes hologram { 0% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } 20% { filter: drop-shadow(2px 0 5px cyan) opacity(0.6) blur(1px); } 40% { filter: drop-shadow(-2px 0 5px cyan) opacity(0.8); } 100% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } }
         @keyframes noir { 0% { filter: grayscale(1) contrast(1.5) brightness(0.8); } 100% { filter: grayscale(1) contrast(2) brightness(0.6); } }
-        @keyframes pixelate { 0% { filter: contrast(1); } 50% { filter: contrast(3) brightness(1.2); } 100% { filter: contrast(1); } } 
+        @keyframes pixelate { 0% { filter: contrast(1); } 50% { filter: contrast(3) brightness(1.2); } 100% { filter: contrast(1); } } /* Mock pixelate */
         @keyframes underwater { 0% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } 50% { filter: blur(2px) hue-rotate(200deg) brightness(1); } 100% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } }
-        @keyframes divine { 0% { filter: drop-shadow(0 0 5px gold) brightness(1.2); } 50% { filter: drop-shadow(0 0 20px white) brightness(2); } 100% { filter: drop-shadow(0 0 5px gold) brightness(1.2); } }
-        @keyframes nightmare { 0% { filter: contrast(2) hue-rotate(0deg) drop-shadow(5px 0 0 red); } 50% { filter: contrast(2) hue-rotate(10deg) drop-shadow(-5px 0 0 blue); } 100% { filter: contrast(2) hue-rotate(0deg) drop-shadow(5px 0 0 red); } }
-        @keyframes blood { 0% { filter: drop-shadow(0 0 0 red); } 50% { filter: drop-shadow(0 10px 5px crimson); } 100% { filter: drop-shadow(0 0 0 red); } }
-        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
-        @keyframes scanline { 0% { filter: brightness(1); } 50% { filter: brightness(1.2) drop-shadow(0 2px 0 rgba(0,255,0,0.5)); } 100% { filter: brightness(1); } }
-        @keyframes vignette { 0% { filter: brightness(1); } 100% { filter: brightness(0.6); } }
 
+        /* Standard Transforms */
         @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
         @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
         @keyframes spin-y { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
         @keyframes spin-x { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
 
-        /* UI Styles */
+        /* --- UI Styles --- */
         .effect-toggle { 
             padding: 8px 12px; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer; 
             border: 1px solid #334155; background: #0f172a; color: #94a3b8; transition: all 0.2s;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; min-height: 50px;
-            position: relative;
         }
         .effect-toggle i { font-size: 16px; margin-bottom: 2px; }
         .effect-toggle:hover { border-color: #64748b; color: #e2e8f0; background: #1e293b; }
@@ -116,8 +106,7 @@
         .active-effect-item .header { display: flex; justify-content: space-between; align-items: center; }
         .active-effect-item .name { font-size: 10px; font-weight: bold; color: #e2e8f0; display: flex; align-items: center; gap: 6px; }
         .active-effect-item .slider-row { display: flex; align-items: center; gap: 8px; }
-        .active-effect-item .label-col { width: 35px; font-size: 8px; font-weight: bold; color: #64748b; }
-        .active-effect-item .val-col { font-size: 9px; color: #94a3b8; font-family: monospace; width: 30px; text-align: right; }
+        .active-effect-item .speed-label { font-size: 9px; color: #94a3b8; font-family: monospace; width: 30px; text-align: right; }
 
         input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #e2e8f0; border: 2px solid #ec4899; cursor: pointer; margin-top: -5px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: transform 0.1s; }
@@ -128,11 +117,7 @@
 
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; backdrop-filter: blur(8px); justify-content: center; align-items: center; }
         .modal-content { width: 90%; max-width: 1000px; height: 90%; background: #1e293b; border-radius: 20px; border: 1px solid #475569; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.6); animation: popUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        
-        #help-popup { display: none; position: absolute; width: 320px; top: 100px; left: 400px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid #4f46e5; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); z-index: 9999; overflow: hidden; animation: popUp 0.2s; }
-        #help-popup .header { background: #312e81; padding: 12px; cursor: grab; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4338ca; }
-        #help-popup .header:active { cursor: grabbing; }
-        #help-popup .content { padding: 16px; max-height: 400px; overflow-y: auto; color: #cbd5e1; font-size: 12px; line-height: 1.5; }
+        @keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         
         .market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 12px; padding: 20px; overflow-y: auto; align-content: start; }
         .market-item { aspect-ratio: 1; background: #334155; border: 1px solid #475569; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 36px; cursor: pointer; transition: all 0.15s ease-out; position: relative; overflow: hidden; }
@@ -142,346 +127,200 @@
         .loader { border: 4px solid #334155; border-top: 4px solid #f472b6; border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; margin-bottom: 16px; box-shadow: 0 0 20px rgba(244, 114, 182, 0.3); }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* [ELITE SECRETARY] Draggable Preview Styles */
-        #live-preview-card { 
-            position: absolute; top: 24px; right: 24px; width: 340px; 
-            background: rgba(255,255,255,0.95); border-radius: 24px; padding: 24px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); 
-            z-index: 50; 
-            transition: opacity 0.3s; backdrop-filter: blur(10px);
-            /* Important: Allow interaction for dragging */
-            pointer-events: auto; 
-        }
-        #live-preview-card .drag-header { cursor: grab; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        #live-preview-card .drag-header:active { cursor: grabbing; }
+        #live-preview-card { position: absolute; top: 24px; right: 24px; width: 340px; background: rgba(255,255,255,0.95); border-radius: 24px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); z-index: 50; pointer-events: none; opacity: 0.95; transition: opacity 0.3s; backdrop-filter: blur(10px); }
+        .btn-chaos { background: linear-gradient(135deg, #7c3aed, #db2777); border: 1px solid rgba(255,255,255,0.2); }
+        .btn-chaos:hover { filter: brightness(1.2); transform: scale(1.05); }
     </style>
 </head>
 <body class="flex h-screen text-sm">
-    <script src="config.js"></script>
-    <div id="loading-overlay"><div class="loader"></div><div class="text-white font-bold text-base tracking-widest">처리중...</div></div>
 
-    <div id="help-popup">
-        <div class="header" id="help-header">
-            <span class="font-bold text-white"><i class="fa-solid fa-circle-info mr-2 text-cyan-400"></i>가이드</span>
-            <button onclick="document.getElementById('help-popup').style.display='none'" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="content" id="help-content"></div>
-    </div>
+    <script src="config.js"></script>
+    <div id="loading-overlay"><div class="loader"></div><div class="text-white font-bold text-base tracking-widest">PROCESSING...</div></div>
 
     <div class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 z-20 shadow-2xl">
         <div class="p-5 border-b border-slate-800 bg-slate-950 relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-indigo-900/20 to-pink-900/20 pointer-events-none"></div>
             <h1 class="font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-xl tracking-tighter relative z-10">
-                <i class="fa-solid fa-flask mr-2 text-white"></i>엠블럼 연구소
+                <i class="fa-solid fa-flask mr-2 text-white"></i>EMBLEM LAB
             </h1>
             <div class="flex justify-between items-center mt-2 relative z-10">
-                <p class="text-[10px] text-slate-500 font-mono">V16.5 (SECRET GARDEN)</p>
+                <p class="text-[10px] text-slate-500 font-mono">V13.5 (ALCHEMY)</p>
                 <div class="flex gap-1"><div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div><span class="text-[9px] text-green-500 font-bold">ONLINE</span></div>
             </div>
         </div>
 
         <div class="flex-1 overflow-y-auto p-3 border-b border-slate-800 h-1/4 custom-scroll">
-            <div class="flex justify-between items-center mb-3 px-1"><span class="text-xs font-black text-slate-400 tracking-wider">현재 레이어</span><button onclick="clearCanvas()" class="text-[10px] font-bold text-rose-500 hover:text-rose-400 transition bg-rose-500/10 px-2 py-1 rounded">전체 초기화</button></div>
+            <div class="flex justify-between items-center mb-3 px-1"><span class="text-xs font-black text-slate-400 tracking-wider">ACTIVE LAYERS</span><button onclick="clearCanvas()" class="text-[10px] font-bold text-rose-500 hover:text-rose-400 transition bg-rose-500/10 px-2 py-1 rounded">RESET ALL</button></div>
             <div id="layer-list" class="space-y-2"></div>
         </div>
 
         <div id="prop-panel" class="flex-1 bg-slate-900 overflow-y-auto hidden flex flex-col custom-scroll">
             <div class="p-4 bg-slate-950 border-b border-slate-800 flex justify-between items-center sticky top-0 z-10 shadow-lg">
-                <span class="text-xs font-black text-pink-500 tracking-widest"><i class="fa-solid fa-sliders mr-1"></i> 속성 제어</span>
+                <span class="text-xs font-black text-pink-500 tracking-widest"><i class="fa-solid fa-sliders mr-1"></i> CONTROL</span>
                 <div class="flex gap-2">
-                    <button onclick="centerLayer()" class="text-xs text-white bg-cyan-600 px-2 py-1 rounded hover:bg-cyan-500 transition" title="중앙 정렬"><i class="fa-solid fa-crosshairs"></i></button>
-                    <button onclick="randomizeLayer()" class="text-xs text-white bg-indigo-600 px-2 py-1 rounded hover:bg-indigo-500 transition" title="랜덤 효과"><i class="fa-solid fa-dice"></i></button>
+                    <button onclick="randomizeLayer()" class="text-xs text-white bg-indigo-600 px-2 py-1 rounded hover:bg-indigo-500 transition" title="CHAOS MODE"><i class="fa-solid fa-dice"></i></button>
                     <button onclick="deleteLayer()" class="text-xs text-slate-400 hover:text-rose-500 transition"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
             </div>
             <div class="p-5 space-y-8 pb-32">
                 <div class="space-y-3">
-                    <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">기본 설정</label>
+                    <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Base Configuration</label>
                     <div class="flex gap-3 items-center">
                         <input type="color" id="p-color" class="w-10 h-10 rounded-lg cursor-pointer bg-slate-800 border border-slate-600 p-1" onchange="updateProp('color', this.value)">
-                        
-                        <div class="flex-1 space-y-1">
-                            <div class="flex justify-between text-[9px] text-slate-500">
-                                <span>크기 (스프링)</span>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-pink-400" id="p-size-val">100%</span>
-                                    <button onclick="resetSize()" class="text-[9px] bg-slate-700 text-slate-300 px-1.5 rounded hover:bg-slate-600 transition" title="100% 리셋"><i class="fa-solid fa-rotate-left"></i></button>
-                                </div>
-                            </div>
-                            <div class="relative flex items-center h-6 bg-slate-800 rounded-full border border-slate-700 px-2">
-                                <div class="absolute left-2 text-[8px] text-slate-500"><i class="fa-solid fa-minus"></i> 축소</div>
-                                <div class="absolute right-2 text-[8px] text-slate-500">확대 <i class="fa-solid fa-plus"></i></div>
-                                <input type="range" id="p-spring-zoom" min="-10" max="10" value="0" step="1"
-                                       class="w-full h-full opacity-0 cursor-ew-resize absolute inset-0 z-10"
-                                       oninput="handleSpringZoom(this.value)"
-                                       onmouseup="resetSpringZoom(this)"
-                                       ontouchend="resetSpringZoom(this)">
-                                <div id="spring-thumb" class="w-4 h-4 bg-pink-500 rounded-full shadow-lg absolute left-1/2 -translate-x-1/2 transition-transform duration-75 pointer-events-none border-2 border-white"></div>
-                            </div>
-                        </div>
+                        <div class="flex-1 space-y-1"><div class="flex justify-between text-[9px] text-slate-500"><span>SIZE</span><span id="p-size-val">100%</span></div><input type="range" id="p-size" min="10" max="300" class="w-full accent-pink-500" oninput="updateProp('size', this.value); document.getElementById('p-size-val').innerText=this.value+'%'"></div>
                     </div>
-
-                    <div id="text-control" class="hidden"><input type="text" id="p-text" class="w-full bg-slate-800 border border-slate-700 rounded-lg text-xs p-3 text-white focus:border-pink-500 outline-none transition" oninput="updateProp('content', this.value)" placeholder="텍스트 입력..."></div>
+                    <div id="text-control" class="hidden"><input type="text" id="p-text" class="w-full bg-slate-800 border border-slate-700 rounded-lg text-xs p-3 text-white focus:border-pink-500 outline-none transition" oninput="updateProp('content', this.value)" placeholder="Enter Text..."></div>
                     <div id="texture-control" class="grid grid-cols-5 gap-2 pt-1">
-                        <div onclick="applyTexture('none')" class="h-8 rounded-md bg-slate-700 border-2 border-transparent hover:border-white transition" title="없음"></div>
-                        <div onclick="applyTexture('gold')" class="h-8 rounded-md bg-gradient-to-br from-yellow-300 to-amber-600 border-2 border-transparent hover:border-white transition" title="골드"></div>
-                        <div onclick="applyTexture('silver')" class="h-8 rounded-md bg-gradient-to-br from-gray-300 to-slate-600 border-2 border-transparent hover:border-white transition" title="실버"></div>
-                        <div onclick="applyTexture('magma')" class="h-8 rounded-md bg-gradient-to-t from-red-600 to-yellow-400 border-2 border-transparent hover:border-white transition" title="마그마"></div>
-                        <div onclick="applyTexture('neon')" class="h-8 rounded-md bg-gradient-to-r from-cyan-400 to-fuchsia-500 border-2 border-transparent hover:border-white transition" title="네온"></div>
+                        <div onclick="applyTexture('none')" class="h-8 rounded-md bg-slate-700 border-2 border-transparent hover:border-white transition"></div>
+                        <div onclick="applyTexture('gold')" class="h-8 rounded-md bg-gradient-to-br from-yellow-300 to-amber-600 border-2 border-transparent hover:border-white transition"></div>
+                        <div onclick="applyTexture('silver')" class="h-8 rounded-md bg-gradient-to-br from-gray-300 to-slate-600 border-2 border-transparent hover:border-white transition"></div>
+                        <div onclick="applyTexture('magma')" class="h-8 rounded-md bg-gradient-to-t from-red-600 to-yellow-400 border-2 border-transparent hover:border-white transition"></div>
+                        <div onclick="applyTexture('neon')" class="h-8 rounded-md bg-gradient-to-r from-cyan-400 to-fuchsia-500 border-2 border-transparent hover:border-white transition"></div>
                     </div>
                 </div>
 
                 <hr class="border-slate-800">
 
                 <div class="space-y-3">
-                    <label class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-layer-group mr-1"></i> 블렌드 (필터 효과)</label>
+                    <label class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-layer-group mr-1"></i> Blend Stack (Filters)</label>
                     <div class="grid grid-cols-4 gap-2" id="blend-toggles"></div>
                     <div id="active-blend-list" class="mt-3 space-y-2"></div>
                 </div>
 
                 <div class="space-y-3">
-                    <label class="text-[10px] text-green-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-heart-pulse mr-1"></i> 모션 (움직임)</label>
+                    <label class="text-[10px] text-green-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-heart-pulse mr-1"></i> Vital Stack</label>
                     <div class="grid grid-cols-4 gap-2" id="vital-toggles"></div>
                     <div id="active-vital-list" class="mt-3 space-y-2"></div>
                 </div>
 
                 <div class="space-y-3">
-                    <label class="text-[10px] text-orange-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> FX (특수효과)</label>
+                    <label class="text-[10px] text-orange-400 font-bold uppercase tracking-wider"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> FX Stack</label>
                     <div class="grid grid-cols-4 gap-2" id="fx-toggles"></div>
                     <div id="active-fx-list" class="mt-3 space-y-2"></div>
+                </div>
+
+                <hr class="border-slate-800">
+
+                <div class="space-y-4">
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center"><label class="text-[10px] text-cyan-400 font-bold uppercase"><i class="fa-solid fa-sync mr-1"></i> Self Spin</label><input type="checkbox" id="anim-spin-on" onchange="updateAnim('spin', 'on', this.checked)" class="accent-cyan-500 w-4 h-4"></div>
+                        <div class="grid grid-cols-3 gap-2"><select id="anim-spin-axis" class="col-span-1 bg-slate-800 text-[10px] text-white p-2 rounded-lg border border-slate-700 outline-none" onchange="updateAnim('spin', 'axis', this.value)"><option value="z">Z-Axis</option><option value="y">Y-Axis</option><option value="x">X-Axis</option></select><input type="range" id="anim-spin-speed" min="1" max="50" class="col-span-2 accent-cyan-500" oninput="updateAnim('spin', 'speed', 51-this.value)"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center"><label class="text-[10px] text-purple-400 font-bold uppercase"><i class="fa-solid fa-globe mr-1"></i> Planetary Orbit</label><input type="checkbox" id="anim-orbit-on" onchange="updateAnim('orbit', 'on', this.checked)" class="accent-purple-500 w-4 h-4"></div>
+                        <div class="space-y-1"><div class="flex justify-between text-[9px] text-slate-500"><span>RADIUS</span></div><input type="range" id="anim-orbit-radius" min="20" max="200" class="w-full accent-purple-500" oninput="updateAnim('orbit', 'radius', this.value)"></div>
+                        <div class="space-y-1"><div class="flex justify-between text-[9px] text-slate-500"><span>VELOCITY</span></div><input type="range" id="anim-orbit-speed" min="1" max="50" class="w-full accent-purple-500" oninput="updateAnim('orbit', 'speed', 51-this.value)"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="flex-1 flex flex-col relative bg-slate-950">
-        <div class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-center px-6 shrink-0 z-10 shadow-lg relative">
-            <div class="absolute left-6 flex gap-4 items-center">
-                <button onclick="openMarket()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-900/50 transition transform hover:-translate-y-0.5"><i class="fa-solid fa-store"></i> 마켓 열기</button>
-                <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700"><input type="text" id="quick-text" placeholder="텍스트..." class="bg-transparent border-none text-white text-xs px-2 w-24 focus:outline-none placeholder-slate-500"><button onclick="addTextLayer()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">추가</button></div>
+        <div class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shrink-0 z-10 shadow-lg">
+            <div class="flex gap-4 items-center">
+                <button onclick="openMarket()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-900/50 transition transform hover:-translate-y-0.5"><i class="fa-solid fa-store"></i> OPEN MARKET</button>
+                <div class="h-8 w-[1px] bg-slate-700 mx-2"></div>
+                <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700"><input type="text" id="quick-text" placeholder="Type here..." class="bg-transparent border-none text-white text-xs px-2 w-24 focus:outline-none placeholder-slate-500"><button onclick="addTextLayer()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">ADD TEXT</button></div>
+                <div class="flex items-center gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700 group cursor-pointer hover:border-pink-500/50 transition"><input type="file" id="img-upload" accept="image/*" class="hidden" onchange="handleImageUpload(this)"><button onclick="document.getElementById('img-upload').click()" class="text-pink-400 hover:text-pink-300 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition"><i class="fa-solid fa-cloud-arrow-up"></i> UPLOAD</button></div>
             </div>
-            
-            <div class="text-[10px] text-slate-500 font-mono flex gap-4">
-                <span><i class="fa-solid fa-mouse mr-1"></i>드래그: 이동</span>
-                <span><i class="fa-solid fa-arrows-left-right mr-1"></i>스프링: 크기조절</span>
-            </div>
-
-            <div class="absolute right-6 flex gap-3">
-                <button onclick="togglePreview()" class="text-pink-400 hover:text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition border border-pink-500/30 hover:bg-pink-500/20"><i class="fa-solid fa-eye"></i> 미리보기</button>
-                <button onclick="randomizeLayer()" class="btn-chaos text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition shadow-lg shadow-purple-900/50 animate-pulse"><i class="fa-solid fa-shuffle"></i> 랜덤</button>
-                <button onclick="openLibraryModal()" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition"><i class="fa-solid fa-box-archive"></i> 보관함</button>
-                <button onclick="saveToLibrary()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-emerald-900/50 transition transform hover:-translate-y-0.5 flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
+            <div class="flex gap-3">
+                <button onclick="randomizeLayer()" class="btn-chaos text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition shadow-lg shadow-purple-900/50 animate-pulse"><i class="fa-solid fa-shuffle"></i> CHAOS</button>
+                <button onclick="openLibraryModal()" class="text-slate-400 hover:text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 transition"><i class="fa-solid fa-box-archive"></i> LIBRARY</button>
+                <button onclick="saveToLibrary()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-emerald-900/50 transition transform hover:-translate-y-0.5 flex items-center gap-2"><i class="fa-solid fa-floppy-disk"></i> SAVE</button>
             </div>
         </div>
         <div id="stage-wrapper" class="flex-1 relative flex items-center justify-center cursor-crosshair">
             <div class="absolute inset-0 pointer-events-none opacity-20"><div class="absolute top-1/2 w-full h-[1px] bg-cyan-500/50"></div><div class="absolute left-1/2 h-full w-[1px] bg-cyan-500/50"></div><div class="absolute top-1/2 left-1/2 w-[400px] h-[400px] -translate-x-1/2 -translate-y-1/2 border border-cyan-500/30 rounded-full border-dashed"></div></div>
             <div id="stage" class="w-full h-full relative pointer-events-none transform-style-3d"></div>
-            
             <div id="live-preview-card">
-                <div class="drag-header" id="preview-header">
-                    <div class="flex items-center gap-2 text-xs font-black text-slate-400 tracking-widest"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> 미리보기</div>
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-grip-lines text-slate-300 cursor-grab hover:text-white" title="이동"></i>
-                        <button onclick="togglePreview()" class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mb-2"><div class="flex items-center gap-2"><span class="text-lg font-black text-slate-800">닉네임</span><span class="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-200">Lv.99</span></div><div class="text-[10px] font-bold text-slate-400 border border-slate-200 px-2 py-1 rounded-lg">전설</div></div>
+                <div class="flex justify-between items-center mb-4"><div class="flex items-center gap-2 text-xs font-black text-slate-400 tracking-widest"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> LIVE PREVIEW</div><i class="fa-solid fa-mobile-screen text-slate-300"></i></div>
+                <div class="flex justify-between items-center mb-2"><div class="flex items-center gap-2"><span class="text-lg font-black text-slate-800">USER_ID</span><span class="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-200">Lv.99</span></div><div class="text-[10px] font-bold text-slate-400 border border-slate-200 px-2 py-1 rounded-lg">LEGENDARY</div></div>
                 <div class="relative w-full h-48 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center overflow-visible mb-4 shadow-inner"><div id="preview-stage" class="w-40 h-40 relative flex items-center justify-center"></div></div>
-                <div class="space-y-1"><div class="flex justify-between text-[10px] font-bold text-slate-400"><span>경험치</span><span>99.9%</span></div><div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full w-[99%] bg-gradient-to-r from-indigo-400 to-purple-500"></div></div></div>
+                <div class="space-y-1"><div class="flex justify-between text-[10px] font-bold text-slate-400"><span>EXP</span><span>99.9%</span></div><div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full w-[99%] bg-gradient-to-r from-indigo-400 to-purple-500"></div></div></div>
             </div>
         </div>
     </div>
 
-    <div id="market-modal" class="modal-overlay"><div class="modal-content"><div class="flex justify-between items-center p-5 bg-slate-950 border-b border-slate-800 shrink-0"><h2 class="text-xl font-black text-white tracking-tight"><i class="fa-solid fa-basket-shopping text-pink-500 mr-3"></i>에셋 마켓</h2><button onclick="closeModal('market-modal')" class="text-slate-500 hover:text-white transition text-2xl"><i class="fa-solid fa-xmark"></i></button></div><div class="market-header flex gap-1 p-2 bg-slate-900 border-b border-slate-800 overflow-x-auto custom-scroll"></div><div id="market-grid" class="market-grid custom-scroll flex-1 bg-slate-900/50"></div></div></div>
-    <div id="library-modal" class="modal-overlay"><div class="modal-content max-w-2xl h-3/4"><div class="flex justify-between items-center p-5 bg-slate-950 border-b border-slate-800 shrink-0"><h2 class="text-xl font-black text-white tracking-tight"><i class="fa-solid fa-server text-emerald-500 mr-3"></i>클라우드 보관함</h2><button onclick="closeModal('library-modal')" class="text-slate-500 hover:text-white transition text-2xl"><i class="fa-solid fa-xmark"></i></button></div><div id="library-list" class="flex-1 overflow-y-auto p-4 bg-slate-900 custom-scroll space-y-2"></div></div></div>
+    <div id="market-modal" class="modal-overlay"><div class="modal-content"><div class="flex justify-between items-center p-5 bg-slate-950 border-b border-slate-800 shrink-0"><h2 class="text-xl font-black text-white tracking-tight"><i class="fa-solid fa-basket-shopping text-pink-500 mr-3"></i>ASSET MARKETPLACE</h2><button onclick="closeModal('market-modal')" class="text-slate-500 hover:text-white transition text-2xl"><i class="fa-solid fa-xmark"></i></button></div><div class="market-header flex gap-1 p-2 bg-slate-900 border-b border-slate-800 overflow-x-auto custom-scroll"></div><div id="market-grid" class="market-grid custom-scroll flex-1 bg-slate-900/50"></div></div></div>
+    <div id="library-modal" class="modal-overlay"><div class="modal-content max-w-2xl h-3/4"><div class="flex justify-between items-center p-5 bg-slate-950 border-b border-slate-800 shrink-0"><h2 class="text-xl font-black text-white tracking-tight"><i class="fa-solid fa-server text-emerald-500 mr-3"></i>CLOUD REPOSITORY</h2><button onclick="closeModal('library-modal')" class="text-slate-500 hover:text-white transition text-2xl"><i class="fa-solid fa-xmark"></i></button></div><div id="library-list" class="flex-1 overflow-y-auto p-4 bg-slate-900 custom-scroll space-y-2"></div></div></div>
 
     <script>
         /**
-         * V16.5: SECRET GARDEN EDITION
-         * - Feature: Draggable & Togglable Live Preview ("Stripping the Panties")
-         * - Update: Replaced "Eve" with "Secret Recipe"
-         * - Content: Added new Blend modes, Vital motions, and FX
+         * V13.5: THE CHAOS ALCHEMIST EDITION
+         * "Blend Mode Stacking" via Filter Simulation logic for ultimate visual layering.
          */
         let layers = []; let selectedId = null; let isDragging = false; let dragTargetId = null;
 
-        // ★ MASTER DATA REGISTRY (Expanded)
-        const EFFECT_DATA = {
-            vital: [
-                {id:'pulse', icon:'💓', label:'두근두근', desc: "일정한 박자로 커졌다 작아집니다.", recipe: "가장 무난하고 생동감 넘치는 기본 효과."},
-                {id:'heartbeat', icon:'💗', label:'심장박동', desc: "두근! 두근! 실제 심장 박동처럼 뜁니다.", recipe: "하트 아이콘이나 생명력 표시에 딱!"},
-                {id:'rubberBand', icon:'🪀', label:'고무줄', desc: "고무줄처럼 양옆으로 팅~ 하고 늘어납니다.", recipe: "장난스럽고 귀여운 느낌을 줄 때."},
-                {id:'tada', icon:'🎉', label:'짜잔!', desc: "짜잔~ 하고 등장하는 듯한 모션입니다.", recipe: "레벨업이나 획득 시 강조할 때."},
-                {id:'swing', icon:'🎪', label:'그네', desc: "천장에 매달린 그네처럼 살랑살랑 흔들립니다.", recipe: "간판이나 매달린 물체 표현에 굿."},
-                {id:'float', icon:'☁️', label:'둥둥', desc: "공중에 둥둥 떠 있는 것처럼 위아래로 움직입니다.", recipe: "구름, 유령, 비행 물체에 필수."},
-                {id:'ghost', icon:'👻', label:'유령', desc: "투명해졌다가 나타나며 위로 솟구칩니다.", recipe: "유령이나 영혼 승천 효과."},
-                {id:'jelly', icon:'🍮', label:'젤리', desc: "젤리처럼 흐물흐물거리며 움직입니다.", recipe: "슬라임이나 액체 괴물 표현."},
-                {id:'wobble', icon:'🥴', label:'비틀비틀', desc: "술 취한 것처럼 비틀비틀거립니다.", recipe: "어지러움 상태이상 표현."},
-                {id:'jello', icon:'🍮', label:'탱글', desc: "탱글탱글하게 튕깁니다.", recipe: "탄력 있는 물체 표현."},
-                {id:'bounce', icon:'🏀', label:'통통', desc: "공을 튀기듯 위아래로 점프합니다.", recipe: "스포츠 공이나 활기찬 아이템."},
-                {id:'flip', icon:'🔄', label:'뒤집기', desc: "동전을 뒤집듯 360도 회전합니다.", recipe: "카드 뒷면/앞면 전환 연출."},
-                {id:'zoomInOut', icon:'🔍', label:'확대축소', desc: "아주 크게 확대되었다가 다시 작아집니다.", recipe: "주목해야 할 중요 아이템."},
-                {id:'panic', icon:'😱', label:'패닉', desc: "제자리에서 오들오들 떱니다.", recipe: "겁에 질린 상태, 추위."},
-                {id:'breath', icon:'🌬️', label:'숨쉬기', desc: "천천히 숨을 쉬듯 부드럽게 크기가 변합니다.", recipe: "대기 상태, 평온함."},
-                {id:'barrel', icon:'🛢️', label:'데굴데굴', desc: "앞구르기를 하듯 회전합니다.", recipe: "굴러가는 물체."},
-                {id:'compress', icon:'🧱', label:'납작', desc: "위아래로 찌그러졌다가 펴집니다.", recipe: "압력을 받는 느낌."},
-                {id:'blackHole', icon:'⚫', label:'블랙홀', desc: "빨려 들어갔다가 다시 튀어나옵니다.", recipe: "차원 이동이나 소환 연출."},
-                {id:'tornado', icon:'🌪️', label:'회오리', desc: "회오리바람처럼 빙글빙글 돌며 날아다닙니다.", recipe: "강력한 바람 속성 표현."},
-                {id:'teleport', icon:'🛸', label:'순간이동', desc: "순간이동하듯 깜빡거리며 크기가 변합니다.", recipe: "SF적인 등장 연출."},
-                {id:'orbit3d', icon:'🪐', label:'3D공전', desc: "3D 공간에서 입체적으로 회전합니다.", recipe: "행성이나 위성 표현에 압도적."},
-                {id:'glitch-skew', icon:'📶', label:'지지직', desc: "형태가 치직거리며 왜곡됩니다.", recipe: "전파 방해, 통신 오류."},
-                {id:'vibrate', icon:'📳', label:'진동', desc: "미세하게 덜덜 떱니다.", recipe: "휴대폰 진동, 긴장감."},
-                {id:'float-h', icon:'↔️', label:'좌우둥둥', desc: "좌우로 둥둥 떠다닙니다.", recipe: "유령, 물고기."},
-                {id:'pendulum', icon:'🕰️', label:'시계추', desc: "시계추처럼 좌우로 일정하게 흔들립니다.", recipe: "최면, 시간 관련 아이템."},
-                {id:'quake', icon:'🌋', label:'지진', desc: "격렬하게 흔들립니다.", recipe: "지진이나 강력한 타격 효과."},
-                {id:'stretch', icon:'📏', label:'늘리기', desc: "가로세로로 쭉쭉 늘어납니다.", recipe: "슬라임, 껌."},
-                {id:'spiral', icon:'🌀', label:'나선', desc: "나선형을 그리며 뱅글뱅글 돕니다.", recipe: "최면이나 혼란 상태."},
-                {id:'blink', icon:'👀', label:'깜빡임', desc: "투명도가 주기적으로 변합니다.", recipe: "비상등, 신호."},
-                {id:'scan-h', icon:'↔️', label:'좌우스캔', desc: "좌우로 빠르게 스캔하듯 움직입니다.", recipe: "로봇, 탐색 모드."},
-                {id:'zigzag', icon:'⚡', label:'지그재그', desc: "지그재그로 움직입니다.", recipe: "전기, 벌레."}
-            ],
-            fx: [
-                {id:'fire', icon:'🔥', label:'화염', desc: "붉은 화염이 타오르는 듯한 그림자를 줍니다.", recipe: "불 속성, 분노, 열정 표현."},
-                {id:'sparkle', icon:'✨', label:'반짝임', desc: "하얗게 번쩍거리며 빛납니다.", recipe: "보물, 희귀 아이템, 깨끗함."},
-                {id:'neon-pulse', icon:'⚡', label:'네온', desc: "네온 사인처럼 색이 변하며 빛납니다.", recipe: "사이버펑크, 미래적인 느낌."},
-                {id:'shake', icon:'🫨', label:'지진', desc: "이미지가 미친 듯이 흔들립니다.", recipe: "충격, 데미지 입음."},
-                {id:'glitch-filter', icon:'☠️', label:'글리치', desc: "화면이 깨진 듯한 노이즈를 줍니다.", recipe: "시스템 오류, 해킹, 공포."},
-                {id:'rainbow', icon:'🌈', label:'무지개', desc: "무지개색으로 계속 변합니다.", recipe: "피버 타임, 무적 상태."},
-                {id:'blurPulse', icon:'🌫️', label:'안개', desc: "초점이 맞았다가 흐려졌다가를 반복합니다.", recipe: "몽환적인 분위기, 꿈속."},
-                {id:'invertFlash', icon:'🌓', label:'반전', desc: "색상이 반전되며 깜빡입니다.", recipe: "강력한 경고, 위험 신호."},
-                {id:'sepiaDream', icon:'📜', label:'세피아', desc: "오래된 영화처럼 누렇게 변합니다.", recipe: "회상, 과거, 역사적 기록."},
-                {id:'brightnessFlash', icon:'💡', label:'플래시', desc: "눈부시게 하얗게 번쩍입니다.", recipe: "사진 촬영, 섬광탄."},
-                {id:'grayscalePulse', icon:'⚫', label:'흑백', desc: "흑백과 컬러를 오갑니다.", recipe: "생명력 저하, 위기."},
-                {id:'radioactive', icon:'☢️', label:'방사능', desc: "초록색 독극물 같은 빛을 냅니다.", recipe: "독, 방사능, 좀비."},
-                {id:'ice', icon:'🧊', label:'얼음', desc: "차가운 푸른빛과 함께 얼어붙은 느낌을 줍니다.", recipe: "얼음 속성, 냉동 상태."},
-                {id:'shadowClone', icon:'👥', label:'분신', desc: "잔상이 남는 분신술 효과를 줍니다.", recipe: "닌자, 초고속 이동."},
-                {id:'midas', icon:'👑', label:'황금', desc: "번쩍이는 황금색으로 변합니다.", recipe: "최고 등급 아이템, 부자."},
-                {id:'matrix', icon:'💻', label:'매트릭스', desc: "초록색 디지털 코드가 흐르는 느낌을 줍니다.", recipe: "해커, 가상 현실."},
-                {id:'thermal', icon:'🌡️', label:'열화상', desc: "열화상 카메라로 보는 듯한 색감입니다.", recipe: "특수 부대, 탐지 모드."},
-                {id:'hologram', icon:'💠', label:'홀로그램', desc: "투명하고 푸른 홀로그램 질감을 줍니다.", recipe: "미래 통신, AI."},
-                {id:'noir', icon:'🕵️', label:'느와르', desc: "거친 흑백 영화 필름 느낌을 줍니다.", recipe: "범죄, 과거 회상, 진지함."},
-                {id:'pixelate', icon:'👾', label:'픽셀', desc: "픽셀이 깨져 보입니다(대비 효과).", recipe: "레트로 게임, 8비트 감성."},
-                {id:'underwater', icon:'🌊', label:'물속', desc: "물속에 있는 것처럼 일렁거립니다.", recipe: "수중 스테이지, 물 속성."},
-                {id:'divine', icon:'👼', label:'성스러움', desc: "성스러운 황금빛과 흰빛이 감돕니다.", recipe: "천사, 부활, 신성함."},
-                {id:'nightmare', icon:'👿', label:'악몽', desc: "색이 뒤틀리고 붉은 그림자가 생깁니다.", recipe: "보스 등장, 공포, 악몽."},
-                {id:'blood', icon:'🩸', label:'유혈', desc: "붉은 핏빛 그림자가 맥동합니다.", recipe: "뱀파이어, 출혈, 폭주."},
-                {id:'scanline', icon:'📺', label:'CRT', desc: "오래된 TV 화면처럼 가로줄이 생깁니다.", recipe: "레트로 모니터."},
-                {id:'vignette', icon:'🌑', label:'비네트', desc: "가장자리가 어두워집니다.", recipe: "공포, 집중."}
-            ],
-            blend: [
-                {id:'multiply', icon:'🌑', label:'곱하기', desc: "색상을 곱해서 어둡게 만듭니다. (배경 필요)", recipe: "흰색 배경 합성 시 투명하게 만들 때."},
-                {id:'screen', icon:'☀️', label:'스크린', desc: "색상을 반전해 곱합니다. 빛나는 효과. (배경 필요)", recipe: "검은 배경의 불꽃/빛을 합성할 때."},
-                {id:'overlay', icon:'🌗', label:'오버레이', desc: "밝은 건 더 밝게, 어두운 건 더 어둡게. (배경 필요)", recipe: "텍스처를 자연스럽게 입힐 때."},
-                {id:'darken', icon:'🌘', label:'어둡게', desc: "어두운 색상만 남깁니다.", recipe: "그림자 효과."},
-                {id:'lighten', icon:'🌖', label:'밝게', desc: "밝은 색상만 남깁니다.", recipe: "광원 효과."},
-                {id:'grayscale', icon:'⚫', label:'흑백', desc: "완전한 무채색으로 만듭니다.", recipe: "석상, 고인물, 사망 상태."},
-                {id:'sepia', icon:'🟤', label:'세피아', desc: "빛 바랜 갈색 톤을 입힙니다.", recipe: "고지도, 유물, 회상 씬."},
-                {id:'invert', icon:'🔄', label:'반전', desc: "보색으로 반전시킵니다.", recipe: "마법, 저주, 기괴함."},
-                {id:'hue-rotate', icon:'🎨', label:'색상회전', desc: "색상환을 돌려 색을 바꿉니다.", recipe: "파란 옷을 빨간 옷으로 바꿀 때."},
-                {id:'saturate', icon:'🔴', label:'채도', desc: "색을 강렬하고 진하게 만듭니다.", recipe: "에너지 넘치는 상태, 폭주."},
-                {id:'contrast', icon:'🔳', label:'대비', desc: "명암 차이를 극대화합니다.", recipe: "강렬한 인상, 만화 같은 느낌."},
-                {id:'blur', icon:'🌫️', label:'블러', desc: "흐릿하게 뭉갭니다.", recipe: "원근감, 유령, 빠른 이동."},
-                {id:'opacity', icon:'👻', label:'투명도', desc: "반투명하게 만듭니다.", recipe: "유령, 은신, 홀로그램."},
-                {id:'drop-shadow', icon:'👤', label:'그림자', desc: "외부 그림자를 생성합니다.", recipe: "입체감, 둥둥 떠있는 느낌."},
-                {id:'difference', icon:'➖', label:'차이', desc: "겹치는 색상을 뺍니다.", recipe: "사이키델릭, 반전 효과."},
-                {id:'exclusion', icon:'❌', label:'제외', desc: "차이와 비슷하지만 대비가 낮습니다.", recipe: "부드러운 반전."},
-                {id:'hard-light', icon:'🔦', label:'하드라이트', desc: "강한 스포트라이트를 비춘 듯합니다.", recipe: "강렬한 합성."},
-                {id:'soft-light', icon:'🕯️', label:'소프트라이트', desc: "부드러운 조명을 비춘 듯합니다.", recipe: "은은한 합성."}
-            ]
-        };
+        // --- EXPANDED LIBRARIES ---
+        const VITAL_TYPES = [
+            {id:'pulse', icon:'💓', label:'Pulse'}, {id:'heartbeat', icon:'💗', label:'Heartbeat'},
+            {id:'rubberBand', icon:'🪀', label:'Rubber'}, {id:'tada', icon:'🎉', label:'Tada'},
+            {id:'swing', icon:'🎪', label:'Swing'}, {id:'float', icon:'☁️', label:'Float'},
+            {id:'ghost', icon:'👻', label:'Ghost'}, {id:'jelly', icon:'🍮', label:'Jelly'},
+            {id:'wobble', icon:'🥴', label:'Wobble'}, {id:'jello', icon:'🍮', label:'Jello'},
+            {id:'bounce', icon:'🏀', label:'Bounce'}, {id:'flip', icon:'🔄', label:'Flip'},
+            {id:'zoomInOut', icon:'🔍', label:'Zoom'}, {id:'panic', icon:'😱', label:'Panic'},
+            {id:'breath', icon:'🌬️', label:'Breath'}, {id:'barrel', icon:'🛢️', label:'Barrel'},
+            {id:'compress', icon:'🧱', label:'Compress'}, {id:'blackHole', icon:'⚫', label:'BlackHole'},
+            {id:'tornado', icon:'🌪️', label:'Tornado'}, {id:'teleport', icon:'🛸', label:'Teleport'},
+            {id:'orbit3d', icon:'🪐', label:'3D-Orbit'}, {id:'glitch-skew', icon:'📶', label:'Skew'},
+            {id:'vibrate', icon:'📳', label:'Vibe'}, {id:'float-h', icon:'↔️', label:'Slide'},
+            {id:'pendulum', icon:'🕰️', label:'Pendulum'}
+        ];
+        const FX_TYPES = [
+            {id:'fire', icon:'🔥', label:'Fire'}, {id:'sparkle', icon:'✨', label:'Sparkle'},
+            {id:'neon-pulse', icon:'⚡', label:'Neon'}, {id:'shake', icon:'🫨', label:'Shake'},
+            {id:'glitch-filter', icon:'☠️', label:'Glitch'}, {id:'rainbow', icon:'🌈', label:'Rainbow'},
+            {id:'blurPulse', icon:'🌫️', label:'Blur'}, {id:'invertFlash', icon:'🌓', label:'Invert'},
+            {id:'sepiaDream', icon:'📜', label:'Sepia'}, {id:'brightnessFlash', icon:'💡', label:'Flash'},
+            {id:'grayscalePulse', icon:'⚫', label:'Gray'}, {id:'radioactive', icon:'☢️', label:'Toxic'},
+            {id:'ice', icon:'🧊', label:'Frozen'}, {id:'shadowClone', icon:'👥', label:'Clone'},
+            {id:'midas', icon:'👑', label:'Midas'}, {id:'matrix', icon:'💻', label:'Matrix'},
+            {id:'thermal', icon:'🌡️', label:'Thermal'}, {id:'hologram', icon:'💠', label:'Holo'},
+            {id:'noir', icon:'🕵️', label:'Noir'}, {id:'pixelate', icon:'👾', label:'Pixel'},
+            {id:'underwater', icon:'🌊', label:'Aqua'}
+        ];
+        // ★ BLEND TYPES (Simulated via CSS Filters for stacking)
+        const BLEND_TYPES = [
+            {id:'multiply', icon:'🌑', label:'Multiply', filter:'brightness(0.7) contrast(1.2)'},
+            {id:'screen', icon:'☀️', label:'Screen', filter:'brightness(1.5) contrast(0.8)'},
+            {id:'overlay', icon:'🌗', label:'Overlay', filter:'contrast(1.5) saturate(1.2)'},
+            {id:'darken', icon:'🌘', label:'Darken', filter:'brightness(0.8)'},
+            {id:'lighten', icon:'🌖', label:'Lighten', filter:'brightness(1.2)'},
+            {id:'grayscale', icon:'⚫', label:'Gray', filter:'grayscale(1)'},
+            {id:'sepia', icon:'🟤', label:'Sepia', filter:'sepia(1)'},
+            {id:'invert', icon:'🔄', label:'Invert', filter:'invert(1)'},
+            {id:'hue-rotate', icon:'🎨', label:'Hue', filter:'hue-rotate(90deg)'},
+            {id:'saturate', icon:'🔴', label:'Saturate', filter:'saturate(2)'},
+            {id:'contrast', icon:'🔳', label:'Contrast', filter:'contrast(2)'},
+            {id:'blur', icon:'🌫️', label:'Blur', filter:'blur(3px)'},
+            {id:'opacity', icon:'👻', label:'Fade', filter:'opacity(0.5)'},
+            {id:'drop-shadow', icon:'👤', label:'Shadow', filter:'drop-shadow(5px 5px 5px rgba(0,0,0,0.5))'}
+        ];
 
         const ASSET_DATA = { face: ['😀','😎','💀','🔥','💩','👑','💎','🏆','❤️','🚀','👽','👻','🤡','👹','👺','🤖','🤠','🤢','🥳','🤬','🤯','🥶','🥵','😱','🦄'], animal: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🦅','🦆','🦇','🐺','🐗','🐴','🦋','🐙','🦕'], icon: ['fa-solid fa-crown','fa-solid fa-trophy','fa-solid fa-medal','fa-solid fa-star','fa-solid fa-bolt','fa-solid fa-fire','fa-solid fa-skull','fa-solid fa-dragon','fa-solid fa-rocket','fa-solid fa-heart','fa-solid fa-certificate','fa-solid fa-radiation','fa-solid fa-biohazard','fa-solid fa-eye','fa-solid fa-hand-fist','fa-solid fa-diamond','fa-solid fa-chess-king','fa-solid fa-yin-yang','fa-solid fa-user-astronaut','fa-solid fa-meteor','fa-solid fa-shield-halved','fa-solid fa-dungeon','fa-solid fa-hat-wizard'], object: ['👓','🕶','💍','💣','🎈','🎉','💊','💉','🩸','🧬','🔭','🔬','🛡','🗡','⚔','🏹','🎁','🔔','🎵','🎤','🎮','🎲','🎯','🎱','🎳'], food: ['🍎','🍌','🍉','🍇','🍓','🍔','🍟','🍕','🌭','🍿','🍩','🍪','🎂','🍫','🍬','🍭','🍺','🥂','🧊','🧁','🥟','🍣','🍱','🍛','🍜'], symbol: ['☮','✝','☪','🕉','☸','✡','🔯','🕎','☯','☦','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⚛'] };
 
         async function init() {
             window.addEventListener('mousemove', handleGlobalMouseMove);
             window.addEventListener('mouseup', handleGlobalMouseUp);
-            setupDraggablePopup();
-            setupDraggablePreview(); // [ELITE SECRETARY] Initialize draggable preview
             renderToggleButtons();
             renderMarketTabs();
         }
 
-        // [ELITE SECRETARY] Draggable Preview Logic
-        function setupDraggablePreview() {
-            const card = document.getElementById('live-preview-card');
-            const header = document.getElementById('preview-header');
-            let isDown = false; let offset = [0, 0];
-            header.addEventListener('mousedown', (e) => { 
-                if(e.target.tagName === 'BUTTON' || e.target.closest('button')) return; // Allow button clicks
-                isDown = true; 
-                offset = [card.offsetLeft - e.clientX, card.offsetTop - e.clientY]; 
-            });
-            document.addEventListener('mouseup', () => { isDown = false; });
-            document.addEventListener('mousemove', (e) => {
-                if (isDown) {
-                    e.preventDefault();
-                    card.style.left = (e.clientX + offset[0]) + 'px';
-                    card.style.top = (e.clientY + offset[1]) + 'px';
-                    card.style.right = 'auto'; // Disable default right positioning
-                }
-            });
-        }
-
-        function togglePreview() {
-            const card = document.getElementById('live-preview-card');
-            card.style.display = card.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function setupDraggablePopup() {
-            const popup = document.getElementById('help-popup');
-            const header = document.getElementById('help-header');
-            let isDown = false; let offset = [0, 0];
-            header.addEventListener('mousedown', (e) => { isDown = true; offset = [popup.offsetLeft - e.clientX, popup.offsetTop - e.clientY]; });
-            document.addEventListener('mouseup', () => { isDown = false; });
-            document.addEventListener('mousemove', (e) => {
-                if (isDown) {
-                    e.preventDefault();
-                    popup.style.left = (e.clientX + offset[0]) + 'px';
-                    popup.style.top = (e.clientY + offset[1]) + 'px';
-                }
-            });
-        }
-
-        function showHelp(group, type) {
-            const popup = document.getElementById('help-popup');
-            const content = document.getElementById('help-content');
-            
-            // Look up in MASTER DATA
-            const item = EFFECT_DATA[group].find(x => x.id === type);
-            if(!item) return;
-            
-            content.innerHTML = `
-                <div class="mb-3">
-                    <span class="text-xl font-bold text-pink-400 capitalize flex items-center gap-2">${item.icon} ${item.label}</span>
-                    <hr class="border-indigo-800 my-2">
-                    <p class="text-white mb-2 font-bold text-xs uppercase tracking-wider text-indigo-400">Effect</p>
-                    <p class="text-slate-300 mb-4 font-normal leading-relaxed">${item.desc}</p>
-                    <p class="text-white mb-2 font-bold text-xs uppercase tracking-wider text-yellow-400">Secret Recipe</p>
-                    <div class="bg-indigo-900/50 p-3 rounded-lg border border-indigo-700 text-yellow-200 text-xs">
-                        <i class="fa-solid fa-lightbulb mr-2"></i>${item.recipe}
-                    </div>
-                    ${group === 'blend' && ['multiply','screen','overlay','darken','lighten','hard-light','soft-light','difference','exclusion'].includes(type) ? 
-                        '<p class="mt-2 text-[10px] text-slate-500 italic">* 이 효과는 배경(다른 레이어)과 겹쳐야 보입니다.</p>' : ''}
-                </div>
-            `;
-            popup.style.display = 'block';
-        }
-
         function renderToggleButtons() {
-            // Render from MASTER DATA to ensure consistency
-            ['vital', 'fx', 'blend'].forEach(group => {
-                const container = document.getElementById(`${group}-toggles`);
-                container.innerHTML = EFFECT_DATA[group].map(t => 
-                    `<div class="effect-toggle ${group}" onclick="toggleEffect('${group}', '${t.id}')" id="btn-${group}-${t.id}" title="${t.desc}">
-                        ${t.icon}<span>${t.label}</span>
-                    </div>`
-                ).join('');
-            });
+            const vitalContainer = document.getElementById('vital-toggles');
+            vitalContainer.innerHTML = VITAL_TYPES.map(t => `<div class="effect-toggle" onclick="toggleEffect('vital', '${t.id}')" id="btn-vital-${t.id}">${t.icon}<span>${t.label}</span></div>`).join('');
+            const fxContainer = document.getElementById('fx-toggles');
+            fxContainer.innerHTML = FX_TYPES.map(t => `<div class="effect-toggle fx" onclick="toggleEffect('fx', '${t.id}')" id="btn-fx-${t.id}">${t.icon}<span>${t.label}</span></div>`).join('');
+            // ★ BLEND STACK TOGGLES
+            const blendContainer = document.getElementById('blend-toggles');
+            blendContainer.innerHTML = BLEND_TYPES.map(t => `<div class="effect-toggle blend" onclick="toggleEffect('blend', '${t.id}')" id="btn-blend-${t.id}">${t.icon}<span>${t.label}</span></div>`).join('');
         }
 
         function renderMarketTabs() {
             const header = document.querySelector('.market-header');
-            const korTabs = { face: '얼굴', animal: '동물', icon: '아이콘', object: '사물', food: '음식', symbol: '기호' };
-            header.innerHTML = Object.keys(ASSET_DATA).map(key => `<div class="px-5 py-3 cursor-pointer text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent hover:border-pink-500 transition uppercase" onclick="switchMarketTab('${key}')" id="tab-${key}">${korTabs[key]||key}</div>`).join('');
+            header.innerHTML = Object.keys(ASSET_DATA).map(key => `<div class="px-5 py-3 cursor-pointer text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent hover:border-pink-500 transition uppercase" onclick="switchMarketTab('${key}')" id="tab-${key}">${key}</div>`).join('');
             if(Object.keys(ASSET_DATA).length > 0) switchMarketTab('face');
         }
 
@@ -495,7 +334,7 @@
                 if (error) throw error;
                 const { data: { publicUrl } } = _supabase.storage.from('emblem_assets').getPublicUrl(fileName);
                 addLayer('image', publicUrl, 'custom');
-            } catch (e) { alert("업로드 실패: " + e.message); } 
+            } catch (e) { alert("Upload Failed: " + e.message); } 
             finally { loading.style.display = 'none'; input.value = ''; }
         }
 
@@ -507,7 +346,9 @@
                 anim: {
                     spin: { on: false, axis: 'z', speed: 10 },
                     orbit: { on: false, radius: 100, speed: 20 },
-                    vital: [], fx: [], blend: []
+                    vital: [], 
+                    fx: [],
+                    blend: [] // ★ NEW BLEND STACK
                 }
             };
             if(type==='text') layer.style.color='#fbbf24';
@@ -516,98 +357,79 @@
             renderAll(); selectLayer(id);
         }
 
-        function handleSpringZoom(val) {
-            if(!selectedId) return;
-            const value = parseInt(val);
-            if(value === 0) return;
-            const thumb = document.getElementById('spring-thumb');
-            if(thumb) thumb.style.transform = `translate(calc(-50% + ${value * 10}px), 0)`;
-            const l = layers.find(x => x.id === selectedId);
-            if(l) {
-                let current = parseInt(l.style.size);
-                const speed = Math.abs(value) * 1.5; 
-                if(value > 0) current += speed;
-                else current = Math.max(10, current - speed);
-                l.style.size = current;
-                document.getElementById('p-size-val').innerText = Math.round(current) + '%';
-                renderStage(); renderPreview();
-            }
-        }
-
-        function resetSpringZoom(input) {
-            input.value = 0;
-            const thumb = document.getElementById('spring-thumb');
-            if(thumb) thumb.style.transform = `translate(-50%, 0)`;
-        }
-
-        function resetSize() {
-            if(!selectedId) return;
-            const l = layers.find(x => x.id === selectedId);
-            if(l) {
-                l.style.size = (l.type === 'image' ? 150 : (l.type === 'bg' ? 300 : 100));
-                document.getElementById('p-size-val').innerText = Math.round(l.style.size) + '%';
-                renderStage(); renderPreview();
-            }
-        }
-
-        function centerLayer() {
-            if(!selectedId) return;
-            const l = layers.find(x => x.id === selectedId);
-            if(l) {
-                l.x = 50; l.y = 50;
-                renderStage();
-            }
-        }
-
+        // Generic Toggle for Vital, FX, and Blend
         function toggleEffect(group, type) {
             if(!selectedId) return;
             const l = layers.find(x => x.id === selectedId);
             if(!l) return;
+            
+            // Check if exists
             const existingIdx = l.anim[group].findIndex(e => e.type === type);
-            if(existingIdx !== -1) { l.anim[group].splice(existingIdx, 1); } 
-            else { l.anim[group].push({ type: type, speed: 10, intensity: 10 }); }
+            
+            if(existingIdx !== -1) {
+                l.anim[group].splice(existingIdx, 1);
+            } else {
+                // Default speed/intensity 10 (range 1-20)
+                l.anim[group].push({ type: type, speed: 10 });
+            }
+            
             updateToggleUI(l); renderAll();
         }
 
-        function updateEffectProp(group, type, prop, value) {
+        // Update Slider
+        function updateEffectSpeed(group, type, value) {
             if(!selectedId) return;
             const l = layers.find(x => x.id === selectedId);
             if(!l) return;
             const effect = l.anim[group].find(e => e.type === type);
             if(effect) {
-                effect[prop] = parseInt(value);
-                const label = document.getElementById(`${prop}-val-${group}-${type}`);
+                effect.speed = parseInt(value);
+                const label = document.getElementById(`spd-val-${group}-${type}`);
                 if(label) {
-                     if(prop === 'speed') label.innerText = group==='blend' ? value+'%' : ((21 - value)/10).toFixed(1) + 'x';
-                     else label.innerText = value; 
+                    // For Blend, display % Intensity. For Anim, display Speed x
+                    if(group === 'blend') label.innerText = (effect.speed * 10) + '%'; // 10 * 10 = 100%
+                    else label.innerText = ((21 - effect.speed)/10).toFixed(1) + 'x';
                 }
                 renderStage(); renderPreview();
             }
         }
 
+        // Randomizer
         function randomizeLayer() {
-            if(!selectedId) return alert("카오스 효과를 줄 레이어를 선택하세요!");
+            if(!selectedId) return alert("Select a layer to infect with CHAOS!");
             const l = layers.find(x => x.id === selectedId);
             if(!l) return;
+            
             l.anim.vital = []; l.anim.fx = []; l.anim.blend = [];
-            ['vital', 'fx', 'blend'].forEach(group => {
-                const arr = EFFECT_DATA[group];
+            
+            const randomPick = (arr, count) => {
+                for(let i=0; i<count; i++) {
+                    const randType = arr[Math.floor(Math.random() * arr.length)].id;
+                    // Prevent duplicates in random
+                    // Simplified for demo: just push
+                    l.anim.vital.push({type: VITAL_TYPES[Math.floor(Math.random()*VITAL_TYPES.length)].id, speed: 10});
+                }
+            };
+            // Add 1-2 items per category
+            [VITAL_TYPES, FX_TYPES, BLEND_TYPES].forEach((arr, i) => {
                 const count = Math.floor(Math.random() * 2) + 1;
-                const target = l.anim[group];
+                const target = i===0 ? l.anim.vital : (i===1 ? l.anim.fx : l.anim.blend);
                 for(let k=0; k<count; k++) {
                     const id = arr[Math.floor(Math.random() * arr.length)].id;
-                    if(!target.find(e=>e.type===id)) target.push({type:id, speed: Math.floor(Math.random()*15)+5, intensity: 10});
+                    if(!target.find(e=>e.type===id)) target.push({type:id, speed: Math.floor(Math.random()*15)+5});
                 }
             });
+            
             selectLayer(l.id);
         }
 
         function updateToggleUI(layer) {
             document.querySelectorAll('.effect-toggle').forEach(el => el.classList.remove('active'));
+            // Safety checks for legacy data
             ['vital', 'fx', 'blend'].forEach(g => {
                 if(!layer.anim[g]) layer.anim[g] = [];
-                // Legacy Fix
-                if(layer.anim[g].length > 0 && typeof layer.anim[g][0] === 'string') layer.anim[g] = layer.anim[g].map(t=>({type:t, speed:10, intensity:10}));
+                if(layer.anim[g].length > 0 && typeof layer.anim[g][0] === 'string') layer.anim[g] = layer.anim[g].map(t=>({type:t, speed:10}));
+                
                 layer.anim[g].forEach(e => { 
                     const btn = document.getElementById(`btn-${g}-${e.type}`); 
                     if(btn) btn.classList.add('active'); 
@@ -619,35 +441,26 @@
         function renderActiveStackList(group, list) {
             const container = document.getElementById(`active-${group}-list`);
             if(!list || list.length === 0) {
-                container.innerHTML = `<div class="text-[9px] text-slate-600 text-center italic py-2">활성화된 효과 없음</div>`;
+                container.innerHTML = `<div class="text-[9px] text-slate-600 text-center italic py-2">No ${group.toUpperCase()} active</div>`;
                 return;
             }
-            const typeArr = EFFECT_DATA[group];
+            let typeArr = group==='vital'?VITAL_TYPES : (group==='fx'?FX_TYPES : BLEND_TYPES);
             
             container.innerHTML = list.map(e => {
                 const def = typeArr.find(t => t.id === e.type) || {label:e.type, icon:'?'};
-                const speedVal = group==='blend' ? (e.speed*10)+'%' : ((21-e.speed)/10).toFixed(1)+'x';
+                const valDisplay = group==='blend' ? (e.speed*10)+'%' : ((21-e.speed)/10).toFixed(1)+'x';
                 const accent = group==='fx'?'accent-orange-500':(group==='blend'?'accent-indigo-500':'accent-green-500');
-                // HELP BUTTON FOR EVERYONE
-                const helpBtn = `<button onclick="showHelp('${group}', '${e.type}')" class="text-cyan-400 hover:text-white px-2"><i class="fa-solid fa-circle-question"></i></button>`;
-
+                
                 return `
                 <div class="active-effect-item">
                     <div class="header">
-                        <div class="name">${def.icon} ${def.label} ${helpBtn}</div>
+                        <div class="name">${def.icon} ${def.label}</div>
                         <button onclick="toggleEffect('${group}', '${e.type}')" class="text-slate-500 hover:text-rose-500"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <div class="slider-row">
-                        <div class="label-col">속도</div>
                         <input type="range" min="1" max="20" value="${e.speed}" class="h-1 bg-slate-700 rounded-lg cursor-pointer ${accent}" 
-                               oninput="updateEffectProp('${group}', '${e.type}', 'speed', this.value)">
-                        <span class="val-col" id="speed-val-${group}-${e.type}">${speedVal}</span>
-                    </div>
-                    <div class="slider-row mt-1">
-                        <div class="label-col">강도</div>
-                        <input type="range" min="1" max="20" value="${e.intensity||10}" class="h-1 bg-slate-700 rounded-lg cursor-pointer ${accent}" style="opacity:0.7" 
-                               oninput="updateEffectProp('${group}', '${e.type}', 'intensity', this.value)">
-                        <span class="val-col" id="intensity-val-${group}-${e.type}">${e.intensity||10}</span>
+                               oninput="updateEffectSpeed('${group}', '${e.type}', this.value)">
+                        <span class="speed-label" id="spd-val-${group}-${e.type}">${valDisplay}</span>
                     </div>
                 </div>`;
             }).join('');
@@ -659,11 +472,7 @@
             const stage = document.getElementById('stage'); stage.innerHTML = '';
             layers.forEach(l => {
                 const root = createObjDOM(l, 'edit');
-                root.addEventListener('mousedown', (e) => { 
-                    e.stopPropagation(); e.preventDefault(); 
-                    selectLayer(l.id); 
-                    isDragging = true; dragTargetId = l.id; 
-                });
+                root.addEventListener('mousedown', (e) => { e.stopPropagation(); e.preventDefault(); selectLayer(l.id); isDragging = true; dragTargetId = l.id; });
                 root.style.pointerEvents = "auto";
                 if(l.id === selectedId) root.classList.add('selected');
                 stage.appendChild(root);
@@ -688,7 +497,7 @@
                 else if(l.type === 'text') icon = '<i class="fa-solid fa-font text-yellow-400"></i>';
                 else icon = '<i class="fa-solid fa-icons text-cyan-400"></i>';
                 item.innerHTML = `
-                    <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3 overflow-hidden">
                             <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center border border-slate-700">${icon}</div>
                             <div class="flex flex-col">
@@ -702,14 +511,20 @@
                             <button onclick="event.stopPropagation(); deleteLayerById('${l.id}')" class="w-6 h-6 rounded bg-slate-700 hover:bg-rose-500 hover:text-white text-slate-300 flex items-center justify-center transition ml-1"><i class="fa-solid fa-xmark text-[10px]"></i></button>
                         </div>
                     </div>
-                    <div class="px-1 flex items-center justify-between text-[9px] text-slate-500 font-mono">
-                         <span>SIZE: ${Math.round(l.style.size)}%</span>
+                    <div class="px-1 flex items-center gap-3">
+                         <span class="text-[9px] text-slate-500 font-bold w-6">SIZE</span>
+                         <input type="range" min="10" max="300" value="${l.style.size}" class="flex-1 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer" oninput="updatePropDirect('${l.id}', 'size', this.value); event.stopPropagation();">
                     </div>`;
                 list.appendChild(item);
             });
         }
 
-        // ★ MASTER OBJECT CREATION
+        function updatePropDirect(id, key, val) {
+            const l = layers.find(x => x.id === id);
+            if(l) { l.style[key] = val; renderStage(); renderPreview(); if(selectedId === id) document.getElementById('p-size').value = val; }
+        }
+
+        // ★ MASTER BUILDER (Recursion + Filter Stacking)
         function createObjDOM(l, mode, scale=1.0) {
             const root = document.createElement('div'); root.className = 'obj-root';
             root.id = mode === 'edit' ? `obj-${l.id}` : `prev-${l.id}`;
@@ -722,23 +537,25 @@
             }
 
             let currentContainer = orbit;
+            
+            // 1. Vital (Motion) Stacking
             if(l.anim.vital && l.anim.vital.length > 0) {
+                if(typeof l.anim.vital[0] === 'string') l.anim.vital = l.anim.vital.map(t=>({type:t, speed:10}));
                 l.anim.vital.forEach(e => {
                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
                     const speed = (21 - (e.speed || 10)) / 10;
                     wrapper.style.animation = `${e.type} ${speed}s infinite ease-in-out`;
-                    const intensity = (e.intensity || 10) / 10; 
-                    if(intensity !== 1) wrapper.style.transform = `scale(${intensity})`;
                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
                 });
             }
+
+            // 2. FX (Visual Animation) Stacking
             if(l.anim.fx && l.anim.fx.length > 0) {
+                if(typeof l.anim.fx[0] === 'string') l.anim.fx = l.anim.fx.map(t=>({type:t, speed:10}));
                 l.anim.fx.forEach(e => {
                     const wrapper = document.createElement('div'); wrapper.className = 'effect-wrapper';
                     const speed = (21 - (e.speed || 10)) / 10;
                     wrapper.style.animation = `${e.type} ${speed}s infinite`;
-                    const intensity = (e.intensity || 10);
-                    if(intensity > 10) wrapper.style.filter = `saturate(${1 + (intensity-10)/10})`;
                     currentContainer.appendChild(wrapper); currentContainer = wrapper;
                 });
             }
@@ -747,37 +564,24 @@
             if(l.anim.spin.on) { spin.style.animation = `spin-${l.anim.spin.axis} ${l.anim.spin.speed/5}s linear infinite`; }
             currentContainer.appendChild(spin);
 
+            // 3. CORE & BLEND STACKING (The Magic)
             const core = document.createElement('div'); core.className = 'obj-core';
             
-            // ★ BLEND INTENSITY LOGIC
+            // Generate Filter String from Stack
             let filterString = '';
-            let mixBlend = '';
-            
             if(l.anim.blend && l.anim.blend.length > 0) {
                 l.anim.blend.forEach(b => {
-                    const intensity = b.intensity || 10; // 1-20
-                    const factor = intensity / 10; // 0.1 - 2.0
-                    
-                    if(b.type === 'drop-shadow') {
-                        const px = intensity * 2; 
-                        filterString += ` drop-shadow(${px}px ${px}px ${px/2}px rgba(0,0,0,0.5))`;
-                    }
-                    else if(b.type === 'blur') { filterString += ` blur(${intensity/3}px)`; }
-                    else if(b.type === 'contrast') { filterString += ` contrast(${factor * 2})`; }
-                    else if(b.type === 'saturate') { filterString += ` saturate(${factor * 2})`; }
-                    else if(b.type === 'hue-rotate') { filterString += ` hue-rotate(${intensity * 18}deg)`; }
-                    else if(b.type === 'opacity') { core.style.opacity = intensity / 20; }
-                    else if(['multiply', 'screen', 'overlay', 'darken', 'lighten', 'difference', 'exclusion', 'hard-light', 'soft-light'].includes(b.type)) {
-                        mixBlend = b.type;
-                    } 
-                    else {
-                        const def = EFFECT_DATA.blend.find(t => t.id === b.type);
-                        if(def && def.filter) filterString += ` ${def.filter}`; 
+                    const def = BLEND_TYPES.find(t => t.id === b.type);
+                    if(def && def.filter) {
+                        // Intensity Logic: Need to parse filter string? 
+                        // Simplification: We append the filter string.
+                        // Ideally we modify values based on b.speed (intensity), but tricky with regex.
+                        // For now, simple stacking.
+                        filterString += ` ${def.filter}`; 
                     }
                 });
             }
             if(filterString) core.style.filter = filterString;
-            if(mixBlend) core.style.mixBlendMode = mixBlend;
 
             if (l.type === 'image') {
                 const img = document.createElement('img'); img.src = l.content;
@@ -814,7 +618,11 @@
                 document.getElementById('text-control').style.display = l.type === 'text' ? 'block' : 'none';
                 if(!isImg) document.getElementById('p-color').value = l.style.color;
                 if(l.type === 'text') document.getElementById('p-text').value = l.content;
-                document.getElementById('p-size-val').innerText = Math.round(l.style.size) + '%';
+                document.getElementById('p-size').value = l.style.size;
+                document.getElementById('p-size-val').innerText = l.style.size + '%';
+                
+                document.getElementById('anim-spin-on').checked = l.anim.spin.on; document.getElementById('anim-spin-axis').value = l.anim.spin.axis; document.getElementById('anim-spin-speed').value = 51 - l.anim.spin.speed;
+                document.getElementById('anim-orbit-on').checked = l.anim.orbit.on; document.getElementById('anim-orbit-radius').value = l.anim.orbit.radius; document.getElementById('anim-orbit-speed').value = 51 - l.anim.orbit.speed; 
             } else p.classList.add('hidden');
         }
 
@@ -832,14 +640,14 @@
             });
         }
 
-        async function saveToLibrary() { if(layers.length===0) return alert("비어있습니다!"); const name = prompt("이름을 입력하세요:"); if(!name) return; const layersToSave = JSON.parse(JSON.stringify(layers)); if(layersToSave.length > 0) layersToSave[0]._signature = 'SIG-' + Date.now(); const { error } = await _supabase.from('emblem_library').insert({ name: name, layers: layersToSave }); if(error) alert("오류: " + error.message); else alert("저장되었습니다."); }
-        async function openLibraryModal() { document.getElementById('library-modal').style.display='flex'; const list = document.getElementById('library-list'); list.innerHTML = '<div class="text-white text-center py-10 opacity-50 font-mono">데이터 불러오는 중...</div>'; const { data } = await _supabase.from('emblem_library').select('*').order('created_at', {ascending:false}); list.innerHTML = ''; if(data) data.forEach(item => list.innerHTML += `<div class="bg-slate-800 p-4 rounded-xl flex justify-between items-center group hover:bg-slate-700 transition cursor-pointer" onclick="loadFromLibrary('${item.id}')"><div class="font-bold text-white group-hover:text-pink-400">${item.name} <span class="text-[10px] text-slate-500 ml-2 font-mono">${new Date(item.created_at).toLocaleDateString()}</span></div><button onclick="event.stopPropagation(); deleteLibraryItem('${item.id}')" class="text-slate-500 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button></div>`); }
-        async function loadFromLibrary(id) { if(!confirm("현재 작업 내용을 덮어쓰시겠습니까?")) return; const { data } = await _supabase.from('emblem_library').select('*').eq('id', id).single(); if(data) { layers = data.layers; closeModal('library-modal'); selectedId = null; document.getElementById('prop-panel').classList.add('hidden'); renderAll(); } }
-        async function deleteLibraryItem(id) { if(confirm("정말 삭제하시겠습니까?")) { await _supabase.from('emblem_library').delete().eq('id', id); openLibraryModal(); } }
+        async function saveToLibrary() { if(layers.length===0) return alert("Empty!"); const name = prompt("Asset Name:"); if(!name) return; const layersToSave = JSON.parse(JSON.stringify(layers)); if(layersToSave.length > 0) layersToSave[0]._signature = 'SIG-' + Date.now(); const { error } = await _supabase.from('emblem_library').insert({ name: name, layers: layersToSave }); if(error) alert("Error: " + error.message); else alert("Saved to Cloud."); }
+        async function openLibraryModal() { document.getElementById('library-modal').style.display='flex'; const list = document.getElementById('library-list'); list.innerHTML = '<div class="text-white text-center py-10 opacity-50 font-mono">FETCHING DATA...</div>'; const { data } = await _supabase.from('emblem_library').select('*').order('created_at', {ascending:false}); list.innerHTML = ''; if(data) data.forEach(item => list.innerHTML += `<div class="bg-slate-800 p-4 rounded-xl flex justify-between items-center group hover:bg-slate-700 transition cursor-pointer" onclick="loadFromLibrary('${item.id}')"><div class="font-bold text-white group-hover:text-pink-400">${item.name} <span class="text-[10px] text-slate-500 ml-2 font-mono">${new Date(item.created_at).toLocaleDateString()}</span></div><button onclick="event.stopPropagation(); deleteLibraryItem('${item.id}')" class="text-slate-500 hover:text-rose-500"><i class="fa-solid fa-trash"></i></button></div>`); }
+        async function loadFromLibrary(id) { if(!confirm("Overwrite current workspace?")) return; const { data } = await _supabase.from('emblem_library').select('*').eq('id', id).single(); if(data) { layers = data.layers; closeModal('library-modal'); selectedId = null; document.getElementById('prop-panel').classList.add('hidden'); renderAll(); } }
+        async function deleteLibraryItem(id) { if(confirm("Permanently delete?")) { await _supabase.from('emblem_library').delete().eq('id', id); openLibraryModal(); } }
         function moveLayer(id, dir) { const idx = layers.findIndex(l => l.id === id); if (idx === -1) return; const newIdx = idx + dir; if (newIdx < 0 || newIdx >= layers.length) return; [layers[idx], layers[newIdx]] = [layers[newIdx], layers[idx]]; renderAll(); }
         function deleteLayerById(id) { layers = layers.filter(l => l.id !== id); if(selectedId === id) { selectedId = null; document.getElementById('prop-panel').classList.add('hidden'); } renderAll(); }
         function deleteLayer() { deleteLayerById(selectedId); }
-        function clearCanvas() { if(confirm("전체 초기화 하시겠습니까?")) { layers=[]; selectedId=null; document.getElementById('prop-panel').classList.add('hidden'); renderAll(); } }
+        function clearCanvas() { if(confirm("Reset Canvas?")) { layers=[]; selectedId=null; document.getElementById('prop-panel').classList.add('hidden'); renderAll(); } }
         function addTextLayer() { const txt=document.getElementById('quick-text').value||"TIER"; addLayer('text', txt); document.getElementById('quick-text').value=''; }
         function handleGlobalMouseMove(e) { if (!isDragging || !dragTargetId) return; const rect = document.getElementById('stage-wrapper').getBoundingClientRect(); const l = layers.find(layer => layer.id === dragTargetId); if (l) { l.x = ((e.clientX - rect.left) / rect.width) * 100; l.y = ((e.clientY - rect.top) / rect.height) * 100; renderStage(); } }
         function handleGlobalMouseUp() { if (isDragging) { isDragging = false; dragTargetId = null; renderAll(); } }
