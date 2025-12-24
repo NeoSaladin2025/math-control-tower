@@ -215,6 +215,16 @@
                             <div id="xp-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 w-0 transition-all duration-1000"></div>
                         </div>
                     </div>
+
+                    <div class="py-2">
+                        <button onclick="location.href='student_emblem_custom.html'" 
+                                class="w-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:to-pink-400 text-white font-black py-3 rounded-xl shadow-[0_4px_15px_rgba(124,58,237,0.3)] transform active:scale-95 transition-all flex items-center justify-center gap-2 border border-white/10">
+                            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                            <span class="text-xs font-['Orbitron'] tracking-wider">CUSTOM EMBLEM</span>
+                            <div class="bg-black/20 px-2 py-0.5 rounded text-[9px] font-normal border border-white/10">100 CP</div>
+                        </button>
+                    </div>
+
                     <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
                         <div>
                             <span class="text-[11px] font-bold text-slate-500 block">현재 자산 (CP)</span>
@@ -468,7 +478,6 @@
         async function loadBooks() {
             const { data } = await _supabase.from('student_books').select(`workbook_id, workbooks ( id, title, total_problems, grade_level )`).eq('student_id', user.username).order('created_at', { ascending: false });
             const list = document.getElementById('book-list'); if (!data || data.length === 0) { list.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">교재 없음</div>`; return; }
-            // [RESTORED] Diagnostics Button Logic based on Screenshot
             list.innerHTML = data.map(item => `<div class="bg-white p-4 rounded-2xl border-2 border-slate-100 flex flex-col gap-3 shadow-sm hover:border-indigo-200 transition group"><div class="flex items-center gap-3"><div class=\"w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold border border-indigo-100 shadow-sm\"><i class=\"fa-solid fa-book\"></i></div><div class=\"flex-1 min-w-0\"><div class=\"font-bold text-slate-800 text-sm truncate\">${item.workbooks.title}</div><div class=\"text-[10px] text-slate-400 font-medium\">자동화 설정 대기중</div></div></div><div class=\"flex gap-2 mt-1\"><button onclick=\"requestHomework(${item.workbook_id}, '${item.workbooks.title}')\" class=\"flex-1 py-2.5 rounded-xl text-xs font-bold bg-white border-2 border-indigo-100 text-indigo-600 shadow-[0_3px_0_#e0e7ff] active:shadow-none active:translate-y-[3px]\"><span>🙋‍♂️</span> 과제 요청</button><button onclick=\"openSelfXray(${item.workbook_id})\" class=\"flex-1 py-2.5 rounded-xl text-xs font-bold bg-white border-2 border-rose-100 text-rose-500 shadow-[0_3px_0_#ffe4e6] active:shadow-none active:translate-y-[3px]\"><span>🩺</span> 진단</button></div></div>`).join('');
         }
 
@@ -481,8 +490,6 @@
             const { data: solutions } = await _supabase.from('student_solutions').select('*').eq('student_id', user.username).neq('status', 'pending');
             const { data: seasonMsgs } = await _supabase.from('season_messages').select('*').eq('student_id', user.username);
             
-            // 숙제 메시지 조회 로직 삭제됨 (Purely feedback & season)
-
             const all = [ 
                 ...(solutions || []).map(m => ({ ...m, cat: '숙제피드백', title: `📝 피드백 (No.${m.problem_num})`, content: m.teacher_feedback || '내용 없음' })), 
                 ...(seasonMsgs || []).map(m => ({ ...m, cat: '시즌', title: '🏆 시즌 알림', content: m.message }))
@@ -516,7 +523,6 @@
             document.getElementById('detail-modal').classList.remove('hidden');
         }
 
-        // [★ REPAIRED] 누락된 함수 복구 (모달 닫기)
         function closeDetailModal() {
             document.getElementById('detail-modal').classList.add('hidden');
             checkNotifications();

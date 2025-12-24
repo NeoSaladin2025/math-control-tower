@@ -121,8 +121,11 @@
             <button onclick="switchTab('emblem')" class="tab-btn text-pink-600 font-black" id="tab-emblem">🎨 엠블럼 제작 & 배포</button>
             <button onclick="switchTab('event')" class="tab-btn" id="tab-event">🎉 티어 이벤트</button>
             <button onclick="switchTab('notice')" class="tab-btn" id="tab-notice">📢 시즌 공지</button>
+            
+            <button onclick="openAwardPrep()" class="tab-btn text-emerald-600 font-bold" id="tab-award-prep">🛠️ 시상식 준비</button>
+            
             <div class="tooltip-wrap">
-                <button onclick="switchTab('award')" class="tab-btn" id="tab-award">🏆 시상식 (종료 후)</button>
+                <button onclick="openAwardPopup()" class="tab-btn" id="tab-award">🏆 시상식 (종료 후)</button>
             </div>
         </div>
 
@@ -260,10 +263,18 @@
         }
 
         async function init() {
+            // [★ 수정] maybeSingle() 사용 (status 정보도 가져옴)
             const { data: seasons } = await _supabase.from('seasons').select('*').eq('is_current', true).maybeSingle();
             currentSeason = seasons;
             if(seasons) document.getElementById('current-season-display').innerText = seasons.season_name;
             else document.getElementById('current-season-display').innerText = "없음";
+
+            // [★ 수정] 시즌이 종료된 상태면 시상식 버튼 활성화 시각 효과
+            if (seasons && seasons.status === 'ended') {
+                const awardBtn = document.getElementById('tab-award');
+                awardBtn.classList.remove('text-gray-400');
+                awardBtn.classList.add('text-amber-500', 'animate-pulse');
+            }
 
             const { data: tr } = await _supabase.from('tier_rules').select('*').order('min_xp');
             tiers = tr || [];
@@ -277,7 +288,9 @@
             const seasonName = nameInput.value.trim();
             if (!seasonName) return alert("시즌 이름을 입력해주세요.");
             const { data: activeSeason } = await _supabase.from('seasons').select('*').eq('is_current', true).maybeSingle();
-            if (activeSeason) return alert("🚫 현재 진행 중인 시즌이 있습니다!\n\n먼저 [시즌 종료]를 눌러 정산을 완료해주세요.");
+            // 활성 시즌(active)이 있으면 시작 불가
+            if (activeSeason && activeSeason.status === 'active') return alert("🚫 현재 진행 중인 시즌이 있습니다!\n\n먼저 [시즌 종료]를 눌러 정산을 완료해주세요.");
+            
             if (!confirm(`[${seasonName}]을(를) 시작하시겠습니까?\n\n주의: 모든 학생의 '시즌 XP'가 0으로 초기화됩니다!`)) return;
             try {
                 const { error: insertErr } = await _supabase.from('seasons').insert([{ season_name: seasonName, is_current: true, status: 'active' }]);
@@ -476,7 +489,42 @@
             });
         }
 
-        function endSeasonStep1() { /*...*/ }
+        // [★ NEW] 시상식 팝업 열기
+        function openAwardPopup() {
+            if (!currentSeason || currentSeason.status !== 'ended') {
+                alert("⚠️ 시즌이 아직 종료되지 않았습니다.\n[시즌 종료] 버튼을 눌러 마감 후 입장해주세요.");
+                return;
+            }
+            // 팝업 열기 (파일명: manager_season_award.html)
+            window.open('manager_season_award.html', '_blank', 'width=1200,height=900');
+        }
+
+        // [★ NEW] 시상식 준비 팝업 열기
+        function openAwardPrep() {
+            // 팝업 열기 (파일명: manager_season_award_prep.html)
+            window.open('manager_season_award_prep.html', '_blank', 'width=1200,height=900');
+        }
+
+        // [★ NEW] 시즌 종료 로직 구현
+        async function endSeasonStep1() {
+            if (!currentSeason) return alert("진행 중인 시즌이 없습니다.");
+            if (currentSeason.status === 'ended') return alert("이미 종료된 시즌입니다. 시상식을 진행하세요.");
+            
+            if (!confirm("정말 시즌을 종료하시겠습니까?\n\n1. 모든 데이터가 동결됩니다.\n2. 시상식 탭이 활성화됩니다.")) return;
+
+            // DB Update
+            const { error } = await _supabase.from('seasons')
+                .update({ status: 'ended' })
+                .eq('id', currentSeason.id);
+
+            if (error) {
+                alert("오류: " + error.message);
+            } else {
+                alert("✅ 시즌이 종료되었습니다! 시상식 입장이 가능합니다.");
+                location.reload();
+            }
+        }
+
         async function saveNotice() { /*...*/ }
 
         init();

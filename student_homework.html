@@ -228,7 +228,7 @@
             document.getElementById('submit-count-badge').innerText = `(${count}개)`;
         }
 
-        // [제출 로직 수정]
+        // [제출 로직 수정: 안 푼 문제 있으면 무조건 incomplete]
         async function submitNormalHomework() {
             const solvedKeys = Object.keys(answers); // 푼 문제만 추출
             const count = solvedKeys.length;
@@ -237,8 +237,14 @@
 
             if (count === 0) return alert("하나라도 풀고 제출해야지? 😘");
             
+            // ★ [핵심] 안품 상태가 1개라도 있으면 'incomplete'로 판정
+            let finalCompStatus = 'complete';
             let msg = `총 ${count}문항을 제출하시겠습니까?`;
-            if(notSolved > 0) msg += `\n(안 푼 문제 ${notSolved}개는 제외됩니다.)`;
+            
+            if(notSolved > 0) {
+                finalCompStatus = 'incomplete'; // 판정 변경
+                msg += `\n\n⚠️ 안 푼 문제 ${notSolved}개가 발견되었습니다.\n이 과제는 '미이행'으로 기록됩니다.`;
+            }
 
             if(!confirm(msg)) return;
 
@@ -246,8 +252,12 @@
             btn.innerText = "전송 중..."; btn.disabled = true;
 
             try {
-                // 1. 과제 상태 업데이트
-                await _supabase.from('assignments').update({ status: 'submitted', submitted_at: new Date() }).eq('id', currentAssignId);
+                // 1. 과제 상태 업데이트 (status는 submitted로 고정, completion_status는 판정에 따라 전송)
+                await _supabase.from('assignments').update({ 
+                    status: 'submitted', 
+                    completion_status: finalCompStatus, // ★ 여기가 포인트
+                    submitted_at: new Date() 
+                }).eq('id', currentAssignId);
                 
                 // 2. Workbook ID 가져오기
                 const wbId = (await _supabase.from('assignments').select('workbook_id').eq('id', currentAssignId).single()).data.workbook_id;
@@ -265,7 +275,8 @@
                 });
                 
                 await Promise.all(promises);
-                alert("✅ 제출되었습니다! 수고하셨습니다."); location.reload();
+                alert(finalCompStatus === 'incomplete' ? "✅ 제출되었습니다. (미풀이로 인해 미이행 처리)" : "✅ 제출되었습니다! 수고하셨습니다."); 
+                location.reload();
             } catch (e) {
                 alert("오류: " + e.message); btn.innerText = "🚀 결과 제출하기"; btn.disabled = false;
             }
@@ -286,7 +297,7 @@
         function openSpecial(aid, deadline) { currentAssignId = aid; document.getElementById('special-modal').classList.remove('hidden'); const mainTimer = document.getElementById(`timer-${aid}`); if(mainTimer) document.getElementById('modal-timer').innerHTML = mainTimer.innerHTML; }
         function closeSpecial() { document.getElementById('special-modal').classList.add('hidden'); }
         function previewImages() { const files = document.getElementById('sp-files').files; const container = document.getElementById('sp-preview'); container.innerHTML = ''; Array.from(files).forEach(file => { const reader = new FileReader(); reader.onload = e => { const img = document.createElement('img'); img.src = e.target.result; img.className = 'h-full w-auto rounded border border-slate-600'; container.appendChild(img); }; reader.readAsDataURL(file); }); }
-        async function submitSpecialHomework() { const files = document.getElementById('sp-files').files; if(files.length === 0) return alert("인증샷 필수!"); const btn = document.getElementById('btn-sp-submit'); btn.innerText = "전송 중..."; btn.disabled = true; try { const imgUrls = []; for (let i=0; i<files.length; i++) { const ext = files[i].name.split('.').pop(); const fname = `sp_${user.username}_${currentAssignId}_${i}_${Date.now()}.${ext}`; const { error: upErr } = await _supabase.storage.from('solutions').upload(fname, files[i]); if(upErr) throw upErr; imgUrls.push(`${SUPABASE_URL}/storage/v1/object/public/solutions/${fname}`); } await _supabase.from('assignments').update({ status: 'submitted', submitted_at: new Date(), submission_images: imgUrls }).eq('id', currentAssignId); alert("✅ 제출 완료!"); location.reload(); } catch(e) { alert("실패: " + e.message); btn.innerText = "🩸 피의 서약 제출하기"; btn.disabled = false; } }
+        async function submitSpecialHomework() { const files = document.getElementById('sp-files').files; if(files.length === 0) return alert("인증샷 필수!"); const btn = document.getElementById('btn-sp-submit'); btn.innerText = "전송 중..."; btn.disabled = true; try { const imgUrls = []; for (let i=0; i<files.length; i++) { const ext = files[i].name.split('.').pop(); const fname = `sp_${user.username}_${currentAssignId}_${i}_${Date.now()}.${ext}`; const { error: upErr } = await _supabase.storage.from('solutions').upload(fname, files[i]); if(upErr) throw upErr; imgUrls.push(`${SUPABASE_URL}/storage/v1/object/public/solutions/${fname}`); } await _supabase.from('assignments').update({ status: 'submitted', completion_status: 'complete', submitted_at: new Date(), submission_images: imgUrls }).eq('id', currentAssignId); alert("✅ 제출 완료!"); location.reload(); } catch(e) { alert("실패: " + e.message); btn.innerText = "🩸 피의 서약 제출하기"; btn.disabled = false; } }
 
         init();
     </script>

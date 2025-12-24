@@ -187,9 +187,7 @@
 
     <script>
         /**
-         * [System Core] V22.5 Portal Edition (Added Homework Sync)
-         * - Preserved all previous logic.
-         * - Added 'studentHomeworkMap' for syncing with homework_messages status.
+         * [System Core] V22.5 Portal Edition + Homework Sync (Incomplete Detection)
          */
         
         let baseDate = new Date();
@@ -203,7 +201,7 @@
         let basketData = {}; 
         let lockedStudents = new Set();
         let studentTestPassMap = {}; 
-        let studentHomeworkMap = {}; // [NEW] Stores homework status (teacher_approved / teacher_rejected)
+        let studentHomeworkMap = {}; // Stores homework status
 
         const dayMap = { '월요일': 0, '화요일': 1, '수요일': 2, '목요일': 3, '금요일': 4, '토요일': 5, '일요일': 6 };
         const dayNamesEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -222,7 +220,7 @@
             allRules = data || [];
         }
 
-        // --- Management Logic ---
+        // --- Management Logic (수정됨: 숙제 미이행 감지 추가) ---
         async function openClinic(id, name, time) {
             currentClassId = id;
             resetManagementState();
@@ -241,11 +239,17 @@
 
             const today = new Date().toISOString().split('T')[0];
             const todayStart = today + 'T00:00:00';
+
+            // [추가] 일주일 전 날짜 계산 (숙제 미이행 감지용)
+            const now = new Date();
+            const oneWeekAgo = new Date(now);
+            oneWeekAgo.setDate(now.getDate() - 7);
+            const searchStart = oneWeekAgo.toISOString().split('T')[0] + 'T00:00:00';
             
             classStudentsMap = {};
             lockedStudents.clear();
             studentTestPassMap = {}; 
-            studentHomeworkMap = {}; // Reset
+            studentHomeworkMap = {}; // 초기화
 
             const studentIds = []; 
 
@@ -264,8 +268,9 @@
                 });
             }
 
-            // 2. [Test Logic]
+            // 2. [Test Logic & Homework Logic]
             if (studentIds.length > 0) {
+                // (1) 진단평가 로직
                 const { data: testRecs } = await _supabase
                     .from('test_assignment_records')
                     .select('student_id, status, current_round')
@@ -283,19 +288,33 @@
                     });
                 }
 
-                // 3. [NEW] Homework Status Logic
+                // (2) 기존 숙제 메시지 로직
                 const { data: hwMsgs } = await _supabase
                     .from('homework_messages')
                     .select('student_id, status')
                     .eq('class_id', id)
-                    .gte('created_at', todayStart); // Today's homework messages
+                    .gte('created_at', todayStart);
 
                 if (hwMsgs) {
                     hwMsgs.forEach(msg => {
-                        // Priority: teacher_rejected or teacher_approved
                         if (msg.status === 'teacher_approved' || msg.status === 'teacher_rejected') {
                             studentHomeworkMap[msg.student_id] = msg.status;
                         }
+                    });
+                }
+
+                // (3) [★ NEW] 숙제 미이행(incomplete) 자동 감지 (최근 1주일 조회로 변경)
+                const { data: autoIncomplete } = await _supabase
+                    .from('assignments')
+                    .select('student_id')
+                    .in('student_id', studentIds)
+                    .gte('submitted_at', searchStart)    // [수정] 일주일 전 데이터부터 조회
+                    .eq('completion_status', 'incomplete'); // '미이행' 딱지가 붙은 것만 조회
+
+                if (autoIncomplete) {
+                    autoIncomplete.forEach(d => {
+                        // 'AUTO_INCOMPLETE'라는 상태로 저장해서 기존 로직과 구분
+                        studentHomeworkMap[d.student_id] = 'AUTO_INCOMPLETE';
                     });
                 }
             }
@@ -314,15 +333,11 @@
             toggleSaveBtn();
         }
 
-        /**
-         * [Navigation] Go to Homework Management
-         */
         function goToHomework() {
             if(!currentClassId) return alert("수업 정보가 없습니다.");
             location.href = `class_scheduler_homework.html?class_id=${currentClassId}`;
         }
 
-        // --- Render Student List (With Unlock Trigger) ---
         function renderStudentList() {
             const list = document.getElementById('m-student-list');
             const ids = Object.keys(classStudentsMap);
@@ -372,6 +387,7 @@
             }
         }
 
+        // --- Student Selection (수정됨: 자동 감지 룰 적용 추가) ---
         function selectStudent(id) {
             selectedStudentData = classStudentsMap[id];
             selectedRuleIds.clear(); 
@@ -388,12 +404,24 @@
                 });
             }
 
-            // 2. [NEW] Homework Status Logic
+            // 2. Homework Status Logic
             const hwStatus = studentHomeworkMap[id];
+            
+            // (1) 기존 선생님 승인/반려 로직
             if (hwStatus) {
                 allRules.forEach(r => {
                     if (r.name === '숙제 해옴' && hwStatus === 'teacher_approved') selectedRuleIds.add(r.id);
                     if (r.name === '숙제미이행' && hwStatus === 'teacher_rejected') selectedRuleIds.add(r.id);
+                });
+            }
+            
+            // (2) [★ NEW] 자동 감지된 '미이행(incomplete)' 처리
+            if (hwStatus === 'AUTO_INCOMPLETE') {
+                allRules.forEach(r => {
+                    // 공백 제거 후 '숙제미이행' 룰을 찾음
+                    if (r.name.replace(/\s/g, '') === '숙제미이행') {
+                        selectedRuleIds.add(r.id);
+                    }
                 });
             }
 
@@ -498,6 +526,9 @@
             try {
                 const promises = [];
                 const studentIdsToStamp = [];
+                // [추가] 숙제 상태를 업데이트할 학생 명단
+                const homeworkProcessedStudentIds = [];
+                
                 const today = new Date().toISOString().split('T')[0];
 
                 Object.values(basketData).forEach(item => {
@@ -505,8 +536,28 @@
                     item.rules.forEach(rule => {
                         const xp = Math.round(rule.xp_change * rule.appliedMultiplier), cp = Math.round(rule.cp_change * rule.appliedMultiplier);
                         promises.push(_supabase.rpc('give_points', { p_student_id: item.data.id, p_xp: xp, p_cp: cp, p_rule_name: `[수업] ${rule.name} (x${rule.appliedMultiplier})` }));
+                        
+                        // [추가] 숙제 미이행 규칙이 적용되면 명단에 추가
+                        if (rule.name.replace(/\s/g, '') === '숙제미이행') {
+                            homeworkProcessedStudentIds.push(item.data.id);
+                        }
                     });
                 });
+
+                // [추가] 숙제 미이행 처리된 건들을 'complete'로 일괄 업데이트
+                if (homeworkProcessedStudentIds.length > 0) {
+                    const checkDate = new Date();
+                    checkDate.setDate(checkDate.getDate() - 14); // 넉넉하게 2주 전부터 조회
+                    const checkDateStr = checkDate.toISOString().split('T')[0];
+                    
+                    promises.push(
+                        _supabase.from('assignments')
+                            .update({ completion_status: 'complete' })
+                            .in('student_id', homeworkProcessedStudentIds)
+                            .eq('completion_status', 'incomplete')
+                            .gte('submitted_at', checkDateStr)
+                    );
+                }
 
                 await Promise.all(promises);
 
