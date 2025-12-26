@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -13,47 +14,179 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         /* [Elite System UI Standard] */
-        body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; overflow: hidden; }
-        
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            overflow: hidden;
+        }
+
         /* List Items */
-        .student-item { padding: 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: all 0.2s; background: white; display: flex; justify-content: space-between; align-items: center; }
-        .student-item:hover { background-color: #f8fafc; }
-        .student-item.selected { background-color: #f0fdfa; border-left: 4px solid #0d9488; } 
-        .student-item.locked { opacity: 0.6; filter: grayscale(1); background: #f8fafc; cursor: help; } 
-        .student-item.in-basket { opacity: 0.5; pointer-events: none; background: #f1f5f9; border: 1px dashed #cbd5e1; }
-        
+        .student-item {
+            padding: 14px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .student-item:hover {
+            background-color: #f8fafc;
+        }
+
+        .student-item.selected {
+            background-color: #f0fdfa;
+            border-left: 4px solid #0d9488;
+        }
+
+        .student-item.locked {
+            opacity: 0.6;
+            filter: grayscale(1);
+            background: #f8fafc;
+            cursor: help;
+        }
+
+        .student-item.in-basket {
+            opacity: 0.5;
+            pointer-events: none;
+            background: #f1f5f9;
+            border: 1px dashed #cbd5e1;
+        }
+
         /* Check Mode Status Badges */
-        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 800; }
-        .st-pending { background: #f1f5f9; color: #94a3b8; }
-        .st-completed { background: #dcfce7; color: #166534; }
-        .st-incomplete { background: #ffe4e6; color: #be123c; }
+        .status-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 800;
+        }
+
+        .st-pending {
+            background: #f1f5f9;
+            color: #94a3b8;
+        }
+
+        .st-completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .st-incomplete {
+            background: #ffe4e6;
+            color: #be123c;
+        }
 
         /* Mode Tabs */
-        .mode-tab { padding: 0 20px; height: 100%; display: flex; align-items: center; cursor: pointer; font-weight: 700; color: #94a3b8; border-bottom: 3px solid transparent; transition: 0.2s; }
-        .mode-tab:hover { color: #64748b; }
-        .mode-tab.active { color: #0d9488; border-bottom-color: #0d9488; }
+        .mode-tab {
+            padding: 0 20px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 700;
+            color: #94a3b8;
+            border-bottom: 3px solid transparent;
+            transition: 0.2s;
+        }
+
+        .mode-tab:hover {
+            color: #64748b;
+        }
+
+        .mode-tab.active {
+            color: #0d9488;
+            border-bottom-color: #0d9488;
+        }
 
         /* Scrollbar */
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
 
         /* Upload UI Styles */
-        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 15px; text-align: center; transition: 0.2s; background: #f8fafc; }
-        .upload-zone:hover { border-color: #0d9488; background: #f0fdfa; }
-        .img-preview-grid { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
-        .img-thumb-wrapper { position: relative; flex-shrink: 0; width: 60px; height: 60px; }
-        .img-thumb { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .file-tag { font-size: 10px; font-weight: bold; background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            transition: 0.2s;
+            background: #f8fafc;
+        }
+
+        .upload-zone:hover {
+            border-color: #0d9488;
+            background: #f0fdfa;
+        }
+
+        .img-preview-grid {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-top: 10px;
+            padding-bottom: 5px;
+        }
+
+        .img-thumb-wrapper {
+            position: relative;
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+        }
+
+        .img-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .file-tag {
+            font-size: 10px;
+            font-weight: bold;
+            background: #e0f2fe;
+            color: #0284c7;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
     </style>
 </head>
+
 <body class="h-screen flex flex-col">
     <script src="config.js"></script>
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
+
+    <script>
+        // 2. 사장님의 고유 마법 번호로 문을 열어줘야 해! 💋
+        if (!Kakao.isInitialized()) {
+            Kakao.init('fbc037a3bf3b2b051428388f154c4ff4');
+        }
+    </script>
 
     <div class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-6 shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-5 h-full">
-            <button onclick="history.back()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition">
+            <button onclick="history.back()"
+                class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition">
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
             <h1 class="text-xl font-black text-slate-800 flex items-center gap-2">
@@ -75,12 +208,13 @@
     </div>
 
     <div class="flex-1 relative overflow-hidden">
-        
+
         <div id="view-assign" class="absolute inset-0 flex bg-slate-50 transition-opacity duration-300">
             <div class="w-1/4 bg-white border-r border-slate-200 flex flex-col z-10">
                 <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
                     <span class="text-xs font-black text-slate-400 tracking-widest uppercase">Target List</span>
-                    <span id="student-count" class="bg-teal-50 text-teal-600 text-[10px] px-2 py-0.5 rounded font-bold">0</span>
+                    <span id="student-count"
+                        class="bg-teal-50 text-teal-600 text-[10px] px-2 py-0.5 rounded font-bold">0</span>
                 </div>
                 <div id="student-list" class="flex-1 overflow-y-auto custom-scroll p-2 space-y-1"></div>
             </div>
@@ -88,42 +222,53 @@
             <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50/50 relative">
                 <div class="p-4 border-b border-slate-200 bg-white shrink-0 h-14 flex justify-between items-center">
                     <span class="text-xs font-black text-slate-400 tracking-widest uppercase">Content & Materials</span>
-                    <div id="selected-badge" class="opacity-0 transition bg-teal-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">
+                    <div id="selected-badge"
+                        class="opacity-0 transition bg-teal-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">
                         <i class="fa-solid fa-check mr-1"></i> 선택됨
                     </div>
                 </div>
-                
+
                 <div class="flex-1 overflow-y-auto custom-scroll p-6 flex flex-col gap-4">
                     <div>
                         <label class="block text-xs font-black text-slate-500 mb-2">숙제 내용 (텍스트)</label>
-                        <textarea id="homework-input" disabled class="w-full bg-white border-2 border-slate-200 rounded-xl p-4 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-400 resize-none h-32 placeholder:text-slate-300 transition" placeholder="학생에게 전달할 내용을 입력하세요..."></textarea>
+                        <textarea id="homework-input" disabled
+                            class="w-full bg-white border-2 border-slate-200 rounded-xl p-4 text-sm font-bold text-slate-700 focus:outline-none focus:border-teal-400 resize-none h-32 placeholder:text-slate-300 transition"
+                            placeholder="학생에게 전달할 내용을 입력하세요..."></textarea>
                     </div>
 
                     <div id="upload-section" class="opacity-50 pointer-events-none transition-opacity duration-300">
                         <label class="block text-xs font-black text-slate-500 mb-2">선생님 자료 (Showcase)</label>
-                        
+
                         <div class="bg-white p-4 rounded-xl border border-slate-200 mb-3">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-bold text-slate-700"><i class="fa-solid fa-camera text-teal-500 mr-1"></i> 손풀이 사진</span>
-                                <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] px-2 py-1 rounded transition font-bold">
+                                <span class="text-xs font-bold text-slate-700"><i
+                                        class="fa-solid fa-camera text-teal-500 mr-1"></i> 손풀이 사진</span>
+                                <label
+                                    class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] px-2 py-1 rounded transition font-bold">
                                     + 추가하기
-                                    <input type="file" id="teacher-img-input" multiple accept="image/*" class="hidden" onchange="handleTeacherImgSelect(this)">
+                                    <input type="file" id="teacher-img-input" multiple accept="image/*" class="hidden"
+                                        onchange="handleTeacherImgSelect(this)">
                                 </label>
                             </div>
-                            <div id="teacher-img-preview" class="img-preview-grid min-h-[60px] bg-slate-50/50 rounded-lg p-2 border border-dashed border-slate-200 justify-center items-center text-xs text-slate-300">
+                            <div id="teacher-img-preview"
+                                class="img-preview-grid min-h-[60px] bg-slate-50/50 rounded-lg p-2 border border-dashed border-slate-200 justify-center items-center text-xs text-slate-300">
                                 사진 없음
                             </div>
                         </div>
 
                         <div class="bg-white p-4 rounded-xl border border-slate-200">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-bold text-slate-700"><i class="fa-solid fa-code text-indigo-500 mr-1"></i> 인터렉티브 풀이 (HTML)</span>
-                                <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] px-2 py-1 rounded transition font-bold">
+                                <span class="text-xs font-bold text-slate-700"><i
+                                        class="fa-solid fa-code text-indigo-500 mr-1"></i> 인터렉티브 풀이 (HTML)</span>
+                                <label
+                                    class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-500 text-[10px] px-2 py-1 rounded transition font-bold">
                                     + 파일 선택
-                                    <input type="file" id="teacher-html-input" accept=".html" class="hidden" onchange="handleTeacherHtmlSelect(this)">
+                                    <input type="file" id="teacher-html-input" accept=".html" class="hidden"
+                                        onchange="handleTeacherHtmlSelect(this)">
                                 </label>
                             </div>
-                            <div id="teacher-html-preview" class="min-h-[40px] bg-slate-50/50 rounded-lg p-2 border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-300">
+                            <div id="teacher-html-preview"
+                                class="min-h-[40px] bg-slate-50/50 rounded-lg p-2 border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-300">
                                 파일 없음
                             </div>
                         </div>
@@ -131,7 +276,8 @@
                 </div>
 
                 <div class="p-4 bg-white border-t border-slate-200 shrink-0 z-20">
-                    <button id="btn-add-basket" onclick="addToBasket()" disabled class="w-full h-12 bg-slate-100 text-slate-300 rounded-xl transition hover:bg-slate-200 flex items-center justify-center gap-2 font-black text-sm active:scale-95 disabled:cursor-not-allowed">
+                    <button id="btn-add-basket" onclick="addToBasket()" disabled
+                        class="w-full h-12 bg-slate-100 text-slate-300 rounded-xl transition hover:bg-slate-200 flex items-center justify-center gap-2 font-black text-sm active:scale-95 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-cart-plus"></i> <span>담기</span>
                     </button>
                 </div>
@@ -140,11 +286,13 @@
             <div class="w-[30%] bg-white flex flex-col z-10">
                 <div class="p-4 border-b border-slate-100 bg-white shrink-0 h-14 flex justify-between items-center">
                     <span class="text-xs font-black text-teal-600 tracking-widest uppercase">Basket</span>
-                    <span id="basket-count" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                    <span id="basket-count"
+                        class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
                 </div>
                 <div id="basket-list" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-2 bg-slate-50/50"></div>
                 <div class="p-4 border-t border-slate-100 bg-white shrink-0">
-                    <button id="btn-final-save" onclick="finalSave()" disabled class="w-full h-12 bg-slate-200 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed">
+                    <button id="btn-final-save" onclick="finalSave()" disabled
+                        class="w-full h-12 bg-slate-200 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed">
                         <i class="fa-solid fa-paper-plane"></i> <span>전송 및 저장</span>
                     </button>
                 </div>
@@ -155,7 +303,8 @@
             <div class="w-1/4 bg-white border-r border-slate-200 flex flex-col z-10">
                 <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
                     <span class="text-xs font-black text-indigo-400 tracking-widest uppercase">Review Targets</span>
-                    <button onclick="loadReviewData()" class="text-xs text-slate-400 hover:text-indigo-500"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button onclick="loadReviewData()" class="text-xs text-slate-400 hover:text-indigo-500"><i
+                            class="fa-solid fa-rotate-right"></i></button>
                 </div>
                 <div id="review-student-list" class="flex-1 overflow-y-auto custom-scroll p-2 space-y-1">
                     <div class="text-center py-10 text-xs text-slate-400">데이터 로딩 중...</div>
@@ -165,10 +314,13 @@
             <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50/50 relative">
                 <div class="p-4 border-b border-slate-200 bg-white shrink-0 h-14 flex justify-between items-center">
                     <span class="text-xs font-black text-indigo-500 tracking-widest uppercase">Homework Feed</span>
-                    <div id="rv-badge" class="opacity-0 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">Target Selected</div>
+                    <div id="rv-badge"
+                        class="opacity-0 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">Target
+                        Selected</div>
                 </div>
                 <div id="review-detail-panel" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-4">
-                    <div class="h-full flex flex-col items-center justify-center text-slate-400 text-sm font-bold opacity-50">
+                    <div
+                        class="h-full flex flex-col items-center justify-center text-slate-400 text-sm font-bold opacity-50">
                         <i class="fa-solid fa-arrow-left mb-2 text-2xl"></i>
                         <p>학생을 선택하면 제출 내역이 표시됩니다.</p>
                     </div>
@@ -176,17 +328,21 @@
             </div>
 
             <div class="w-[30%] bg-white flex flex-col z-10 border-l border-indigo-100">
-                <div class="p-4 border-b border-indigo-50 bg-indigo-50/30 shrink-0 h-14 flex justify-between items-center">
+                <div
+                    class="p-4 border-b border-indigo-50 bg-indigo-50/30 shrink-0 h-14 flex justify-between items-center">
                     <span class="text-xs font-black text-indigo-600 tracking-widest uppercase">Judgment Basket</span>
-                    <span id="rv-basket-count" class="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                    <span id="rv-basket-count"
+                        class="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
                 </div>
                 <div id="rv-basket-list" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-2 bg-white"></div>
                 <div class="p-4 border-t border-indigo-50 bg-indigo-50/10 shrink-0">
                     <label class="flex items-center gap-2 mb-3 cursor-pointer select-none justify-center">
-                        <input type="checkbox" id="rv-chk-confirm" onchange="toggleRvSaveBtn()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
+                        <input type="checkbox" id="rv-chk-confirm" onchange="toggleRvSaveBtn()"
+                            class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
                         <span class="text-xs font-bold text-slate-500">최종 확인 (규칙 적용 및 저장)</span>
                     </label>
-                    <button id="btn-rv-save" onclick="saveReviews()" disabled class="w-full h-12 bg-slate-300 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed">
+                    <button id="btn-rv-save" onclick="saveReviews()" disabled
+                        class="w-full h-12 bg-slate-300 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed">
                         <i class="fa-solid fa-gavel"></i> <span>심판 실행 (Execute)</span>
                     </button>
                 </div>
@@ -199,22 +355,22 @@
         const urlParams = new URLSearchParams(window.location.search);
         const currentClassId = urlParams.get('class_id');
         const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-        
-        let students = []; 
-        let pointRules = {}; 
-        
+
+        let students = [];
+        let pointRules = {};
+
         let assignBasket = {};
         let lockedAssignIds = new Set();
         let selectedStudent = null;
-        let currentTeacherImages = []; 
+        let currentTeacherImages = [];
         let currentTeacherHtml = null;
 
-        let reviewDataList = []; 
-        let reviewBasket = {}; 
+        let reviewDataList = [];
+        let reviewBasket = {};
         let selectedReviewStudentId = null;
 
         document.getElementById('current-date').innerText = todayStr;
-        
+
         async function init() {
             if (!currentClassId) { alert("잘못된 접근입니다."); history.back(); return; }
             await loadClassInfo();
@@ -254,7 +410,7 @@
         }
 
         /* ================= PHASE 1: ASSIGN LOGIC ================= */
-        
+
         async function loadStudents() {
             const { data: members } = await _supabase.from('class_members').select('student_id, users(name, grade)').eq('class_id', currentClassId);
             const todayISO = new Date().toISOString().split('T')[0];
@@ -290,10 +446,10 @@
             selectedStudent = students.find(s => s.id === id);
             document.getElementById('selected-badge').style.opacity = '1';
             document.getElementById('selected-badge').innerHTML = `<i class="fa-solid fa-check mr-1.5"></i> ${selectedStudent.name}`;
-            
-            const input = document.getElementById('homework-input'); 
-            input.disabled = false; 
-            input.value = ''; 
+
+            const input = document.getElementById('homework-input');
+            input.disabled = false;
+            input.value = '';
             input.focus();
 
             const uploadSec = document.getElementById('upload-section');
@@ -305,10 +461,10 @@
             document.getElementById('teacher-html-input').value = '';
             renderTeacherPreviews();
 
-            const btn = document.getElementById('btn-add-basket'); 
-            btn.disabled = false; 
+            const btn = document.getElementById('btn-add-basket');
+            btn.disabled = false;
             btn.className = "w-full h-12 bg-teal-500 text-white rounded-xl shadow-lg transition hover:bg-teal-600 flex items-center justify-center gap-2 active:scale-95 cursor-pointer font-black text-sm";
-            
+
             renderStudentList();
         }
 
@@ -363,18 +519,18 @@
         function addToBasket() {
             const content = document.getElementById('homework-input').value.trim();
             if (!content && currentTeacherImages.length === 0 && !currentTeacherHtml) return alert("내용이나 자료를 입력하세요.");
-            
-            assignBasket[selectedStudent.id] = { 
-                name: selectedStudent.name, 
+
+            assignBasket[selectedStudent.id] = {
+                name: selectedStudent.name,
                 content: content,
-                images: [...currentTeacherImages], 
+                images: [...currentTeacherImages],
                 html: currentTeacherHtml
             };
 
-            selectedStudent = null; 
-            document.getElementById('homework-input').value = ''; 
-            document.getElementById('homework-input').disabled = true; 
-            
+            selectedStudent = null;
+            document.getElementById('homework-input').value = '';
+            document.getElementById('homework-input').disabled = true;
+
             currentTeacherImages = [];
             currentTeacherHtml = null;
             renderTeacherPreviews();
@@ -383,8 +539,8 @@
             document.getElementById('btn-add-basket').disabled = true;
             document.getElementById('btn-add-basket').className = "w-full h-12 bg-slate-100 text-slate-300 rounded-xl transition flex items-center justify-center gap-2 font-black text-sm cursor-not-allowed";
             document.getElementById('selected-badge').style.opacity = '0';
-            
-            renderStudentList(); 
+
+            renderStudentList();
             renderAssignBasket();
         }
 
@@ -394,84 +550,119 @@
             const list = document.getElementById('basket-list'); const ids = Object.keys(assignBasket);
             document.getElementById('basket-count').innerText = ids.length;
             const btn = document.getElementById('btn-final-save');
-            
+
             if (ids.length > 0) { btn.disabled = false; btn.className = "w-full h-12 bg-teal-500 hover:bg-teal-600 text-white rounded-xl font-black text-sm shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"; }
             else { btn.disabled = true; btn.className = "w-full h-12 bg-slate-200 text-white rounded-xl font-black text-sm shadow-none transition flex items-center justify-center gap-2 cursor-not-allowed"; list.innerHTML = `<div class="text-center py-20 text-slate-300 text-xs">대기 목록 비어있음</div>`; return; }
 
-            list.innerHTML = ids.map(id => { 
-                const i = assignBasket[id]; 
+            list.innerHTML = ids.map(id => {
+                const i = assignBasket[id];
                 const fileCnt = i.images.length + (i.html ? 1 : 0);
                 const fileBadge = fileCnt > 0 ? `<span class="bg-indigo-100 text-indigo-600 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">+자료 ${fileCnt}개</span>` : '';
-                return `<div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm relative group"><div class="flex justify-between mb-1"><span class="font-bold text-xs text-slate-700 flex items-center">${i.name} ${fileBadge}</span><button onclick="removeAssignBasket('${id}')" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button></div><div class="text-[10px] text-slate-500 line-clamp-2">${i.content || '(자료만 전송)'}</div></div>`; 
+                return `<div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm relative group"><div class="flex justify-between mb-1"><span class="font-bold text-xs text-slate-700 flex items-center">${i.name} ${fileBadge}</span><button onclick="removeAssignBasket('${id}')" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button></div><div class="text-[10px] text-slate-500 line-clamp-2">${i.content || '(자료만 전송)'}</div></div>`;
             }).join('');
         }
 
         async function finalSave() {
-            if(!confirm("전송하시겠습니까?")) return;
-            const btn = document.getElementById('btn-final-save');
-            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> 전송 중...`;
+            // 1. 초기 검증
+            if (!confirm("전송하시겠습니까?")) return;
+
+            var btn = document.getElementById('btn-final-save');
+            var ids = Object.keys(assignBasket);
+            var className = document.getElementById('class-info-display').innerText;
+
+            btn.innerText = "전송 중...";
             btn.disabled = true;
 
-            const ids = Object.keys(assignBasket);
-            
-            try {
-                for (const id of ids) {
-                    const item = assignBasket[id];
-                    let imgUrls = [];
-                    let htmlUrl = null;
+            // 변수 이름을 kakaoMsg로 통일합니다 💋
+            var kakaoMsg = "[" + className + "] 숙제 알림\n━━━━━━━━━━━━━━\n";
 
-                    // 1. Upload Images
-                    if (item.images.length > 0) {
-                        for (const file of item.images) {
-                            const fileExt = file.name.split('.').pop();
-                            const safeName = `teacher_uploads/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-                            const { error: upErr } = await _supabase.storage.from('homework_evidence').upload(safeName, file);
-                            if (upErr) throw upErr;
-                            const { data: pubData } = _supabase.storage.from('homework_evidence').getPublicUrl(safeName);
-                            imgUrls.push(pubData.publicUrl);
+            try {
+                // 2. 메인 루프 시작
+                for (var i = 0; i < ids.length; i++) {
+                    var id = ids[i];
+                    var item = assignBasket[id];
+
+                    // 학생 학년 매칭
+                    var studentInfo = null;
+                    for (var k = 0; k < students.length; k++) {
+                        if (students[k].id === id) {
+                            studentInfo = students[k];
+                            break;
                         }
                     }
 
-                    // 2. Upload HTML
-                    if (item.html) {
-                        const safeName = `teacher_uploads/html/${Date.now()}_${Math.random().toString(36).substring(2)}.html`;
-                        const { error: upErr } = await _supabase.storage.from('homework_evidence').upload(safeName, item.html, {
-                            contentType: 'text/html; charset=utf-8',
-                            upsert: false
-                        });
-                        if (upErr) throw upErr;
-                        const { data: pubData } = _supabase.storage.from('homework_evidence').getPublicUrl(safeName);
-                        htmlUrl = pubData.publicUrl;
+                    var grade = (studentInfo && studentInfo.grade) ? studentInfo.grade : "미설정";
+                    // 리스트 핥아서 담기 💋
+                    kakaoMsg += "👤 " + item.name + "(" + grade + "): " + (item.content || "자료 확인") + "\n";
+
+                    var imgUrls = [];
+                    var htmlUrl = null;
+
+                    // 3. 이미지 업로드
+                    if (item.images && item.images.length > 0) {
+                        for (var j = 0; j < item.images.length; j++) {
+                            var file = item.images[j];
+                            var safeName = "teacher_uploads/" + Date.now() + "_" + Math.random().toString(36).substring(2);
+                            var upRes = await _supabase.storage.from('homework_evidence').upload(safeName, file);
+                            if (upRes.error) throw upRes.error;
+                            var pubRes = _supabase.storage.from('homework_evidence').getPublicUrl(safeName);
+                            imgUrls.push(pubRes.data.publicUrl);
+                        }
                     }
 
-                    // 3. Insert DB
-                    const { error } = await _supabase.from('homework_messages').insert({
+                    // 4. HTML 업로드
+                    if (item.html) {
+                        var htmlName = "teacher_uploads/html/" + Date.now() + ".html";
+                        var htmlUp = await _supabase.storage.from('homework_evidence').upload(htmlName, item.html, { contentType: "text/html" });
+                        if (htmlUp.error) throw htmlUp.error;
+                        var htmlPub = _supabase.storage.from('homework_evidence').getPublicUrl(htmlName);
+                        htmlUrl = htmlPub.data.publicUrl;
+                    }
+
+                    // 5. DB 저장
+                    var insertRes = await _supabase.from('homework_messages').insert({
                         class_id: currentClassId,
                         student_id: id,
                         content: item.content,
                         is_read: false,
-                        teacher_images: imgUrls.length > 0 ? imgUrls : null,
+                        teacher_images: (imgUrls.length > 0) ? imgUrls : null,
                         teacher_html: htmlUrl
-                        // is_deleted is usually NULL by default, do not set it here.
                     });
-                    if (error) throw error;
+                    if (insertRes.error) throw insertRes.error;
+                }
+                // 메인 루프 종료
+
+                kakaoMsg += "━━━━━━━━━━━━━━\n⚠️ 위 학생들은 지금 바로 하단 버튼을 눌러 숙제를 완료하십시오.";
+
+                // 6. 카톡 전송 (변수명을 kakaoMsg로 맞췄습니다 💋)
+                if (window.Kakao && window.Kakao.isInitialized()) {
+                    window.Kakao.Share.sendDefault({
+                        objectType: "text",
+                        text: kakaoMsg,
+                        link: {
+                            mobileWebUrl: "https://btlmath.vercel.app/",
+                            webUrl: "https://btlmath.vercel.app/"
+                        },
+                        buttonTitle: "지금 숙제하러 가기"
+                    });
                 }
 
-                alert("완료되었습니다!");
+                alert("저장 및 전송 완료");
                 assignBasket = {};
                 await loadStudents();
                 renderAssignBasket();
 
             } catch (e) {
                 console.error(e);
-                alert("전송 실패: " + e.message);
+                alert("실패: " + e.message);
+            } finally {
                 btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>전송 및 저장</span>`;
+                btn.innerHTML = "전송 및 저장";
             }
         }
 
         async function manualUnlock(sid, name) {
-            if(confirm(`${name} 잠금 해제?`)) { lockedAssignIds.delete(sid); renderStudentList(); }
+            if (confirm(`${name} 잠금 해제?`)) { lockedAssignIds.delete(sid); renderStudentList(); }
         }
 
         /* ================= PHASE 2: REVIEW LOGIC (FIXED) ================= */
@@ -490,9 +681,9 @@
                 if (memErr) throw memErr;
 
                 // 2. 메시지 로딩 (30일치로 확장, is_deleted 필터 제거)
-                const dateLimit = new Date(); 
+                const dateLimit = new Date();
                 dateLimit.setDate(dateLimit.getDate() - 30); // 넉넉하게 30일 전
-                
+
                 // [FIX] is_deleted 체크 제거 (DB에서 NULL일 확률 높음)
                 const { data: msgs, error: msgErr } = await _supabase
                     .from('homework_messages')
@@ -509,7 +700,7 @@
                 if (members && msgs) {
                     members.forEach(m => {
                         // [FIX] 메모리 상에서 null과 false를 모두 통과시키고 true만 거름
-                        const studentMsgs = msgs.filter(msg => 
+                        const studentMsgs = msgs.filter(msg =>
                             msg.student_id === m.student_id && msg.is_deleted !== true
                         );
 
@@ -554,7 +745,7 @@
         function selectReviewStudent(sid) {
             selectedReviewStudentId = sid;
             const data = reviewDataList.find(x => x.student.id === sid);
-            
+
             const badge = document.getElementById('rv-badge');
             badge.style.opacity = '1';
             badge.innerText = `Target: ${data.student.name}`;
@@ -571,7 +762,7 @@
                 const date = new Date(m.created_at).toLocaleDateString();
                 const submittedAt = m.submitted_at ? new Date(m.submitted_at).toLocaleString() : '-';
                 const isProcessed = (m.status === 'teacher_approved' || m.status === 'teacher_rejected');
-                
+
                 let statusUi = '';
                 if (m.status === 'completed') statusUi = `<div class="mt-2 text-xs font-black text-emerald-600 bg-emerald-50 p-2 rounded-lg"><i class="fa-solid fa-circle-check"></i> 학생 제출 완료 (${submittedAt})</div>`;
                 else if (m.status === 'incomplete') statusUi = `<div class="mt-2 bg-rose-50 p-2 rounded-lg"><div class="text-xs font-black text-rose-600"><i class="fa-solid fa-circle-exclamation"></i> 미완료 사유:</div><div class="text-[11px] text-rose-500 mt-1">${m.reason || '없음'}</div></div>`;
@@ -715,7 +906,7 @@
             for (const id of ids) {
                 const item = reviewBasket[id];
                 let sid = null;
-                for(const d of reviewDataList) { if(d.messages.find(m=>m.id == item.msgId)) { sid = d.student.id; break; } }
+                for (const d of reviewDataList) { if (d.messages.find(m => m.id == item.msgId)) { sid = d.student.id; break; } }
 
                 if (sid && item.ruleId) {
                     const { data: ruleData } = await _supabase.from('point_rules').select('xp_change, cp_change').eq('id', item.ruleId).single();
@@ -732,7 +923,7 @@
             reviewBasket = {};
             await loadReviewData();
             if (selectedReviewStudentId) selectReviewStudent(selectedReviewStudentId);
-            
+
             document.getElementById('rv-chk-confirm').checked = false;
             toggleRvSaveBtn();
             btn.innerHTML = `<i class="fa-solid fa-gavel"></i> <span>심판 실행 (Execute)</span>`;
@@ -741,4 +932,5 @@
         init();
     </script>
 </body>
+
 </html>

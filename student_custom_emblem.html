@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Master Atelier V21.3 | The Frame Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@900&display=swap" rel="stylesheet">
+    <style>
+        /* --- [CORE PHYSICS] --- */
+        body { font-family: 'Pretendard', sans-serif; background-color: #020617; color: #f1f5f9; overflow: hidden; user-select: none; touch-action: none; }
+        
+        #main-layout { display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
+        @media (min-width: 768px) { #main-layout { flex-direction: row; } }
+
+        #stage-wrapper { 
+            background-image: radial-gradient(#334155 1px, transparent 1px); 
+            background-size: 20px 20px; 
+            background-color: #0f172a; 
+            box-shadow: inset 0 0 100px #000; 
+            perspective: 1200px; 
+            position: relative;
+            overflow: hidden;
+            flex: 1; 
+            touch-action: none;
+        }
+        #stage { pointer-events: none; width: 100%; height: 100%; position: relative; }
+
+        /* Objects */
+        .obj-root { position: absolute; display: flex; align-items: center; justify-content: center; width: 0; height: 0; cursor: grab; pointer-events: auto; touch-action: none; }
+        .obj-root:active { cursor: grabbing; z-index: 9999 !important; }
+        .obj-root.selected .obj-core { outline: 2px dashed #f472b6; outline-offset: 10px; }
+        .obj-orbit, .obj-spin, .effect-wrapper { position: absolute; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; }
+        .obj-core { position: relative; display: flex; align-items: center; justify-content: center; white-space: nowrap; -webkit-user-select: none; }
+        .obj-core img { pointer-events: none; max-width: none; -webkit-user-drag: none; }
+
+        /* --- [🔒 SYSTEM: REAL IDENTITY FRAME V21.3] --- */
+        #identity-frame {
+            position: absolute; inset: 0; pointer-events: none; z-index: 50;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+            box-sizing: border-box; transition: all 0.5s ease;
+            /* Real Frame Thickness */
+            border-style: solid;
+            border-width: 24px; 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* [TIER 0: 삭막한 나무 (Wood/Bronze)] */
+        .frame-tier-0 {
+            border-color: #5d4037;
+            background-image: linear-gradient(#5d4037, #3e2723); 
+            border-image: repeating-linear-gradient(45deg, #4e342e, #3e2723 10px, #5d4037 20px) 24;
+            box-shadow: inset 0 0 15px #000, 5px 10px 20px rgba(0,0,0,0.7) !important;
+        }
+        .frame-tier-0 .engraved-text {
+            color: #271c19; /* Deep Wood */
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.1), -1px -1px 0 rgba(0,0,0,0.8); /* Engraved Effect */
+            font-family: 'Black Han Sans', sans-serif;
+        }
+
+        /* [TIER 1: 멋진 은색 (Silver)] */
+        .frame-tier-1 {
+            border-width: 24px;
+            border-style: solid;
+            border-image: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 50%, #f8fafc 100%) 1;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3), 0 0 15px rgba(226, 232, 240, 0.3) !important;
+        }
+        .frame-tier-1 .engraved-text {
+            color: #334155; /* Dark Slate */
+            text-shadow: 0px 1px 1px rgba(255,255,255,0.9), 0px -1px 1px rgba(0,0,0,0.6);
+            font-family: 'Black Han Sans', sans-serif;
+        }
+
+        /* [TIER 2: 빛나는 금색 (Gold)] */
+        .frame-tier-2 {
+            border-width: 24px;
+            border-style: solid;
+            border-image: linear-gradient(to bottom right, #fcd34d, #b45309, #fcd34d, #fffbeb) 1;
+            filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+            box-shadow: inset 0 0 20px rgba(180, 83, 9, 0.5) !important;
+        }
+        .frame-tier-2 .engraved-text {
+            color: #451a03; /* Deep Gold/Brown */
+            text-shadow: 0px 1px 0px rgba(255,255,255,0.5), 0px -1px 0px rgba(0,0,0,0.3);
+            font-family: 'Black Han Sans', sans-serif;
+        }
+
+        /* [TIER 3: 전설의 오로라 (Aurora)] */
+        .frame-tier-3 {
+            border-width: 24px;
+            border-style: solid;
+            border-image: linear-gradient(to right, #ec4899, #8b5cf6, #06b6d4, #ec4899) 1;
+            animation: border-flow 3s linear infinite;
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.5), inset 0 0 20px rgba(0,0,0,0.5) !important;
+        }
+        @keyframes border-flow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+        .frame-tier-3 .engraved-text {
+            color: #fff;
+            text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff; /* Neon Glow */
+            font-family: 'Black Han Sans', sans-serif;
+        }
+
+        /* 텍스트 컨테이너 (액자 테두리에 각인) */
+        #id-title-text { 
+            position: absolute; top: -20px; /* On Top Border */
+            width: 100%; text-align: center;
+            font-size: 20px; letter-spacing: -1px; z-index: 51;
+            pointer-events: none; /* 드래그 방해 금지 */
+        }
+        #id-rank-badge {
+            position: absolute; bottom: -18px; /* On Bottom Border */
+            width: 100%; text-align: center;
+            font-size: 10px; font-weight: 900; letter-spacing: 2px; z-index: 51;
+            font-family: 'Orbitron', sans-serif !important;
+            text-transform: uppercase;
+            pointer-events: none; /* 드래그 방해 금지 */
+            /* 기존 배지 스타일 제거 (텍스트만 남김) */
+            background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important;
+        }
+
+        /* 경고창 애니메이션 */
+        @keyframes shake-hard {
+            0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .warning-active { animation: shake-hard 0.5s; border-color: #f43f5e !important; box-shadow: 0 0 10px #f43f5e; }
+
+        /* --- [LIVE PREVIEW CARD] --- */
+        #live-preview-card { 
+            /* [FIXED] Position: Left-Top Corner */
+            position: absolute; top: 80px; left: 20px; width: 180px; min-width: 150px; min-height: 180px;
+            background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(15px);
+            border-radius: 20px; padding: 15px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); 
+            z-index: 60; transition: opacity 0.3s, transform 0.3s; 
+            opacity: 1; transform: translateY(0); 
+            resize: both; overflow: hidden;
+        }
+        #live-preview-card.hidden-card { opacity: 0; transform: translateY(-20px); pointer-events: none; }
+        #preview-header { cursor: move; }
+        
+        /* 미니 액자 (미리보기용) */
+        #preview-frame-mini {
+            position: absolute; inset: 0; pointer-events: none; z-index: 50;
+            display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+            box-sizing: border-box;
+            border-style: solid; border-width: 8px; /* 미니 사이즈 두께 */
+        }
+        /* 미니 액자 텍스트 */
+        #prev-title-text { 
+            position: absolute; top: -7px; width: 100%; text-align: center;
+            font-size: 6px; font-family: 'Black Han Sans'; z-index: 51; pointer-events: none;
+        }
+        #prev-rank-badge { 
+            position: absolute; bottom: -6px; width: 100%; text-align: center;
+            font-size: 4px; font-family: 'Orbitron'; font-weight: 900; z-index: 51;
+            text-transform: uppercase; pointer-events: none;
+        }
+        
+        @media (max-width: 767px) {
+            #live-preview-card { top: 60px; right: 10px; width: 140px; padding: 10px; }
+        }
+
+        /* --- [UI & UTILS] --- */
+        .penalty-warning { font-size: 9px; color: #f43f5e; font-weight: bold; margin-top: 6px; line-height: 1.3; animation: blink-red 3s infinite; display: flex; align-items: center; gap: 4px; }
+        @keyframes blink-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        
+        .joystick-track { width: 100%; height: 40px; background: #1e293b; border-radius: 20px; position: relative; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+        .joystick-track::before { content: ''; width: 2px; height: 100%; background: #475569; position: absolute; left: 50%; transform: translateX(-50%); }
+        .joystick-knob { width: 32px; height: 32px; background: #f472b6; border-radius: 50%; position: absolute; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px #f472b6; cursor: grab; transition: transform 0.05s; z-index: 10; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: bold; }
+        .joystick-knob:active { cursor: grabbing; background: #db2777; transform: translateX(-50%) scale(1.1); }
+        .joystick-knob i { pointer-events: none; }
+
+        /* --- [PANELS] --- */
+        .sidebar { background: #0f172a; border-color: #1e293b; z-index: 20; display: flex; flex-direction: column; }
+        
+        #prop-panel { 
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid #334155; 
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5); z-index: 50; 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @media (max-width: 767px) {
+            #prop-panel { position: fixed; bottom: 0; left: 0; right: 0; width: 100%; height: 60vh; border-radius: 24px 24px 0 0; transform: translateY(110%); }
+            #prop-panel.active { transform: translateY(0); }
+        }
+        @media (min-width: 768px) {
+            #prop-panel { position: absolute; right: 20px; top: 20px; bottom: 20px; width: 320px; height: auto; border-radius: 24px; transform: translateX(120%); }
+            #prop-panel.active { transform: translateX(0); }
+        }
+
+        /* FX Buttons */
+        .fx-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; background: #1e293b; border-radius: 12px; border: 1px solid #334155; transition: 0.1s; min-height: 50px; }
+        .fx-btn:active { transform: scale(0.95); }
+        .fx-btn.active { background: #db2777; border-color: #f472b6; color: white; box-shadow: 0 0 10px rgba(219, 39, 119, 0.5); }
+        .fx-btn.locked { opacity: 0.3; grayscale: 1; cursor: not-allowed; }
+        
+        .fx-btn.preview { border: 1px solid #06b6d4; box-shadow: 0 0 5px #06b6d4; animation: pulse-border 2s infinite; }
+        .fx-btn.preview i { color: #22d3ee; }
+        .preview-badge { position: absolute; top: -4px; right: -4px; width: 8px; height: 8px; background: #22d3ee; border-radius: 50%; animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        
+        @keyframes pulse-border { 0%, 100% { border-color: #06b6d4; box-shadow: 0 0 5px #06b6d4; } 50% { border-color: #3b82f6; box-shadow: 0 0 10px #3b82f6; } }
+        @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .market-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; }
+
+        /* --- [ANIMATIONS] --- */
+        @keyframes heartbeat { 0%, 100% {transform: scale(1);} 14%, 42% {transform: scale(1.3);} }
+        @keyframes rubberBand { 0% {transform: scale3d(1,1,1);} 30% {transform: scale3d(1.25,0.75,1);} 40% {transform: scale3d(0.75,1.25,1);} 50% {transform: scale3d(1.15,0.85,1);} 65% {transform: scale3d(0.95,1.05,1);} 75% {transform: scale3d(1.05,0.95,1);} 100% {transform: scale3d(1,1,1);} }
+        @keyframes swing { 20% {transform: rotate3d(0,0,1,15deg);} 40% {transform: rotate3d(0,0,1,-10deg);} 60% {transform: rotate3d(0,0,1,5deg);} 80% {transform: rotate3d(0,0,1,-5deg);} 100% {transform: rotate3d(0,0,1,0deg);} }
+        @keyframes tada { 0% {transform: scale3d(1,1,1);} 10%, 20% {transform: scale(0.9) rotate(-3deg);} 30%, 50%, 70%, 90% {transform: scale(1.1) rotate(3deg);} 40%, 60%, 80% {transform: scale(1.1) rotate(-3deg);} 100% {transform: scale(1);} }
+        @keyframes wobble { 0% {transform: none} 15% {transform: translate3d(-25%,0,0) rotate3d(0,0,1,-5deg)} 30% {transform: translate3d(20%,0,0) rotate3d(0,0,1,3deg)} 45% {transform: translate3d(-15%,0,0) rotate3d(0,0,1,-3deg)} 60% {transform: translate3d(10%,0,0) rotate3d(0,0,1,2deg)} 75% {transform: translate3d(-5%,0,0) rotate3d(0,0,1,-1deg)} 100% {transform: none} }
+        @keyframes jello { 0%,11.1%,to {transform:translateZ(0)} 22.2% {transform:skewX(-12.5deg) skewY(-12.5deg)} 33.3% {transform:skewX(6.25deg) skewY(6.25deg)} 44.4% {transform:skewX(-3.125deg) skewY(-3.125deg)} 55.5% {transform:skewX(1.5625deg) skewY(1.5625deg)} 66.6% {transform:skewX(-.78125deg) skewY(-.78125deg)} 77.7% {transform:skewX(.390625deg) skewY(.390625deg)} 88.8% {transform:skewX(-.1953125deg) skewY(-.1953125deg)} }
+        @keyframes bounce { 0%, 20%, 53%, 80%, 100% {transform: translate3d(0,0,0);} 40%, 43% {transform: translate3d(0, -30px, 0);} 70% {transform: translate3d(0, -15px, 0);} 90% {transform: translate3d(0,-4px,0);} }
+        @keyframes panic { 0% {transform: translate(0,0) rotate(0deg);} 25% {transform: translate(5px,5px) rotate(5deg);} 75% {transform: translate(-5px,5px) rotate(-5deg);} 100% {transform: translate(0,0) rotate(0deg);} }
+        @keyframes breath { 0% {transform: scale(1);} 50% {transform: scale(1.05);} 100% {transform: scale(1);} }
+        @keyframes barrel { 0% {transform: rotateX(0deg);} 100% {transform: rotateX(360deg);} }
+        @keyframes compress { 0% {transform: scaleY(1);} 50% {transform: scaleY(0.5);} 100% {transform: scaleY(1);} }
+        @keyframes tornado { 0% {transform: translateX(-50px) rotateY(0deg);} 50% {transform: translateX(50px) rotateY(180deg) scale(1.2);} 100% {transform: translateX(-50px) rotateY(360deg);} }
+        @keyframes orbit3d { 0% {transform: rotate3d(1,1,1,0deg);} 100% {transform: rotate3d(1,1,1,360deg);} }
+        @keyframes glitch-skew { 0% {transform: skew(0deg);} 20% {transform: skew(-10deg);} 40% {transform: skew(10deg);} 60% {transform: skew(-5deg);} 80% {transform: skew(5deg);} 100% {transform: skew(0deg);} }
+        @keyframes vibrate { 0% {transform: translate(0);} 20% {transform: translate(-2px, 2px);} 40% {transform: translate(-2px, -2px);} 60% {transform: translate(2px, 2px);} 80% {transform: translate(2px, -2px);} 100% {transform: translate(0);} }
+        @keyframes float-h { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-20px); } }
+        @keyframes pendulum { 0% { transform: rotate(20deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
+        @keyframes stretch { 0% { transform: scaleX(1); } 50% { transform: scaleX(1.5); } 100% { transform: scaleX(1); } }
+        @keyframes squeeze { 0% { transform: scaleY(1); } 50% { transform: scaleY(0.5); } 100% { transform: scaleY(1); } }
+        @keyframes flip-x { 0% { transform: perspective(400px) rotateX(0); } 100% { transform: perspective(400px) rotateX(360deg); } }
+        @keyframes flip-y { 0% { transform: perspective(400px) rotateY(0); } 100% { transform: perspective(400px) rotateY(360deg); } }
+        @keyframes vortex { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(0.2); } 100% { transform: rotate(360deg) scale(1); } }
+        @keyframes quake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+        
+        /* FX Visuals */
+        @keyframes fire { 0% { filter: drop-shadow(0 0 2px orangered); } 50% { filter: drop-shadow(0 -5px 5px yellow); } 100% { filter: drop-shadow(0 0 2px orangered); } }
+        @keyframes sparkle { 0% { filter: brightness(100%); } 50% { filter: brightness(150%) drop-shadow(0 0 5px white); } 100% { filter: brightness(100%); } }
+        @keyframes neon-pulse { 0% { filter: drop-shadow(0 0 2px cyan); } 50% { filter: drop-shadow(0 0 10px magenta); } 100% { filter: drop-shadow(0 0 2px cyan); } }
+        @keyframes glitch-filter { 0% { clip-path: inset(50% 0 30% 0); transform: translate(-5px,0); } 100% { clip-path: inset(0 0 0 0); transform: translate(0); } }
+        @keyframes rainbow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+        @keyframes blurPulse { 0% { filter: blur(0px); } 50% { filter: blur(4px); } 100% { filter: blur(0px); } }
+        @keyframes invertFlash { 0% { filter: invert(0%); } 50% { filter: invert(100%); } 100% { filter: invert(0%); } }
+        @keyframes sepiaDream { 0% { filter: sepia(0%); } 50% { filter: sepia(100%); } 100% { filter: sepia(0%); } }
+        @keyframes radioactive { 0% { filter: drop-shadow(0 0 2px lime); } 50% { filter: drop-shadow(0 0 10px #0f0) hue-rotate(90deg); } 100% { filter: drop-shadow(0 0 2px lime); } }
+        @keyframes ice { 0% { filter: drop-shadow(0 0 2px cyan) hue-rotate(180deg) brightness(1.2); } 100% { filter: drop-shadow(0 0 5px white) hue-rotate(180deg) brightness(1.2); } }
+        @keyframes matrix { 0% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } 50% { filter: drop-shadow(0 0 5px #0f0) hue-rotate(20deg) contrast(2); } 100% { filter: drop-shadow(0 0 2px #0f0) hue-rotate(0deg) contrast(1.5); } }
+        @keyframes hologram { 0% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } 20% { filter: drop-shadow(2px 0 5px cyan) opacity(0.6) blur(1px); } 40% { filter: drop-shadow(-2px 0 5px cyan) opacity(0.8); } 100% { filter: drop-shadow(0 0 2px cyan) opacity(0.8); } }
+        @keyframes noir { 0% { filter: grayscale(1) contrast(1.5) brightness(0.8); } 100% { filter: grayscale(1) contrast(2) brightness(0.6); } }
+        @keyframes pixelate { 0% { filter: contrast(1); } 50% { filter: contrast(3) brightness(1.2); } 100% { filter: contrast(1); } }
+        @keyframes underwater { 0% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } 50% { filter: blur(2px) hue-rotate(200deg) brightness(1); } 100% { filter: blur(1px) hue-rotate(180deg) brightness(0.8); } }
+        @keyframes golden { 0% { filter: sepia(1) saturate(5) brightness(1); } 50% { filter: sepia(1) saturate(5) brightness(1.3) drop-shadow(0 0 5px gold); } 100% { filter: sepia(1) saturate(5) brightness(1); } }
+        @keyframes ghost { 0% { opacity: 0.8; filter: blur(0px); } 50% { opacity: 0.4; filter: blur(2px); } 100% { opacity: 0.8; filter: blur(0px); } }
+        @keyframes xray { 0% { filter: invert(1) grayscale(1) contrast(2); } 50% { filter: invert(0) grayscale(1) contrast(1); } 100% { filter: invert(1) grayscale(1) contrast(2); } }
+        
+        @keyframes orbit-cw { from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); } to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); } }
+        @keyframes spin-z { from { transform: rotateZ(0deg); } to { transform: rotateZ(360deg); } }
+    </style>
+</head>
+<body>
+    <script src="config.js"></script> 
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none w-max"></div>
+
+    <div id="main-layout">
+        <div class="sidebar w-full md:w-80 h-auto md:h-full border-b md:border-b-0 md:border-r border-slate-800 shrink-0 order-2 md:order-1 bg-slate-900 shadow-2xl flex md:flex-col flex-row">
+            
+            <div class="hidden md:block p-6 border-b border-slate-800 bg-slate-950">
+                <h1 class="font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-indigo-500 text-xl italic uppercase">Master Atelier</h1>
+                <div class="flex justify-between items-center mt-2">
+                    <span id="tier-name-display" class="text-[10px] text-pink-500 font-black tracking-widest uppercase">LOADING...</span>
+                    <span id="cp-display" class="text-[10px] text-indigo-400 font-mono font-bold">0 CP</span>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3 md:p-4 custom-scroll border-r md:border-r-0 border-slate-800 min-w-[150px] md:min-w-0 flex flex-col gap-6">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[9px] font-black uppercase text-pink-500">SAVED EMBLEMS</span>
+                        <div class="flex gap-2 items-center">
+                            <span class="text-[8px] text-slate-500 font-bold">SLOT SELECT</span>
+                            <button onclick="expandSlot()" class="text-[8px] bg-indigo-600 px-2 py-0.5 rounded text-white font-black hover:bg-indigo-500">+ EXP</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2" id="slot-grid"></div>
+                </div>
+
+                <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl shadow-inner relative overflow-hidden group">
+                    <i class="fa-solid fa-triangle-exclamation absolute -right-2 -bottom-2 text-6xl text-rose-900/20 pointer-events-none group-hover:text-rose-900/30 transition"></i>
+                    <label class="text-[9px] font-black text-indigo-400 uppercase block mb-2 flex justify-between">
+                        <span><i class="fa-solid fa-id-card mr-1"></i>Identity Title</span>
+                        <span class="text-[8px] text-slate-600">MAX 10 CHARS</span>
+                    </label>
+                    <input type="text" id="id-title-input" maxlength="10" placeholder="나만의 칭호 입력" 
+                           class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-3 text-xs text-white font-bold focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition z-10 relative placeholder-slate-600"
+                           oninput="updateIdentityTitle(this.value)"
+                           onfocus="showWarning(true)"
+                           onblur="showWarning(false)">
+                    <div id="penalty-warning-box" class="hidden mt-3 p-2 bg-rose-950/50 border border-rose-500/50 rounded-lg flex items-start gap-2 animate-pulse">
+                        <div class="text-rose-500 text-lg"><i class="fa-solid fa-skull-crossbones"></i></div>
+                        <div>
+                            <div class="text-[9px] font-black text-rose-400 uppercase">Warning: Censorship Active</div>
+                            <div class="text-[9px] text-rose-200 leading-tight break-keep mt-0.5">
+                                선생님이 봤을 때 눈살을 찌푸리는 문구 발견 시, <span class="text-white font-black underline decoration-rose-500">XP 및 CP가 즉시 삭감</span>됩니다.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[9px] font-black uppercase text-indigo-400">MY ASSETS</span>
+                        <div class="flex items-center gap-2">
+                            <span id="asset-count" class="text-[8px] font-bold text-slate-500">0 / 3</span>
+                            <button onclick="document.getElementById('img-upload').click()" class="text-[8px] bg-slate-800 border border-slate-600 px-2 py-1 rounded text-white hover:bg-slate-700 font-bold">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                        <input type="file" id="img-upload" class="hidden" accept="image/*" onchange="handleImageUpload(this)">
+                    </div>
+                    <div id="asset-grid" class="grid grid-cols-3 gap-2 empty:h-12 empty:bg-slate-900/50 empty:rounded-lg empty:border empty:border-dashed empty:border-slate-800 empty:flex empty:items-center empty:justify-center empty:after:content-['NO_ASSETS'] empty:after:text-[8px] empty:after:text-slate-700"></div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-4 flex-1">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[9px] font-black uppercase text-slate-500">Active Layers</span>
+                        <button onclick="openMarket()" class="text-[9px] text-pink-500 font-black hover:underline">+ MARKET</button>
+                    </div>
+                    <div id="layer-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div class="p-3 md:p-4 bg-slate-950 border-t border-slate-800 shrink-0 flex items-center justify-center">
+                <button onclick="saveMyEmblem()" class="w-full md:py-4 py-3 bg-indigo-600 active:bg-indigo-500 text-white rounded-xl font-black text-xs shadow-xl flex items-center justify-center">
+                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i> <span class="hidden md:inline">COMMIT SYNC (100 CP)</span><span class="md:hidden">SAVE</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 relative flex flex-col bg-slate-950 order-1 md:order-2 h-[60vh] md:h-full">
+            <div class="h-12 md:h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 md:px-8 z-10 shadow-lg">
+                <div class="flex items-center gap-4">
+                    <button onclick="history.back()" class="text-slate-500"><i class="fa-solid fa-arrow-left"></i></button>
+                    <div class="text-[10px] font-bold text-slate-500 md:block hidden">MODE: <span class="text-indigo-400">RANKED EDIT</span></div>
+                </div>
+                
+                <button onclick="togglePreview()" class="text-[9px] font-bold text-slate-400 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg hover:text-white hover:border-slate-500 transition uppercase flex items-center gap-1">
+                    <i class="fa-solid fa-eye"></i> <span class="hidden md:inline">PREVIEW</span>
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <div id="save-warning" class="hidden text-[8px] md:text-[9px] text-cyan-400 font-black animate-pulse bg-cyan-400/10 px-3 py-1 rounded-full border border-cyan-400/20">PREVIEW MODE</div>
+                    <span id="img-slot-count" class="text-[10px] text-indigo-400 font-black">0/0</span>
+                </div>
+            </div>
+
+            <div id="stage-wrapper">
+                <div id="stage" class="w-full h-full relative"></div>
+
+                <div id="identity-frame">
+                    <div id="id-title-text" class="engraved-text">YOUR TITLE</div>
+                    <div id="id-rank-badge" class="engraved-text">RANK LOADING...</div>
+                </div>
+
+                <div id="live-preview-card">
+                    <div id="preview-header" class="flex justify-between items-center mb-3">
+                        <div class="text-[8px] font-black text-slate-300 uppercase tracking-widest"><i class="fa-solid fa-arrows-up-down-left-right mr-1"></i>LIVE</div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
+                    </div>
+                    <div class="w-full aspect-square bg-slate-100 rounded-xl overflow-hidden relative shadow-inner border border-slate-200/20 mb-2">
+                        <div id="preview-stage" class="w-full h-full relative flex items-center justify-center transform origin-center transition-transform"></div>
+                        <div id="preview-frame-mini">
+                            <div id="prev-title-text" class="engraved-text"></div>
+                            <div id="prev-rank-badge" class="engraved-text"></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 px-1">
+                        <span class="text-[8px] text-slate-500"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="range" min="20" max="100" value="40" class="flex-1 h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-500" oninput="updatePreviewZoom(this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <div id="prop-panel" class="custom-scroll flex flex-col">
+                <div class="w-full h-6 md:hidden flex items-center justify-center shrink-0" onclick="closeEdit()">
+                    <div class="w-12 h-1 bg-slate-600 rounded-full"></div>
+                </div>
+
+                <div class="p-6 md:p-8 flex-1 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-[10px] font-black text-pink-500 tracking-widest uppercase italic">Alchemy Control</span>
+                        <div class="flex gap-4">
+                            <button onclick="resetToCenter()" class="bg-indigo-600 text-white text-[8px] font-bold px-2 py-1 rounded-full">CENTER</button>
+                            <button onclick="deleteLayer()" class="text-slate-500 hover:text-rose-500"><i class="fa-solid fa-trash-can"></i></button>
+                            <button onclick="closeEdit()" class="md:hidden text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 mb-6">
+                        <label class="text-[9px] text-slate-500 font-bold uppercase">Base Matter</label>
+                        <div class="flex gap-3 items-center">
+                            <input type="color" id="p-color" class="w-12 h-12 rounded-xl bg-slate-800 border-0 p-1 cursor-pointer shrink-0" onchange="updateProp('color', this.value)">
+                            <div class="flex-1">
+                                <div class="flex justify-between text-[8px] font-black text-slate-500 mb-1">
+                                    <span>SIZE ADJUSTER</span>
+                                    <span id="p-size-val">100%</span>
+                                </div>
+                                <div class="joystick-track" id="joystick-zone">
+                                    <div class="joystick-knob" id="joystick-knob"><i class="fa-solid fa-arrows-left-right"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 mb-6">
+                        <label class="text-[9px] text-slate-500 font-bold uppercase">Kinetic Matrix</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="btn-spin" onclick="toggleMotion('spin')" class="bg-slate-800 py-3 rounded-xl text-[9px] font-bold text-slate-400 border border-slate-700">SPIN: OFF</button>
+                            <button id="btn-orbit" onclick="toggleMotion('orbit')" class="bg-slate-800 py-3 rounded-xl text-[9px] font-bold text-slate-400 border border-slate-700">ORBIT: OFF</button>
+                        </div>
+                    </div>
+
+                    <div id="active-stacks-container" class="space-y-2 mb-6"></div>
+
+                    <div class="space-y-6 pt-4 border-t border-slate-800">
+                        <div><label class="text-[9px] text-slate-500 font-bold uppercase block mb-2">Vital (Motion)</label><div class="grid grid-cols-5 gap-2" id="vital-grid"></div></div>
+                        <div><label class="text-[9px] text-slate-500 font-bold uppercase block mb-2">FX (Visual)</label><div class="grid grid-cols-5 gap-2" id="fx-grid"></div></div>
+                        <div><label class="text-[9px] text-slate-500 font-bold uppercase block mb-2">Blend (Filter)</label><div class="grid grid-cols-5 gap-2" id="blend-grid"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="market-modal" class="market-overlay">
+        <div class="w-[90%] md:w-[600px] h-[80%] bg-slate-900 rounded-3xl flex flex-col overflow-hidden border border-slate-700 shadow-2xl">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                <h2 class="text-sm font-black text-white uppercase italic">Asset Market</h2>
+                <button onclick="document.getElementById('market-modal').style.display='none'" class="text-slate-500 text-xl">&times;</button>
+            </div>
+            <div id="market-tabs" class="flex gap-2 p-3 bg-slate-900 overflow-x-auto whitespace-nowrap"></div>
+            <div id="market-grid" class="grid grid-cols-5 md:grid-cols-6 gap-3 p-4 overflow-y-auto flex-1 custom-scroll content-start"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- [DATA: CONSTANTS] ---
+        const VITAL_TYPES = [ 
+            {id:'pulse', icon:'💓', label:'Pulse'}, {id:'heartbeat', icon:'💗', label:'Heart'}, {id:'rubberBand', icon:'🪀', label:'Rubber'}, 
+            {id:'tada', icon:'🎉', label:'Tada'}, {id:'swing', icon:'🎪', label:'Swing'}, {id:'float', icon:'☁️', label:'Float'}, 
+            {id:'ghost', icon:'👻', label:'Ghost'}, {id:'jelly', icon:'🍮', label:'Jelly'}, {id:'wobble', icon:'🥴', label:'Wobble'}, 
+            {id:'bounce', icon:'🏀', label:'Bounce'}, {id:'panic', icon:'😱', label:'Panic'}, {id:'breath', icon:'🌬️', label:'Breath'}, 
+            {id:'orbit3d', icon:'🪐', label:'3D-Orbit'}, {id:'glitch-skew', icon:'📶', label:'Skew'}, {id:'vibrate', icon:'📳', label:'Vibe'},
+            {id:'float-h', icon:'↔️', label:'Slide'}, {id:'pendulum', icon:'🕰️', label:'Clock'}, {id:'stretch', icon:'↔️', label:'Stretch'},
+            {id:'squeeze', icon:'↕️', label:'Squeeze'}, {id:'flip-x', icon:'🔄', label:'Flip-X'}, {id:'flip-y', icon:'🔃', label:'Flip-Y'},
+            {id:'tornado', icon:'🌪️', label:'Tornado'}, {id:'barrel', icon:'🛢️', label:'Barrel'}, {id:'compress', icon:'🧱', label:'Compress'},
+            {id:'shake', icon:'🫨', label:'Shake'}, {id:'jello', icon:'🍮', label:'Jello'}, {id:'headShake', icon:'🤕', label:'HeadShake'},
+            {id:'wobble-hor', icon:'〰️', label:'WobbleH'}, {id:'wobble-ver', icon:'➿', label:'WobbleV'}, {id:'pulse-fast', icon:'💗', label:'PulseF'},
+            {id:'vortex', icon:'🌀', label:'Vortex'}, {id:'quake', icon:'🌋', label:'Quake'}
+        ];
+        
+        const FX_TYPES = [ 
+            {id:'fire', icon:'🔥', label:'Fire'}, {id:'sparkle', icon:'✨', label:'Sparkle'}, {id:'neon-pulse', icon:'⚡', label:'Neon'}, 
+            {id:'glitch-filter', icon:'☠️', label:'Glitch'}, {id:'rainbow', icon:'🌈', label:'Rainbow'}, {id:'ice', icon:'🧊', label:'Ice'}, 
+            {id:'matrix', icon:'💻', label:'Matrix'}, {id:'hologram', icon:'💠', label:'Holo'}, {id:'noir', icon:'🕵️', label:'Noir'}, 
+            {id:'pixelate', icon:'👾', label:'Pixel'}, {id:'underwater', icon:'🌊', label:'Aqua'}, {id:'radioactive', icon:'☢️', label:'Toxic'}, 
+            {id:'sepiaDream', icon:'📜', label:'Sepia'}, {id:'golden', icon:'👑', label:'Gold'}, {id:'ghost', icon:'👻', label:'Spirit'},
+            {id:'blurPulse', icon:'🌫️', label:'Blur'}, {id:'invertFlash', icon:'🌓', label:'Invert'}, {id:'shadowClone', icon:'👥', label:'Clone'},
+            {id:'thermal', icon:'🌡️', label:'Thermal'}, {id:'xray', icon:'🩻', label:'X-Ray'}, {id:'night-vision', icon:'🟢', label:'Night'},
+            {id:'posterize', icon:'🎨', label:'Poster'}, {id:'emboss', icon:'🗿', label:'Emboss'}, {id:'sharpen', icon:'🔪', label:'Sharp'}
+        ];
+        
+        const BLEND_TYPES = [ 
+            {id:'multiply', icon:'🌑', filter:'brightness(0.7) contrast(1.2)'}, {id:'screen', icon:'☀️', filter:'brightness(1.5)'}, 
+            {id:'overlay', icon:'🌗', filter:'contrast(1.5) saturate(1.2)'}, {id:'grayscale', icon:'⚫', filter:'grayscale(1)'}, 
+            {id:'sepia', icon:'🟤', filter:'sepia(1)'}, {id:'invert', icon:'🔄', filter:'invert(1)'}, {id:'blur', icon:'🌫️', filter:'blur(4px)'}, 
+            {id:'saturate', icon:'🔴', filter:'saturate(2)'}, {id:'hue-rotate', icon:'🎨', filter:'hue-rotate(90deg)'},
+            {id:'brightness', icon:'💡', filter:'brightness(1.5)'}, {id:'contrast', icon:'🔳', filter:'contrast(2)'},
+            {id:'opacity', icon:'👻', filter:'opacity(0.5)'}, {id:'drop-shadow', icon:'👤', filter:'drop-shadow(5px 5px 5px rgba(0,0,0,0.5))'}
+        ];
+        
+        const ASSETS = { 
+            face: ['😀','😎','💀','🔥','💎','🚀','👻','🤖','👽','🦄'], 
+            icon: ['fa-solid fa-crown','fa-solid fa-bolt','fa-solid fa-star','fa-solid fa-fire','fa-solid fa-skull','fa-solid fa-dragon','fa-solid fa-heart','fa-solid fa-gem'], 
+            food: ['🍎','🍔','🍕','🍩','🍦','🍺','🍗','🍟'],
+            obj: ['💣','🎈','🎁','⚽','💰','📱','🔫','🛡']
+        };
+
+        // --- [STATE] ---
+        let tierRules = [], myTierIndex = 0, tierLevel = 1, totalValidTiers = 0;
+        let myLayers = [], selectedId = null, dbData = null;
+        let myAssets = []; 
+        let isDraggingLayer = false, dragTargetId = null;
+        let joystickInterval = null; 
+        let previewZoom = 0.4;
+
+        const user = JSON.parse(sessionStorage.getItem('currentUser')) || { username: 'GUEST', cp: 9999, season_xp: 0 };
+
+        // --- [INIT] ---
+        async function init() {
+            setupJoystick();
+            setupPreviewDrag(); 
+            window.addEventListener('resize', () => {});
+            await loadData();
+            await loadUserAssets();
+            renderAll(); renderSlots(); renderMarketTabs();
+            
+            const stage = document.getElementById('stage-wrapper');
+            stage.addEventListener('touchmove', handleTouchMove, {passive: false});
+            stage.addEventListener('touchend', handleTouchEnd);
+            stage.addEventListener('mousemove', handleMouseMove);
+            stage.addEventListener('mouseup', handleMouseUp);
+        }
+
+        // --- [DATA] ---
+        async function loadData() {
+            try {
+                const { data: u } = await _supabase.from('users').select('*').eq('username', user.username).maybeSingle();
+                const safeUser = u || user; 
+                
+                const { data: tiers } = await _supabase.from('tier_rules').select('*').gte('min_xp', 0).order('min_xp');
+                tierRules = tiers || [];
+                totalValidTiers = tierRules.length;
+
+                myTierIndex = tierRules.findIndex(t => safeUser.season_xp >= t.min_xp && safeUser.season_xp <= (t.max_xp || 999999999));
+                if(myTierIndex === -1) myTierIndex = 0;
+                tierLevel = myTierIndex + 1;
+
+                // [UPDATE IDENTITY FRAME]
+                document.getElementById('tier-name-display').innerText = tierRules[myTierIndex]?.tier_name || 'RANK';
+                document.getElementById('cp-display').innerText = `${safeUser.cp.toLocaleString()} CP`;
+                
+                // 티어 텍스트 업데이트 (Badge)
+                const tierName = tierRules[myTierIndex]?.tier_name || 'NO TIER';
+                const badgeEl = document.getElementById('id-rank-badge');
+                const prevBadgeEl = document.getElementById('prev-rank-badge');
+                if(badgeEl) badgeEl.innerText = tierName;
+                if(prevBadgeEl) prevBadgeEl.innerText = tierName;
+                
+                // 프레임 등급별 스타일 적용
+                const frame = document.getElementById('identity-frame');
+                const prevFrame = document.getElementById('preview-frame-mini');
+                // 기존 클래스 초기화 및 새 등급 적용
+                frame.className = ''; prevFrame.className = '';
+                const tierClass = `frame-tier-${Math.min(myTierIndex, 3)}`;
+                frame.classList.add(tierClass);
+                prevFrame.classList.add(tierClass);
+
+                let { data: e } = await _supabase.from('student_emblems').select('*').eq('student_id', user.username).maybeSingle();
+                if(!e) {
+                    const defaultLayers = tierRules[myTierIndex]?.emblem_json?.layers || [];
+                    const { data: n } = await _supabase.from('student_emblems').insert([{ student_id: user.username, slots_data: [{ layers: defaultLayers, title: safeUser.name }] }]).select().single();
+                    e = n;
+                }
+                dbData = e;
+                const slot = e.slots_data[e.current_slot];
+                myLayers = slot?.layers || (tierRules[myTierIndex]?.emblem_json?.layers || []);
+                // Load Title
+                const loadedTitle = slot?.title || safeUser.name;
+                document.getElementById('id-title-input').value = loadedTitle;
+                updateIdentityTitle(loadedTitle);
+
+                updateUIByTier();
+            } catch(err) { console.error(err); showToast("데이터 로드 실패", "error"); }
+        }
+
+        // --- [SYSTEM: IDENTITY FRAME LOGIC] ---
+        function updateIdentityTitle(val) {
+            document.getElementById('id-title-text').innerText = val || "";
+            document.getElementById('prev-title-text').innerText = val || "";
+            // Sync current slot data locally
+            if(dbData && dbData.slots_data[dbData.current_slot]) {
+                dbData.slots_data[dbData.current_slot].title = val;
+            }
+        }
+        function showWarning(show) {
+            const box = document.getElementById('penalty-warning-box');
+            const input = document.getElementById('id-title-input');
+            if (show) {
+                box.classList.remove('hidden');
+                input.classList.add('warning-active'); // 입력창 흔들림
+            } else {
+                box.classList.add('hidden');
+                input.classList.remove('warning-active');
+            }
+        }
+
+        async function loadUserAssets() {
+            if(!user || !user.username) return;
+            const safeName = user.username.replace(/[^a-zA-Z0-9]/g, '');
+            const { data, error } = await _supabase.storage.from('emblem_assets').list(`student_assets/${safeName}`, { limit: 10, offset: 0, sortBy: { column: 'created_at', order: 'desc' }});
+            if(error) { console.error(error); return; }
+            myAssets = data || [];
+            renderAssetGrid();
+        }
+
+        function renderAssetGrid() {
+            const grid = document.getElementById('asset-grid');
+            const countEl = document.getElementById('asset-count');
+            if(!grid) return;
+            grid.innerHTML = '';
+            countEl.innerText = `${myAssets.length} / 3`;
+            if(myAssets.length >= 3) countEl.classList.add('text-rose-500'); else countEl.classList.remove('text-rose-500');
+
+            const safeName = user.username.replace(/[^a-zA-Z0-9]/g, '');
+            myAssets.forEach(file => {
+                const { data: { publicUrl } } = _supabase.storage.from('emblem_assets').getPublicUrl(`student_assets/${safeName}/${file.name}`);
+                const div = document.createElement('div');
+                div.className = "relative aspect-square bg-slate-800 rounded-lg overflow-hidden border border-slate-700 group cursor-pointer";
+                div.innerHTML = `
+                    <img src="${publicUrl}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition" onclick="addLayer('image', '${publicUrl}')">
+                    <button onclick="deleteAsset('${file.name}')" class="absolute top-0 right-0 w-5 h-5 bg-black/50 text-white text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-500 transition"><i class="fa-solid fa-xmark"></i></button>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        async function deleteAsset(fileName) {
+            if(!confirm("삭제하시겠습니까?")) return;
+            const safeName = user.username.replace(/[^a-zA-Z0-9]/g, '');
+            const { error } = await _supabase.storage.from('emblem_assets').remove([`student_assets/${safeName}/${fileName}`]);
+            if(error) showToast("삭제 실패", "error");
+            else { showToast("삭제 완료", "success"); await loadUserAssets(); }
+        }
+
+        async function handleImageUpload(input) {
+            if(!user || !user.username) { showToast("로그인 필요", "error"); return; }
+            if(myAssets.length >= 3) { showToast("🚫 업로드 슬롯 가득 참 (최대 3개)", "error"); input.value=''; return; }
+
+            const file = input.files[0]; if(!file) return;
+            const safeName = user.username.replace(/[^a-zA-Z0-9]/g, '');
+            const path = `student_assets/${safeName}/${Date.now()}_${Math.floor(Math.random()*1000)}.png`;
+
+            showToast("업로드 중...", "info");
+            const { error } = await _supabase.storage.from('emblem_assets').upload(path, file);
+            if(error) { showToast("업로드 실패 (권한 확인)", "error"); return; }
+            
+            await loadUserAssets();
+            const { data: { publicUrl } } = _supabase.storage.from('emblem_assets').getPublicUrl(path);
+            addLayer('image', publicUrl);
+            input.value = '';
+            showToast("완료!", "success");
+        }
+
+        // --- [LOGIC: TIER] ---
+        function getFeatureStatus(reqTierIndex) {
+            if (reqTierIndex <= myTierIndex) return 'AUTHORIZED';
+            if (reqTierIndex === myTierIndex + 1) return 'PREVIEW';
+            return 'LOCKED';
+        }
+        function getRequiredTierForIndex(itemIndex, totalItems) {
+            if(totalValidTiers === 0) return 0;
+            const itemsPerTier = totalItems / totalValidTiers; 
+            return Math.floor(itemIndex / itemsPerTier);
+        }
+        function updateUIByTier() {
+            renderGrid('vital', VITAL_TYPES); renderGrid('fx', FX_TYPES); renderGrid('blend', BLEND_TYPES);
+        }
+        
+        function checkPermission(reqTier, name) {
+            const status = getFeatureStatus(reqTier);
+            if(status === 'AUTHORIZED') { document.getElementById('save-warning').classList.add('hidden'); return true; }
+            const reqTierName = tierRules[reqTier]?.tier_name || `LV.${reqTier+1}`;
+            if(status === 'PREVIEW') { 
+                showToast(`✨ [PREVIEW] ${name} 체험 가능 (${reqTierName} 등급)`, "warning"); 
+                document.getElementById('save-warning').classList.remove('hidden'); 
+                return true; 
+            }
+            showToast(`🔒 [잠김] ${reqTierName} 등급 달성 시 해금`, "error"); 
+            return false;
+        }
+
+        // --- [JOYSTICK & PREVIEW] ---
+        function setupJoystick() {
+            const track = document.getElementById('joystick-zone');
+            const knob = document.getElementById('joystick-knob');
+            let isJoyActive = false, currentX = 0;
+            const start = (x) => { if(!selectedId) return; isJoyActive=true; knob.style.transition='none'; loopScaling(); };
+            const move = (x) => {
+                if(!isJoyActive) return;
+                const rect = track.getBoundingClientRect();
+                const delta = Math.max(-rect.width/2+16, Math.min(rect.width/2-16, x - rect.left - rect.width/2));
+                currentX = delta; knob.style.transform = `translateX(calc(-50% + ${delta}px))`;
+            };
+            const end = () => { isJoyActive=false; currentX=0; knob.style.transition='transform 0.3s'; knob.style.transform=`translateX(-50%)`; cancelAnimationFrame(joystickInterval); };
+            knob.addEventListener('mousedown', e => { e.preventDefault(); start(e.clientX); });
+            window.addEventListener('mousemove', e => move(e.clientX));
+            window.addEventListener('mouseup', end);
+            knob.addEventListener('touchstart', e => { e.preventDefault(); start(e.touches[0].clientX); });
+            window.addEventListener('touchmove', e => move(e.touches[0].clientX));
+            window.addEventListener('touchend', end);
+            function loopScaling() {
+                if(!isJoyActive) return;
+                if(Math.abs(currentX) > 5) {
+                    const l = myLayers.find(x => x.id === selectedId);
+                    if(l) {
+                        let newSize = (l.style.size || 100) + (currentX * 0.05);
+                        l.style.size = Math.max(10, Math.min(1000, newSize));
+                        document.getElementById('p-size-val').innerText = Math.round(newSize) + '%';
+                        renderAll();
+                    }
+                }
+                joystickInterval = requestAnimationFrame(loopScaling);
+            }
+        }
+
+        function setupPreviewDrag() {
+            const pCard = document.getElementById('live-preview-card');
+            const pHeader = document.getElementById('preview-header');
+            let isDraggingPreview = false, pStartX, pStartY, pInitX, pInitY;
+            pHeader.onmousedown = (e) => {
+                isDraggingPreview = true; pStartX = e.clientX; pStartY = e.clientY;
+                pInitX = pCard.offsetLeft; pInitY = pCard.offsetTop;
+            };
+            window.addEventListener('mousemove', (e) => {
+                if(isDraggingPreview) { e.preventDefault(); pCard.style.left = (pInitX + e.clientX - pStartX) + 'px'; pCard.style.top = (pInitY + e.clientY - pStartY) + 'px'; pCard.style.right = 'auto'; }
+            });
+            window.addEventListener('mouseup', () => isDraggingPreview = false);
+        }
+        function updatePreviewZoom(val) { previewZoom = val / 100; const pStage = document.getElementById('preview-stage'); if(pStage) pStage.style.transform = `scale(${previewZoom})`; }
+
+        // --- [RENDER] ---
+        function createObjDOM(l, scale = 1.0) {
+            const root = document.createElement('div');
+            root.className = `obj-root ${l.id === selectedId ? 'selected' : ''}`;
+            root.id = `obj-${l.id}`;
+            root.style.left = `${l.x}%`; root.style.top = `${l.y}%`;
+            root.style.zIndex = l.id === selectedId ? 100 : 1;
+            
+            if(scale === 1.0) {
+                const startDrag = (e) => { e.preventDefault(); e.stopPropagation(); selectLayer(l.id); isDraggingLayer = true; dragTargetId = l.id; };
+                root.addEventListener('mousedown', startDrag);
+                root.addEventListener('touchstart', startDrag);
+            }
+
+            let contentHtml = l.type === 'image' ? `<img src="${l.content}" style="width:${l.style.size * scale}px">` : 
+                             (l.type === 'icon' ? `<i class="${l.content}" style="font-size:${l.style.size * scale}px; color:${l.style.color}"></i>` : 
+                             `<span style="font-size:${l.style.size * scale}px; color:${l.style.color}; font-family:'Black Han Sans'">${l.content}</span>`);
+
+            let filters = ''; (l.anim?.blend || []).forEach(b => { const def = BLEND_TYPES.find(t => t.id === b.type); if(def) filters += `${def.id === 'drop-shadow' ? 'drop-shadow(0 0 5px rgba(0,0,0,0.5))' : (def.id+'(1.5)')} `; });
+            let inner = `<div class="obj-core" style="filter:${filters}">${contentHtml}</div>`;
+            
+            [...(l.anim?.vital || []), ...(l.anim?.fx || [])].forEach(anim => { 
+                const speed = (21 - (anim.speed || 10)) / 10;
+                inner = `<div class="effect-wrapper" style="animation:${anim.type} ${speed}s infinite">${inner}</div>`; 
+            });
+            if(l.anim?.spin?.on) inner = `<div class="obj-spin" style="animation:spin-z 5s linear infinite">${inner}</div>`;
+            if(l.anim?.orbit?.on) inner = `<div class="obj-orbit" style="--orbit-r:${100 * scale}px; animation:orbit-cw 5s linear infinite">${inner}</div>`;
+
+            root.innerHTML = inner; return root;
+        }
+
+        function handleMouseMove(e) { handleMove(e.clientX, e.clientY); }
+        function handleTouchMove(e) { if(isDraggingLayer) e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }
+        function handleMove(cx, cy) {
+            if(!isDraggingLayer || !dragTargetId) return;
+            const wrapper = document.getElementById('stage-wrapper');
+            const rect = wrapper.getBoundingClientRect();
+            const l = myLayers.find(x => x.id === dragTargetId);
+            if(l) { l.x = ((cx - rect.left) / rect.width) * 100; l.y = ((cy - rect.top) / rect.height) * 100; renderAll(); }
+        }
+        function handleMouseUp() { isDraggingLayer = false; }
+        function handleTouchEnd() { isDraggingLayer = false; }
+
+        function selectLayer(id) { selectedId = id; document.getElementById('prop-panel').classList.add('active'); updatePropUI(); renderAll(); renderLayerList(); }
+        function closeEdit() { document.getElementById('prop-panel').classList.remove('active'); selectedId = null; renderAll(); renderLayerList(); }
+        function renderAll() { 
+            const s = document.getElementById('stage'); s.innerHTML = ''; 
+            const p = document.getElementById('preview-stage'); p.innerHTML = '';
+            myLayers.slice().reverse().forEach(l => {
+                s.appendChild(createObjDOM(l, 1.0)); 
+                p.appendChild(createObjDOM(l, 1.0));
+            }); 
+            document.getElementById('preview-stage').style.transform = `scale(${previewZoom})`;
+        }
+        function togglePreview() { document.getElementById('live-preview-card').classList.toggle('hidden-card'); }
+
+        function renderLayerList() {
+            const list = document.getElementById('layer-list'); list.innerHTML = '';
+            [...myLayers].reverse().forEach((l, idx) => {
+                const arrIdx = myLayers.length - 1 - idx;
+                const el = document.createElement('div');
+                el.className = `p-2 rounded border text-[9px] flex justify-between items-center ${l.id===selectedId ? 'bg-indigo-900 border-indigo-500' : 'bg-slate-800 border-slate-700'}`;
+                el.innerHTML = `
+                    <span onclick="selectLayer('${l.id}')" class="truncate cursor-pointer flex-1">${l.type}</span> 
+                    <div class="flex gap-1 ml-2">
+                        <button onclick="moveLayer(${arrIdx}, 1)" class="w-4 h-4 bg-slate-700 rounded hover:bg-white hover:text-black flex items-center justify-center"><i class="fa-solid fa-angle-up"></i></button>
+                        <button onclick="moveLayer(${arrIdx}, -1)" class="w-4 h-4 bg-slate-700 rounded hover:bg-white hover:text-black flex items-center justify-center"><i class="fa-solid fa-angle-down"></i></button>
+                        <i onclick="deleteLayerById('${l.id}')" class="fa-solid fa-trash text-rose-500 p-1 cursor-pointer ml-1"></i>
+                    </div>`;
+                list.appendChild(el);
+            });
+        }
+        function moveLayer(idx, dir) {
+            const newIdx = idx + dir; if (newIdx < 0 || newIdx >= myLayers.length) return;
+            [myLayers[idx], myLayers[newIdx]] = [myLayers[newIdx], myLayers[idx]];
+            renderAll(); renderLayerList();
+        }
+        function addLayer(type, content) {
+            const id = Date.now().toString();
+            myLayers.push({ id, type, content, x:50, y:50, style:{size:100, color:'#ffffff'}, anim:{spin:{on:false}, orbit:{on:false}, vital:[], fx:[], blend:[]} });
+            document.getElementById('market-modal').style.display='none'; selectLayer(id);
+        }
+
+        function renderSlots() {
+            const g = document.getElementById('slot-grid'); if(!g || !dbData) return; g.innerHTML = '';
+            for(let i=0; i<5; i++) { 
+                const isActive = i === dbData.current_slot;
+                const isLocked = i >= dbData.unlocked_slots;
+                const hasData = dbData.slots_data[i] && dbData.slots_data[i].layers && dbData.slots_data[i].layers.length > 0;
+                let statusClass = isLocked ? "text-slate-700 bg-slate-900 border-slate-800 opacity-50" : (hasData ? (isActive ? "bg-indigo-600 border-indigo-400 text-white shadow-lg" : "bg-slate-800 border-slate-600 text-white hover:border-pink-500") : (isActive ? "bg-indigo-600 text-white" : "bg-slate-800 border-slate-700 hover:bg-slate-700"));
+                let content = isLocked ? `<i class="fa-solid fa-lock text-[8px]"></i>` : (hasData ? `<div class="flex flex-col items-center"><span class="text-[8px] font-black">${i+1}</span><div class="w-1.5 h-1.5 rounded-full bg-pink-500 mt-0.5"></div></div>` : `<span class="text-[9px] font-bold">${i+1}</span>`);
+                g.innerHTML += `<div class="aspect-square rounded-lg border flex items-center justify-center cursor-pointer transition-all ${statusClass}" onclick="${!isLocked ? `switchSlot(${i})` : ''}">${content}</div>`;
+            }
+        }
+        async function switchSlot(idx) { if(idx === dbData.current_slot) return; dbData.current_slot = idx; await loadSlot(); renderSlots(); showToast(`SLOT ${idx+1} LOADED`, "info"); }
+        async function loadSlot() { 
+            const slot = dbData.slots_data[dbData.current_slot];
+            myLayers = slot?.layers || []; 
+            // Title 복구
+            const savedTitle = slot?.title || "";
+            document.getElementById('id-title-input').value = savedTitle;
+            updateIdentityTitle(savedTitle);
+            renderAll(); renderLayerList(); 
+        }
+        async function saveMyEmblem() {
+            if(document.getElementById('save-warning').classList.contains('hidden') === false) { showToast("PREVIEW 모드 (저장 불가)", "error"); return; }
+            if(!confirm(`SLOT ${dbData.current_slot + 1}에 저장? (100 CP)`)) return;
+            const titleVal = document.getElementById('id-title-input').value;
+            const { error } = await _supabase.rpc('save_student_emblem_rpc', { p_student_id: user.username, p_slot_idx: dbData.current_slot, p_emblem_data: { layers: myLayers, title: titleVal } });
+            if(error) showToast("오류 발생", "error"); else { 
+                showToast("저장 완료!", "success"); 
+                if(!dbData.slots_data[dbData.current_slot]) dbData.slots_data[dbData.current_slot] = {};
+                dbData.slots_data[dbData.current_slot].layers = JSON.parse(JSON.stringify(myLayers)); 
+                dbData.slots_data[dbData.current_slot].title = titleVal;
+                renderSlots(); 
+            }
+        }
+        async function expandSlot() {
+            if(!confirm("슬롯 확장? (CP 소모)")) return;
+            const { error } = await _supabase.rpc('expand_emblem_slot_rpc', { p_student_id: user.username });
+            if(error) showToast("오류", "error"); else { showToast("확장 완료", "success"); await loadData(); renderSlots(); }
+        }
+
+        function renderGrid(group, list) {
+            const c = document.getElementById(`${group}-grid`); c.innerHTML='';
+            list.forEach((item, idx) => {
+                const reqTier = getRequiredTierForIndex(idx, list.length);
+                const status = getFeatureStatus(reqTier);
+                const isAct = selectedId && myLayers.find(x=>x.id===selectedId)?.anim[group]?.some(x=>x.type===item.id);
+                const previewClass = status === 'PREVIEW' ? 'preview' : '';
+                const previewBadge = status === 'PREVIEW' ? '<div class="preview-badge"></div>' : '';
+                c.innerHTML += `<button onclick="toggleEffect('${group}','${item.id}',${reqTier})" class="fx-btn ${previewClass} ${status==='LOCKED'?'locked':''} ${isAct?'active':''}">${status==='LOCKED'?'<i class="fa-solid fa-lock"></i>':item.icon}<span class="text-[7px]">${item.label||item.id}</span>${previewBadge}</button>`;
+            });
+        }
+        function toggleEffect(g, t, r) { if(!checkPermission(r, t)) return; const l = myLayers.find(x=>x.id===selectedId); if(!l) return; if(!l.anim[g]) l.anim[g] = []; const idx = l.anim[g].findIndex(x=>x.type===t); if(idx>-1) l.anim[g].splice(idx,1); else l.anim[g].push({type:t, speed:10}); renderAll(); updateUIByTier(); updatePropUI(); }
+        function updateEffectSpeed(g, t, v) { const l = myLayers.find(x => x.id === selectedId); if(!l) return; const e = l.anim[g].find(x => x.type === t); if(e) { e.speed = parseInt(v); renderAll(); } }
+        function updatePropUI() { 
+            const l = myLayers.find(x=>x.id===selectedId); if(!l) return; 
+            document.getElementById('p-color').value = l.style.color; document.getElementById('p-size-val').innerText = Math.round(l.style.size)+'%'; 
+            const setBtn = (id, on, txt) => { const b=document.getElementById(id); b.className = on ? "bg-indigo-600 text-white py-3 rounded-xl text-[9px] font-bold" : "bg-slate-800 text-slate-400 py-3 rounded-xl text-[9px] font-bold border border-slate-700"; b.innerText = txt + (on?'ON':'OFF'); }; 
+            setBtn('btn-spin', l.anim.spin.on, 'SPIN: '); setBtn('btn-orbit', l.anim.orbit.on, 'ORBIT: ');
+            const container = document.getElementById('active-stacks-container'); container.innerHTML = '';
+            ['vital','fx','blend'].forEach(group => {
+                if(l.anim[group] && l.anim[group].length > 0) {
+                    l.anim[group].forEach(e => {
+                        const list = group==='vital'?VITAL_TYPES:(group==='fx'?FX_TYPES:BLEND_TYPES); const def = list.find(t => t.id === e.type); if(!def) return;
+                        container.innerHTML += `<div class="bg-slate-800 p-2 rounded-xl border border-slate-700"><div class="flex justify-between items-center mb-1"><span class="text-[9px] font-bold text-slate-300 uppercase">${def.icon} ${def.label || e.type}</span><button onclick="toggleEffect('${group}', '${e.type}', 0)" class="text-rose-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div><div class="flex items-center gap-2"><span class="text-[8px] text-slate-500 w-4">SPD</span><input type="range" min="1" max="20" value="${e.speed || 10}" class="flex-1 h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer" oninput="updateEffectSpeed('${group}', '${e.type}', this.value)"></div></div>`;
+                    });
+                }
+            });
+        }
+        function updateProp(k, v) { const l = myLayers.find(x=>x.id===selectedId); if(l) { l.style[k]=v; renderAll(); } }
+        function toggleMotion(k) { if(!checkPermission(0, k)) return; const l = myLayers.find(x=>x.id===selectedId); if(l) { l.anim[k].on = !l.anim[k].on; updatePropUI(); renderAll(); } }
+        function deleteLayerById(id) { myLayers = myLayers.filter(x=>x.id!==id); if(selectedId===id) closeEdit(); renderAll(); renderLayerList(); }
+        function deleteLayer() { deleteLayerById(selectedId); }
+        function showToast(m, t) { const d = document.createElement('div'); d.className = `px-4 py-2 rounded-full text-xs font-bold text-white shadow-xl ${t==='error'?'bg-rose-500':'bg-indigo-600'}`; d.innerText = m; document.getElementById('toast-container').appendChild(d); setTimeout(()=>d.remove(), 2000); }
+        function renderMarketTabs() { document.getElementById('market-tabs').innerHTML = Object.keys(ASSETS).map(k=>`<button onclick="loadMarket('${k}')" class="px-3 py-1 bg-slate-800 rounded-full text-[10px] text-white uppercase">${k}</button>`).join(''); }
+        function loadMarket(k) { const g = document.getElementById('market-grid'); g.innerHTML=''; ASSETS[k].forEach((item, i)=>{ const req = getRequiredTierForIndex(i, ASSETS[k].length); const stat = getFeatureStatus(req); g.innerHTML += `<div onclick="${stat!=='LOCKED'?`addLayer('${k==='icon'?'icon':'face'}','${item}')`:''}" class="aspect-square bg-slate-800 rounded flex items-center justify-center text-2xl ${stat==='LOCKED'?'opacity-20':''}">${item}</div>`; }); }
+        function openMarket() { document.getElementById('market-modal').style.display='flex'; loadMarket('face'); }
+        function resetToCenter() { if(selectedId) { const l = myLayers.find(x=>x.id===selectedId); l.x=50; l.y=50; renderAll(); } }
+
+        init();
+    </script>
+</body>
+</html>
