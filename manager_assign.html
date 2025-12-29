@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>숙제 출제 모듈</title>
+    <title>숙제 출제 통합 모듈 - 한글 패치판</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -13,12 +13,17 @@
     <script src="config.js"></script>
 
     <style>
+        /* 시스템 기본 폰트 및 레이아웃 설정 */
         body { font-family: 'Pretendard', sans-serif; background: #f8fafc; overflow: hidden; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        /* 학생 카드 컴포넌트 스타일 */
         .student-card { transition: all 0.2s; cursor: pointer; }
         .student-card:hover { transform: translateY(-1px); border-color: #6366f1; }
         .student-card.active { border-color: #4f46e5; background: #eef2ff; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15); }
+        
+        /* 뷰 전환 페이드인 애니메이션 */
         .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -37,52 +42,87 @@
         <main class="flex-1 relative bg-slate-50/30 flex flex-col min-w-0">
             <div id="view-empty" class="flex-1 flex flex-col items-center justify-center text-slate-300 select-none">
                 <i class="fa-solid fa-pen-nib text-4xl mb-4 opacity-20"></i>
-                <p class="text-xs font-bold opacity-50">출제할 학생을 선택하세요</p>
+                <p class="text-xs font-bold opacity-50">출제할 학생을 선택해 주세요</p>
             </div>
             <div id="view-engine" class="flex-1 hidden flex flex-col overflow-hidden animate-fadeIn"></div>
         </main>
     </div>
 
     <script>
-        const STATE = { cid: new URLSearchParams(window.location.search).get('class_id'), student: null, allClasses: [], assignmentCart: [] };
-        const CONSTANTS = { BUCKET: 'homework_attached_images_and_solutions', KAKAO_KEY: 'fbc037a3bf3b2b051428388f154c4ff4' };
+        /**
+         * 전역 상태 관리 (Global State Management)
+         */
+        const STATE = { 
+            cid: new URLSearchParams(window.location.search).get('class_id'), 
+            student: null, 
+            allClasses: [], 
+            assignmentCart: [] 
+        };
+
+        const CONSTANTS = { 
+            BUCKET: 'homework_attached_images_and_solutions', 
+            KAKAO_KEY: 'fbc037a3bf3b2b051428388f154c4ff4' 
+        };
+
         const Util = {
             findClassName: (cid) => {
-                if (!cid) return "Unknown";
+                if (!cid) return "알 수 없음";
                 const found = STATE.allClasses.find(c => String(c.id) === String(cid));
-                return found ? found.name : `Sector #${cid}`;
+                return found ? found.name : `분류 #${cid}`;
             }
         };
 
         const app = {
+            /**
+             * 애플리케이션 초기화 (Initialization)
+             */
             init: async () => {
-                if (!STATE.cid) return alert("Class ID Missing!");
+                if (!STATE.cid) return alert("반 식별자(Class ID)가 누락되었습니다.");
                 try {
                     const { data } = await _supabase.from('classes').select('*');
                     STATE.allClasses = data || [];
-                } catch (e) {}
+                } catch (e) { console.error("클래스 로드 오류:", e); }
                 await app.loadStudents();
                 if (window.Kakao && !Kakao.isInitialized()) Kakao.init(CONSTANTS.KAKAO_KEY);
             },
+
+            /**
+             * 학생 목록 로드 및 필터링 (Data Fetching & Filtering)
+             */
             loadStudents: async () => {
                 const { data: logicList } = await _supabase.from('assignment_and_class_logic').select('*');
                 const { data: userList } = await _supabase.from('users').select('username, name, grade');
+                
                 const enrolled = logicList.filter(l => {
                     let settings = [];
                     try { settings = typeof l.class_settings === 'string' ? JSON.parse(l.class_settings) : l.class_settings; } catch {}
                     return Array.isArray(settings) && settings.some(s => String(s.class_id) === String(STATE.cid));
                 });
+
                 document.getElementById('st-count').innerText = enrolled.length;
                 document.getElementById('student-list').innerHTML = enrolled.map(l => {
                     const u = userList.find(x => x.username === l.student_id);
                     const name = u?.name || l.student_id;
                     const grade = u?.grade || "-";
-                    return `<div onclick="app.selectStudent('${l.student_id}', '${name}', '${grade}')" class="student-card p-3 rounded-xl border border-slate-100 bg-white group flex justify-between items-center mb-1.5" data-name="${name}"><div><p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${grade}</p><p class="name-text text-sm font-bold text-slate-700 transition-colors">${name}</p></div><i class="fa-solid fa-chevron-right text-[10px] text-slate-200 group-hover:text-indigo-400"></i></div>`;
+                    return `
+                        <div onclick="app.selectStudent('${l.student_id}', '${name}', '${grade}')" 
+                             class="student-card p-3 rounded-xl border border-slate-100 bg-white group flex justify-between items-center mb-1.5" 
+                             data-id="${l.student_id}">
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${grade}</p>
+                                <p class="name-text text-sm font-bold text-slate-700 transition-colors">${name}</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-200 group-hover:text-indigo-400"></i>
+                        </div>`;
                 }).join('');
             },
+
+            /**
+             * 학생 선택 시 엔진 렌더링 (State Update & View Rendering)
+             */
             selectStudent: async (id, name, grade) => {
                 STATE.student = { id, name, grade };
-                document.querySelectorAll('.student-card').forEach(el => el.classList.toggle('active', el.dataset.name === name));
+                document.querySelectorAll('.student-card').forEach(el => el.classList.toggle('active', el.dataset.id === id));
                 
                 document.getElementById('view-empty').classList.add('hidden');
                 const container = document.getElementById('view-engine');
@@ -91,15 +131,55 @@
 
                 let logicData = { homework_settings: [] };
                 try {
-                    const { data } = await _supabase.from('assignment_and_class_logic').select('*').eq('student_id', STATE.student.id).maybeSingle();
+                    const { data } = await _supabase.from('assignment_and_class_logic').select('*').eq('student_id', id).maybeSingle();
                     if(data) logicData = data;
-                } catch(e) {}
+                } catch(e) { console.error("로직 로드 오류:", e); }
+                
                 EngineAssign.render(container, logicData);
             }
         };
 
+        /**
+         * 출제 인터페이스 엔진 (Core Interface Engine)
+         */
         const EngineAssign = {
-            render: (container, logicData) => {
+            /**
+             * 최근 숙제 기록 3건 조회 (History Fetching)
+             */
+            fetchRecentHistory: async (studentId) => {
+                try {
+                    const { data, error } = await _supabase
+                        .from('homework_messages')
+                        .select('created_at, content')
+                        .eq('student_id', studentId)
+                        .order('created_at', { ascending: false })
+                        .limit(3);
+                    
+                    if (error) throw error;
+                    if (!data || data.length === 0) return `<div class="p-8 text-center text-[11px] text-slate-300 font-medium italic">최근 숙제 기록이 없습니다.</div>`;
+                    
+                    return data.map(task => {
+                        const date = new Date(task.created_at);
+                        const dateStr = date.toLocaleDateString();
+                        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        return `
+                            <div class="p-3 bg-white border border-slate-100 rounded-lg shadow-sm mb-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">${dateStr}</span>
+                                    <span class="text-[9px] text-slate-400 font-bold">${timeStr}</span>
+                                </div>
+                                <p class="text-xs font-semibold text-slate-600 leading-relaxed break-all">${task.content}</p>
+                            </div>`;
+                    }).join('');
+                } catch (e) {
+                    return `<div class="p-4 text-red-400 text-[10px]">데이터 로드 실패: ${e.message}</div>`;
+                }
+            },
+
+            /**
+             * 화면 렌더링 (Split-View Implementation)
+             */
+            render: async (container, logicData) => {
                 let settings = [];
                 try { settings = typeof logicData.homework_settings === 'string' ? JSON.parse(logicData.homework_settings) : logicData.homework_settings; } catch {}
                 if (!Array.isArray(settings)) settings = [];
@@ -110,82 +190,199 @@
                 const targetName = Util.findClassName(targetId);
                 const currentClassName = Util.findClassName(STATE.cid);
 
+                // 최근 기록 비동기 호출
+                const historyHtml = await EngineAssign.fetchRecentHistory(STATE.student.id);
+
                 container.innerHTML = `
                     <div class="h-full flex flex-col bg-white">
-                        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white shadow-sm z-10">
                             <div>
-                                <h2 class="text-xl font-black text-slate-800"><span class="text-indigo-600">${STATE.student.name}</span> 출제</h2>
-                                <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">FROM: ${currentClassName}</p>
+                                <h2 class="text-xl font-black text-slate-800 tracking-tight"><span class="text-indigo-600">${STATE.student.name}</span> 학생 출제</h2>
+                                <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">현재 반: ${currentClassName}</p>
                             </div>
-                            <div class="text-right"><p class="text-[10px] font-bold text-slate-400 mb-1">검사 예정</p><div class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-md">${targetName}</div></div>
+                            <div class="text-right">
+                                <p class="text-[10px] font-bold text-slate-400 mb-1">검사 예정 반</p>
+                                <div class="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-black shadow-lg">${targetName}</div>
+                            </div>
                         </div>
-                        <div class="flex-1 overflow-y-auto p-6 custom-scroll">
-                            <div class="flex gap-6 h-full">
-                                <div class="flex-1 flex flex-col gap-4">
-                                    <textarea id="task-body" placeholder="지시사항 입력..." class="w-full flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold focus:border-indigo-500 outline-none resize-none placeholder-slate-300"></textarea>
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center gap-2 hover:bg-slate-50"><i class="fa-regular fa-image text-slate-400"></i><span class="text-xs font-bold text-slate-500">사진</span><input type="file" id="img-upload" class="hidden" accept="image/*"></label>
-                                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center gap-2 hover:bg-slate-50"><i class="fa-brands fa-html5 text-slate-400"></i><span class="text-xs font-bold text-slate-500">HTML</span><input type="file" id="html-upload" class="hidden" accept=".html"></label>
-                                    </div>
-                                    <button onclick="EngineAssign.add('${targetId}', '${targetTitle}', '${targetName}')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95">리스트 담기</button>
+
+                        <div class="flex-1 flex overflow-hidden">
+                            
+                            <div class="w-80 bg-slate-50/80 border-r border-slate-200 p-4 overflow-y-auto custom-scroll flex flex-col">
+                                <div class="flex items-center gap-2 mb-4 px-1">
+                                    <i class="fa-solid fa-history text-slate-400 text-xs"></i>
+                                    <span class="text-[11px] font-black text-slate-500 uppercase tracking-widest">최근 출제 숙제 (3건)</span>
                                 </div>
-                                <div class="w-72 bg-slate-50 rounded-xl border border-slate-200 flex flex-col shadow-inner">
-                                    <div class="p-3 border-b border-slate-200 bg-white rounded-t-xl flex justify-between items-center"><span class="text-xs font-black text-slate-500">Ready Queue</span><span id="cart-cnt" class="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-2 rounded">0</span></div>
-                                    <div id="cart-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scroll"></div>
-                                    <div class="p-2 border-t border-slate-200 bg-white rounded-b-xl"><button onclick="EngineAssign.deploy()" id="btn-deploy" disabled class="w-full py-2 bg-slate-200 text-slate-400 rounded-lg font-bold text-xs">전송 불가</button></div>
+                                <div class="flex-1">${historyHtml}</div>
+                            </div>
+
+                            <div class="flex-1 flex overflow-hidden">
+                                <div class="flex-1 flex flex-col p-6 gap-4 overflow-y-auto custom-scroll">
+                                    <div class="flex flex-col flex-1 gap-4">
+                                        <div class="flex items-center gap-2 px-1">
+                                            <i class="fa-solid fa-pen text-indigo-500 text-xs"></i>
+                                            <span class="text-[11px] font-black text-slate-500 uppercase tracking-widest">상세 지시사항</span>
+                                        </div>
+                                        <textarea id="task-body" placeholder="학생에게 전달할 숙제 내용을 입력해 주세요..." class="w-full flex-1 bg-white border border-slate-200 rounded-2xl p-5 text-sm font-bold focus:ring-4 focus:ring-indigo-50/50 focus:border-indigo-500 outline-none resize-none transition-all placeholder-slate-300 shadow-sm"></textarea>
+                                        
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <label class="cursor-pointer border border-slate-200 bg-white rounded-xl p-3 flex items-center justify-center gap-2 hover:bg-slate-50 hover:border-indigo-300 transition-all shadow-sm group">
+                                                <i class="fa-regular fa-image text-slate-400 group-hover:text-indigo-500"></i>
+                                                <span class="text-[11px] font-bold text-slate-500">사진 첨부</span>
+                                                <input type="file" id="img-upload" class="hidden" accept="image/*">
+                                            </label>
+                                            <label class="cursor-pointer border border-slate-200 bg-white rounded-xl p-3 flex items-center justify-center gap-2 hover:bg-slate-50 hover:border-indigo-300 transition-all shadow-sm group">
+                                                <i class="fa-brands fa-html5 text-slate-400 group-hover:text-indigo-500"></i>
+                                                <span class="text-[11px] font-bold text-slate-500">HTML 지시서</span>
+                                                <input type="file" id="html-upload" class="hidden" accept=".html">
+                                            </label>
+                                        </div>
+                                        
+                                        <button onclick="EngineAssign.add('${targetId}', '${targetTitle}', '${targetName}')" 
+                                                class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-100 transition-all active:scale-[0.98]">
+                                            리스트에 담기
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="w-72 bg-white border-l border-slate-100 flex flex-col">
+                                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">출제 대기열</span>
+                                        <span id="cart-cnt" class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md">0</span>
+                                    </div>
+                                    <div id="cart-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll"></div>
+                                    <div class="p-4 bg-slate-50 border-t border-slate-100">
+                                        <button onclick="EngineAssign.deploy()" id="btn-deploy" disabled 
+                                                class="w-full py-3 bg-slate-200 text-slate-400 rounded-xl font-black text-xs transition-all">
+                                            출제 불가
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>`;
                 EngineAssign.refreshCart();
             },
+
+            /**
+             * 대기열 추가 로직 (Cart Interaction)
+             */
             add: (targetId, targetTitle, targetName) => {
                 const body = document.getElementById('task-body').value;
                 const img = document.getElementById('img-upload').files[0];
                 const html = document.getElementById('html-upload').files[0];
-                if (!body) return alert("내용을 입력해주세요.");
-                STATE.assignmentCart.push({ sid: STATE.student.id, name: STATE.student.name, cid: String(STATE.cid), checkClassId: String(targetId), checkTitle: targetTitle, targetName: targetName, content: body, imgFile: img, htmlFile: html });
+                
+                if (!body.trim()) return alert("오류: 지시사항 내용을 입력해야 합니다.");
+
+                STATE.assignmentCart.push({ 
+                    sid: STATE.student.id, 
+                    name: STATE.student.name, 
+                    cid: String(STATE.cid), 
+                    checkClassId: String(targetId), 
+                    checkTitle: targetTitle, 
+                    targetName: targetName, 
+                    content: body, 
+                    imgFile: img, 
+                    htmlFile: html 
+                });
+
                 document.getElementById('task-body').value = "";
+                document.getElementById('img-upload').value = "";
+                document.getElementById('html-upload').value = "";
                 EngineAssign.refreshCart();
             },
+
+            /**
+             * 대기열 상태 동기화 (UI Sync)
+             */
             refreshCart: () => {
                 const list = document.getElementById('cart-list');
                 const btn = document.getElementById('btn-deploy');
                 document.getElementById('cart-cnt').innerText = STATE.assignmentCart.length;
+
                 if (STATE.assignmentCart.length === 0) {
-                    list.innerHTML = `<div class="h-full flex items-center justify-center text-slate-300 text-xs italic">대기열 없음</div>`;
+                    list.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-300 text-[10px] font-bold opacity-40 italic">대기 중인 숙제가 없습니다</div>`;
                     btn.disabled = true;
-                    btn.className = "w-full py-2 bg-slate-200 text-slate-400 rounded-lg font-bold text-xs";
-                    btn.innerText = "전송 불가";
+                    btn.className = "w-full py-3 bg-slate-200 text-slate-400 rounded-xl font-black text-xs";
+                    btn.innerText = "출제 불가";
                 } else {
-                    list.innerHTML = STATE.assignmentCart.map((item, i) => `<div class="bg-white border border-slate-200 p-2 rounded-lg relative group"><button onclick="STATE.assignmentCart.splice(${i},1); EngineAssign.refreshCart()" class="absolute top-1 right-1 text-slate-300 hover:text-red-500">×</button><span class="text-[9px] bg-slate-100 text-slate-500 px-1 rounded">To: ${item.targetName}</span><p class="text-xs font-bold text-slate-700 mt-1 truncate">${item.content}</p></div>`).join('');
+                    list.innerHTML = STATE.assignmentCart.map((item, i) => `
+                        <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl relative group animate-fadeIn">
+                            <button onclick="STATE.assignmentCart.splice(${i},1); EngineAssign.refreshCart()" class="absolute -top-2 -right-2 w-5 h-5 bg-white border border-slate-200 text-slate-400 hover:text-red-500 rounded-full flex items-center justify-center text-xs shadow-sm">×</button>
+                            <span class="text-[8px] font-black bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-sm uppercase mb-2 inline-block">대상: ${item.targetName}</span>
+                            <p class="text-[11px] font-bold text-slate-700 truncate">${item.content}</p>
+                        </div>`).join('');
                     btn.disabled = false;
-                    btn.className = "w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs shadow-md";
-                    btn.innerText = `전송 (${STATE.assignmentCart.length})`;
+                    btn.className = "w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs shadow-lg shadow-indigo-100 active:scale-[0.97]";
+                    btn.innerText = `숙제 최종 전송 (${STATE.assignmentCart.length})`;
                 }
             },
+
+            /**
+             * 최종 출제 실행 (Deployment & DB Injection)
+             */
             deploy: async () => {
                 if (STATE.assignmentCart.length === 0) return;
                 const btn = document.getElementById('btn-deploy');
-                btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 처리 중...';
+                btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 전송 중...';
                 btn.disabled = true;
+
                 try {
                     const payloads = await Promise.all(STATE.assignmentCart.map(async (item) => {
                         let iUrl = null, hUrl = null;
-                        if (item.imgFile) { const path = `images/${Date.now()}_${Math.random().toString(36).substr(2,5)}.${item.imgFile.name.split('.').pop()}`; await _supabase.storage.from(CONSTANTS.BUCKET).upload(path, item.imgFile); iUrl = _supabase.storage.from(CONSTANTS.BUCKET).getPublicUrl(path).data.publicUrl; }
-                        if (item.htmlFile) { const path = `solutions/${Date.now()}_${Math.random().toString(36).substr(2,5)}.html`; await _supabase.storage.from(CONSTANTS.BUCKET).upload(path, item.htmlFile); hUrl = _supabase.storage.from(CONSTANTS.BUCKET).getPublicUrl(path).data.publicUrl; }
-                        return { class_id: item.cid, student_id: item.sid, content: item.content, status: 'pending', teacher_images: iUrl ? [iUrl] : null, teacher_html: hUrl || null, kName: item.name, kTargetName: item.targetName };
+                        
+                        if (item.imgFile) {
+                            const path = `images/${Date.now()}_${Math.random().toString(36).substr(2,5)}.${item.imgFile.name.split('.').pop()}`;
+                            await _supabase.storage.from(CONSTANTS.BUCKET).upload(path, item.imgFile);
+                            iUrl = _supabase.storage.from(CONSTANTS.BUCKET).getPublicUrl(path).data.publicUrl;
+                        }
+                        
+                        if (item.htmlFile) {
+                            const path = `solutions/${Date.now()}_${Math.random().toString(36).substr(2,5)}.html`;
+                            await _supabase.storage.from(CONSTANTS.BUCKET).upload(path, item.htmlFile);
+                            hUrl = _supabase.storage.from(CONSTANTS.BUCKET).getPublicUrl(path).data.publicUrl;
+                        }
+
+                        return { 
+                            class_id: item.cid, 
+                            student_id: item.sid, 
+                            content: item.content, 
+                            status: 'pending', 
+                            teacher_images: iUrl ? [iUrl] : null, 
+                            teacher_html: hUrl || null,
+                            kName: item.name, 
+                            kTargetName: item.targetName 
+                        };
                     }));
+
                     const { error } = await _supabase.from('homework_messages').insert(payloads.map(({kName, kTargetName, ...rest}) => rest));
                     if (error) throw error;
+
                     if (window.Kakao) {
-                        const fullContentBody = payloads.map((p) => `■ ${p.kName} (To: ${p.kTargetName})\n└ 지시사항: ${p.content}`).join('\n\n━━━━━━━━━━━━━━\n\n');
-                        Kakao.Share.sendDefault({ objectType: 'text', text: `[숙제 출제 명령서] ${new Date().toLocaleDateString()}\n총 ${payloads.length}건 하달\n\n${fullContentBody}\n\n[이상 전달 끝]`, link: { mobileWebUrl: location.href, webUrl: location.href }, buttonTitle: 'HQ 접속하기' });
+                        const fullContentBody = payloads.map((p) => `■ ${p.kName} (반: ${p.kTargetName})\n└ 내용: ${p.content}`).join('\n\n━━━━━━━━━━━━━━\n\n');
+                        Kakao.Share.sendDefault({
+                            objectType: 'text',
+                            text: `[숙제 출제 명령] ${new Date().toLocaleDateString()}\n총 ${payloads.length}건 배정 완료\n\n${fullContentBody}\n\n[이상 전달 끝]`,
+                            link: { mobileWebUrl: location.href, webUrl: location.href },
+                            buttonTitle: '콘솔 접속하기'
+                        });
                     }
-                    alert("출제 완료!"); STATE.assignmentCart = []; EngineAssign.refreshCart();
-                } catch (e) { alert("오류: " + e.message); btn.disabled = false; btn.innerText = "재시도"; }
+
+                    alert("성공적으로 출제되었습니다!");
+                    STATE.assignmentCart = [];
+                    EngineAssign.refreshCart();
+                    app.selectStudent(STATE.student.id, STATE.student.name, STATE.student.grade);
+
+                } catch (e) {
+                    console.error("전송 오류:", e);
+                    alert("출제 실패: " + e.message);
+                    btn.disabled = false;
+                    btn.innerText = "재시도";
+                }
             }
         };
+
         window.onload = app.init;
     </script>
 </body>
