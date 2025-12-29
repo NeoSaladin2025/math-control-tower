@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HQ Integrated Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        /* 기본 폰트 설정 및 전체 화면 오버플로우 방지 */
+        body { font-family: 'Pretendard', sans-serif; overflow: hidden; }
+        
+        /* 네비게이션 아이템의 애니메이션 및 기본 불투명도 설정 */
+        .nav-item { transition: all 0.2s ease-in-out; border-bottom: 3px solid transparent; opacity: 0.6; }
+        
+        /* 마우스 커서를 올렸을 때의 시각적 피드백 */
+        .nav-item:hover { opacity: 1; background-color: #f8fafc; }
+        
+        /* 현재 활성화된 메뉴를 강조하는 디자인 */
+        .nav-item.active { border-bottom-color: #4f46e5; color: #4f46e5; opacity: 1; font-weight: 800; }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-slate-50">
+
+    <header class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-50 shadow-sm">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white shadow-md">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <span class="font-black text-slate-700 tracking-tight text-lg">HQ CONSOLE</span>
+        </div>
+
+        <nav class="flex h-full gap-1">
+            <button onclick="switchTab('DAILY')" id="tab-daily" class="nav-item active px-6 h-full flex items-center gap-2 text-sm font-bold text-slate-600">
+                <i class="fa-solid fa-calendar-check"></i> 일일 관리
+            </button>
+            
+            <button onclick="switchTab('STATS')" id="tab-stats" class="nav-item px-6 h-full flex items-center gap-2 text-sm font-bold text-slate-600">
+                <i class="fa-solid fa-chart-line"></i> 개인 통계 데이터 센터
+            </button>
+            
+            <button onclick="switchTab('ASSIGN')" id="tab-assign" class="nav-item px-6 h-full flex items-center gap-2 text-sm font-bold text-slate-600">
+                <i class="fa-solid fa-pen-nib"></i> 숙제 출제
+            </button>
+            
+            <button onclick="switchTab('INSPECT')" id="tab-inspect" class="nav-item px-6 h-full flex items-center gap-2 text-sm font-bold text-slate-600">
+                <i class="fa-solid fa-magnifying-glass"></i> 숙제 검사
+            </button>
+        </nav>
+
+        <div class="w-24 text-right">
+            <button onclick="window.close()" class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-power-off text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 bg-slate-100 relative">
+        <iframe id="main-frame" src="" class="w-full h-full border-none" allow="camera; microphone"></iframe>
+    </main>
+
+    <script>
+        /**
+         * switchTab 함수
+         * @param {string} mode - 전환하고자 하는 메뉴의 식별값
+         * 각 버튼 클릭 시 해당 페이지를 iframe에 로드하고 탭 스타일을 변경합니다.
+         */
+        function switchTab(mode) {
+            // 1. 모든 메뉴 버튼의 '활성화(active)' 클래스를 제거하여 초기화합니다.
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            const frame = document.getElementById('main-frame');
+            let targetFile = "";
+
+            // 2. 입력된 모드에 따라 불러올 파일명을 결정합니다.
+            if (mode === 'DAILY') {
+                document.getElementById('tab-daily').classList.add('active');
+                targetFile = "class_scheduler_student-daily.html"; // 일일 관리 파일
+            } 
+            else if (mode === 'STATS') {
+                document.getElementById('tab-stats').classList.add('active');
+                targetFile = "manager_student_stats_center.html"; // 신규 데이터 센터 파일
+            } 
+            else if (mode === 'ASSIGN') {
+                document.getElementById('tab-assign').classList.add('active');
+                targetFile = "manager_assign.html"; // 숙제 출제 파일
+            } 
+            else if (mode === 'INSPECT') {
+                document.getElementById('tab-inspect').classList.add('active');
+                targetFile = "manager_inspect.html"; // 숙제 검사 파일
+            }
+
+            // 3. 브라우저 주소창에 있는 파라미터(예: ?class_id=123)를 유지하여 하위 파일에 전달합니다.
+            const params = window.location.search; 
+            frame.src = targetFile + params;
+            
+            // 개발자 도구에서 전환 확인을 위한 로그 출력
+            console.info(`[System] Switched to ${mode} mode. Target: ${targetFile}`);
+        }
+
+        /**
+         * 초기 로딩 시 기본 탭 설정
+         * 페이지가 처음 열릴 때 자동으로 '일일 관리' 화면을 띄워줍니다.
+         */
+        window.onload = () => {
+            switchTab('DAILY');
+        }
+    </script>
+</body>
+</html>

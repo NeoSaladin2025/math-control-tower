@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Data Analytics Center | Admin Console</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f1f5f9; overflow: hidden; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* 학생 리스트 스타일 */
+        .student-item { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-left: 4px solid transparent; }
+        .student-item.selected { border-left-color: #4f46e5 !important; background-color: #eef2ff !important; }
+        
+        /* 내비게이션 탭 스타일 */
+        .nav-tab { transition: all 0.3s; position: relative; cursor: pointer; color: #94a3b8; }
+        .nav-tab.active { color: #1e293b; }
+        .nav-tab.active::after { 
+            content: ''; position: absolute; bottom: -24px; left: 0; width: 100%; height: 3px; 
+            background: #4f46e5; border-radius: 10px;
+        }
+
+        /* 리포트 탭 전용 포인트 컬러 */
+        .nav-tab#tab-report.active { color: #059669 !important; }
+        .nav-tab#tab-report.active::after { background: #059669 !important; }
+
+        /* [잠금 로직] 4번 엔진에서 미분석 시 블러 처리  */
+        .engine-lock-blur { filter: blur(15px); pointer-events: none; user-select: none; opacity: 0.4; transition: all 0.5s; }
+        .lock-indicator { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; background: rgba(255,255,255,0.7); border-radius: 40px; }
+
+        .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .no-select { user-select: none; }
+    </style>
+</head>
+<body class="h-screen flex text-slate-900">
+
+    <aside class="w-80 bg-white border-r border-slate-200 flex flex-col shrink-0 z-10 shadow-sm">
+        <div class="p-6 border-b bg-slate-50/30 text-center">
+            <h2 class="text-sm font-black text-slate-800 uppercase tracking-tight">학생 관리 리스트</h2>
+            <span id="student-count" class="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg mt-2 inline-block italic">데이터 로딩중</span>
+        </div>
+        <nav id="student-list" class="flex-1 overflow-y-auto p-4 custom-scroll space-y-1"></nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+        
+        <header class="h-24 bg-white border-b border-slate-200 flex justify-between items-center px-10 shrink-0 z-20 shadow-sm">
+            <div class="flex items-center gap-10 h-full">
+                <div onclick="window.HQTabManager.switchTab('attendance')" id="tab-attendance" class="nav-tab active flex items-center gap-3 h-full group">
+                    <i class="fa-solid fa-calendar-check text-lg"></i>
+                    <span class="text-sm font-black tracking-tighter uppercase">출결 분석 센터</span>
+                </div>
+                <div onclick="window.HQTabManager.switchTab('homework')" id="tab-homework" class="nav-tab flex items-center gap-3 h-full group">
+                    <i class="fa-solid fa-book-open-reader text-lg"></i>
+                    <span class="text-sm font-black tracking-tighter uppercase">숙제 이행 센터</span>
+                </div>
+                <div onclick="window.HQTabManager.switchTab('report')" id="tab-report" class="nav-tab flex items-center gap-3 h-full group">
+                    <i class="fa-solid fa-print text-lg"></i>
+                    <span class="text-sm font-black tracking-tighter uppercase">통합 보고서 출력 센터</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3 bg-slate-100 p-2.5 rounded-2xl border border-slate-200">
+                <div class="flex items-center gap-2 px-3 border-r border-slate-200">
+                    <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">From</span>
+                    <input type="date" id="start-date" class="bg-transparent text-xs font-black outline-none text-slate-700" value="2025-12-01">
+                </div>
+                <div class="flex items-center gap-2 px-3">
+                    <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">To</span>
+                    <input type="date" id="end-date" class="bg-transparent text-xs font-black outline-none text-slate-700" value="2025-12-31">
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-12 bg-slate-50/50 custom-scroll relative">
+            <div id="main-view-container" class="bg-white rounded-[48px] border border-slate-200 min-h-[720px] flex flex-col shadow-sm transition-all overflow-hidden relative">
+                <div class="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
+                    <i class="fa-solid fa-id-card-clip text-8xl opacity-10"></i>
+                    <p class="font-black text-base uppercase tracking-widest italic text-slate-400 tracking-tighter">분석 대상을 선택해 주십시오 💋</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="report-modal-overlay" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center animate-fadeIn"></div>
+
+    <script src="config.js"></script>
+    <script src="manager_student_stats_center/student_fetcher.js"></script>
+    <script src="manager_student_stats_center/student_stats_engine.js"></script>
+    <script src="manager_student_stats_center/homework_stats_engine.js"></script>
+    <script src="manager_student_stats_center/report_stats_engine.js"></script>
+
+    <script>
+        /**
+         * @namespace HQTabManager
+         * @description 통합 통제소: 탭 전환 시 엔진 교체 및 데이터 연동 로직
+         */
+        window.HQTabManager = {
+            currentTab: 'attendance',
+
+            switchTab(tabName) {
+                console.log(`[통제소] 탭 전환 명령: ${tabName}`);
+                this.currentTab = tabName;
+
+                // 탭 UI 스타일 갱신
+                document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+                const activeTab = document.getElementById(`tab-${tabName}`);
+                if (activeTab) activeTab.classList.add('active');
+
+                // 학생이 선택된 상태라면 즉시 해당 엔진 재가동
+                if (window.StudentFetcher && window.StudentFetcher.selectedStudentId) {
+                    this.renderActiveEngine();
+                }
+            },
+
+            /**
+             * @function renderActiveEngine
+             * @description 현재 활성화된 탭의 엔진에 분석 명령을 내림 
+             */
+            renderActiveEngine() {
+                const studentId = window.StudentFetcher.selectedStudentId;
+                if (!studentId) return;
+
+                const container = document.getElementById('main-view-container');
+                container.classList.remove('animate-fadeIn');
+                void container.offsetWidth; // 강제 리플로우로 애니메이션 초기화
+                container.classList.add('animate-fadeIn');
+
+                // 탭 이름에 따른 엔진 분기 처리 
+                if (this.currentTab === 'attendance') {
+                    window.StudentStatsEngine.loadAndRender(studentId);
+                } else if (this.currentTab === 'homework') {
+                    window.HomeworkStatsEngine.loadAndRender(studentId);
+                } else if (this.currentTab === 'report') {
+                    // 4번 리포트 엔진 기동!
+                    window.ReportStatsEngine.loadAndRender(studentId);
+                }
+            }
+        };
+
+        // 날짜 필터 변경 이벤트 전역 바인딩
+        document.addEventListener('DOMContentLoaded', () => {
+            ['start-date', 'end-date'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    if (window.StudentFetcher && window.StudentFetcher.selectedStudentId) {
+                        window.HQTabManager.renderActiveEngine();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

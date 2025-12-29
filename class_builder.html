@@ -3,9 +3,6 @@
 <head>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    
-    <link rel="manifest" href="site.webmanifest">
-    
     <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <title>수업 관리 시스템 - Administrator</title>
@@ -13,28 +10,25 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* [Elite System UI] */
         body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 1.5rem; user-select: none; }
-        
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-        
         .grade-btn {
             min-width: 65px; padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 13px; 
             background: white; border: 2px solid #e2e8f0; color: #64748b; 
             box-shadow: 0 4px 0 #cbd5e1; transition: all 0.1s; cursor: pointer; text-align: center;
         }
         .grade-btn:active { transform: translateY(4px); box-shadow: none; }
-        .grade-btn.active {
-            background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #3730a3; color: white; box-shadow: 0 4px 0 #312e81;
-        }
-
+        .grade-btn.active { background: linear-gradient(135deg, #6366f1, #4338ca); border-color: #3730a3; color: white; box-shadow: 0 4px 0 #312e81; }
         .drive-badge { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; }
         .conflict-warning { color: #ef4444; font-size: 11px; font-weight: 800; animation: shake 0.4s ease-in-out; }
-        
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
         @keyframes spawn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         .animate-spawn { animation: spawn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        /* 추가된 스타일 */
+        .slot-card { background: #f1f5f9; border-radius: 20px; padding: 15px; border: 1px solid #e2e8f0; position: relative; }
+        .slot-delete { position: absolute; right: -8px; top: -8px; background: #ff4444; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; items-center: center; justify-content: center; font-size: 12px; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -61,8 +55,8 @@
     </div>
 
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex justify-center items-center p-4">
-        <div class="bg-white w-full max-w-[450px] rounded-[32px] shadow-2xl p-8 border border-slate-100">
-            <div class="flex justify-between items-start mb-6">
+        <div class="bg-white w-full max-w-[480px] max-h-[90vh] overflow-hidden rounded-[32px] shadow-2xl border border-slate-100 flex flex-col">
+            <div class="p-8 pb-4 flex justify-between items-start shrink-0">
                 <div>
                     <h3 class="text-xl font-black text-slate-800" id="modal-title-text">수업 정보 설정</h3>
                     <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Class Configuration</p>
@@ -70,28 +64,21 @@
                 <button onclick="closeModal('edit-modal')" class="text-slate-300 hover:text-slate-500 text-2xl transition">×</button>
             </div>
             
-            <div class="space-y-5">
+            <div class="flex-1 overflow-y-auto custom-scroll p-8 pt-0 space-y-6">
                 <div>
                     <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">수업 명칭</label>
                     <input type="text" id="cls-name" placeholder="예: 고등 수학(상) 심화반" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none focus:border-indigo-500 font-bold text-slate-700 transition">
                 </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="col-span-2">
-                        <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">요일 선택</label>
-                        <select id="cls-day" onchange="validateTime()" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 cursor-pointer">
-                            <option value="월요일">월요일</option><option value="화요일">화요일</option><option value="수요일">수요일</option>
-                            <option value="목요일">목요일</option><option value="금요일">금요일</option><option value="토요일">토요일</option><option value="일요일">일요일</option>
-                        </select>
+
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center ml-1">
+                        <label class="text-[11px] font-black text-slate-400 uppercase">강의 시간표 설정</label>
+                        <button onclick="addTimeSlot()" class="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-black hover:bg-indigo-600 hover:text-white transition">
+                            <i class="fa-solid fa-plus mr-1"></i> 추가
+                        </button>
                     </div>
-                    <div>
-                        <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">시작 시간</label>
-                        <input type="time" id="cls-start" onchange="validateTime()" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-black text-slate-400 mb-1 uppercase ml-1">종료 시간</label>
-                        <input type="time" id="cls-end" onchange="validateTime()" class="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl outline-none font-bold text-slate-700 cursor-pointer">
-                    </div>
+                    <div id="slots-container" class="space-y-4">
+                        </div>
                 </div>
 
                 <div id="time-error" class="hidden conflict-warning bg-red-50 p-3 rounded-xl border border-red-100 flex items-center gap-2">
@@ -107,7 +94,7 @@
                 </div>
             </div>
 
-            <div class="flex gap-3 mt-8">
+            <div class="p-8 pt-4 flex gap-3 shrink-0">
                 <button onclick="closeModal('edit-modal')" class="flex-1 bg-slate-100 text-slate-400 font-black py-4 rounded-2xl hover:bg-slate-200 transition">취소</button>
                 <button id="btn-save" onclick="saveClass()" disabled class="flex-1 bg-slate-300 text-white font-black py-4 rounded-2xl cursor-not-allowed transition">검증 대기중</button>
             </div>
@@ -120,8 +107,7 @@
                 <h3 class="text-2xl font-black text-slate-800" id="assign-modal-title">수강생 배정</h3>
                 <button onclick="closeModal('assign-modal')" class="text-slate-300 hover:text-slate-500 text-3xl transition">×</button>
             </div>
-            
-            <div class="flex gap-2 overflow-x-auto pb-4 mb-2 shrink-0 scrollbar-hide" id="grade-tabs">
+            <div class="flex gap-2 overflow-x-auto pb-4 mb-2 shrink-0" id="grade-tabs">
                 <button onclick="filterGrade('all')" id="tab-all" class="grade-btn active">전체</button>
                 <button onclick="filterGrade('중1')" id="tab-중1" class="grade-btn">중1</button>
                 <button onclick="filterGrade('중2')" id="tab-중2" class="grade-btn">중2</button>
@@ -130,41 +116,24 @@
                 <button onclick="filterGrade('고2')" id="tab-고2" class="grade-btn">고2</button>
                 <button onclick="filterGrade('고3')" id="tab-고3" class="grade-btn">고3</button>
             </div>
-
             <div class="relative mb-4 shrink-0">
                 <i class="fa-solid fa-search absolute left-4 top-4 text-slate-300"></i>
                 <input type="text" id="member-search" oninput="renderStudentPool()" placeholder="이름 검색..." class="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-indigo-500 transition">
             </div>
-
             <div class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-2" id="student-pool"></div>
             <button onclick="closeModal('assign-modal')" class="mt-6 w-full bg-slate-800 text-white font-black py-5 rounded-[24px] hover:bg-slate-900 transition shadow-lg active:scale-95">설정 완료</button>
         </div>
     </div>
 
     <script>
-        /**
-         * [Class Management Core Logic]
-         * Provides CRUD operations, time conflict validation, and DB synchronization.
-         */
         let classes = [], students = [], currentClassId = null, currentGrade = 'all', currentMemberSet = new Set();
+        let timeSlots = []; // Multi-slot management
 
         async function init() {
             try {
-                // Fetch Classes (Latest first)
                 const { data: c, error: cErr } = await _supabase.from('classes').select('*').order('id', {ascending: false});
                 const { data: s, error: sErr } = await _supabase.from('users').select('username, name, grade').eq('role', 'student').order('name');
-                
-                if (cErr) {
-                    console.error("DB Error:", cErr);
-                    // Provide clear feedback if schema is missing
-                    if(cErr.code === '42P01' || cErr.code === '42703') {
-                        alert("시스템 초기화 필요: 데이터베이스 구조가 최신이 아닙니다. SQL 업데이트를 진행해주세요.");
-                    } else {
-                        alert(`데이터 로드 오류: ${cErr.message}`);
-                    }
-                    throw cErr;
-                }
-                
+                if (cErr) throw cErr;
                 classes = c || []; 
                 students = s || [];
                 renderGrid();
@@ -176,15 +145,19 @@
         function renderGrid() {
             const grid = document.getElementById('class-grid');
             if (classes.length === 0) {
-                grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-400 font-medium">등록된 수업이 없습니다.<br>우측 상단의 버튼을 눌러 개설해주세요.</div>';
+                grid.innerHTML = '<div class="col-span-full py-20 text-center text-slate-400 font-medium">등록된 수업이 없습니다.</div>';
                 return;
             }
-
-            grid.innerHTML = classes.map((c, index) => `
+            grid.innerHTML = classes.map((c, index) => {
+                // schedules JSONB가 있으면 멀티 표시, 없으면 기존 단일 표시
+                const multiSlots = (c.schedules && c.schedules.length > 0) ? c.schedules : [{day: c.day_of_week, start: c.start_time, end: c.end_time}];
+                const slotText = multiSlots.map(s => `${s.day.charAt(0)} ${s.start}~${s.end}`).join(' | ');
+                
+                return `
                 <div class="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all group relative animate-spawn" style="animation-delay: ${index * 0.05}s">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-wide">
-                            ${c.day_of_week} <span class="mx-1 text-indigo-300">|</span> ${c.start_time || '00:00'} ~ ${c.end_time || '00:00'}
+                        <span class="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-tight truncate max-w-[180px]">
+                            ${slotText}
                         </span>
                         ${c.google_folder_id ? `<span class="drive-badge"><i class="fa-brands fa-google-drive mr-1"></i>Linked</span>` : ''}
                     </div>
@@ -196,32 +169,89 @@
                             <button onclick="deleteClass(${c.id})" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
+        }
+
+        // --- Time Slot Logic ---
+        function addTimeSlot(day = '월요일', start = '14:00', end = '16:00') {
+            const id = Date.now() + Math.random();
+            timeSlots.push({ id, day, start, end });
+            renderSlots();
+            validateTime();
+        }
+
+        function removeSlot(id) {
+            if (timeSlots.length <= 1) return alert("최소 한 개의 시간표는 필요해요! ");
+            timeSlots = timeSlots.filter(s => s.id !== id);
+            renderSlots();
+            validateTime();
+        }
+
+        function updateSlot(id, field, value) {
+            const slot = timeSlots.find(s => s.id === id);
+            if (slot) slot[field] = value;
+            validateTime();
+        }
+
+        function renderSlots() {
+            const container = document.getElementById('slots-container');
+            container.innerHTML = timeSlots.map(s => `
+                <div class="slot-card animate-spawn">
+                    <button onclick="removeSlot(${s.id})" class="slot-delete"><i class="fa-solid fa-xmark"></i></button>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select onchange="updateSlot(${s.id}, 'day', this.value)" class="col-span-2 bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold outline-none">
+                            ${['월요일','화요일','수요일','목요일','금요일','토요일','일요일'].map(d => `<option value="${d}" ${s.day === d ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                        <input type="time" value="${s.start}" onchange="updateSlot(${s.id}, 'start', this.value)" class="bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold outline-none">
+                        <input type="time" value="${s.end}" onchange="updateSlot(${s.id}, 'end', this.value)" class="bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold outline-none">
+                    </div>
+                </div>
+            `).join('');
         }
 
         function validateTime() {
-            const day = document.getElementById('cls-day').value;
-            const start = document.getElementById('cls-start').value;
-            const end = document.getElementById('cls-end').value;
             const errorDiv = document.getElementById('time-error');
             const errorMsg = document.getElementById('error-msg');
+            let hasConflict = false;
 
-            if (!start || !end) { setSaveButton(false, "시간을 입력하세요"); return; }
-            if (start >= end) { errorDiv.classList.remove('hidden'); errorMsg.innerText = "종료 시간이 시작보다 빨라요!"; setSaveButton(false, "시간 설정 오류"); return; }
+            // 1. 내부 슬롯 간 충돌 검증
+            for (let i = 0; i < timeSlots.length; i++) {
+                const a = timeSlots[i];
+                if (a.start >= a.end) {
+                    showError("종료 시간이 시작 시간보다 빨라요! ");
+                    return;
+                }
+                for (let j = i + 1; j < timeSlots.length; j++) {
+                    const b = timeSlots[j];
+                    if (a.day === b.day && (a.start < b.end && a.end > b.start)) {
+                        showError("현재 설정 중인 시간표끼리 겹칩니다! ");
+                        return;
+                    }
+                }
+            }
 
-            const conflict = classes.find(c => {
-                if (currentClassId && c.id === currentClassId) return false;
-                if (c.day_of_week !== day) return false;
-                return (start < c.end_time) && (end > c.start_time);
-            });
+            // 2. 다른 수업과의 충돌 검증
+            for (const slot of timeSlots) {
+                const conflict = classes.find(c => {
+                    if (currentClassId && c.id === currentClassId) return false;
+                    // 타겟 수업의 schedules 또는 단일 컬럼 체크
+                    const targetSlots = (c.schedules && c.schedules.length > 0) ? c.schedules : [{day: c.day_of_week, start: c.start_time, end: c.end_time}];
+                    return targetSlots.some(ts => ts.day === slot.day && (slot.start < ts.end && slot.end > ts.start));
+                });
+                if (conflict) {
+                    showError(`[${conflict.name}] 수업과 시간이 겹칩니다!`);
+                    return;
+                }
+            }
 
-            if (conflict) {
+            errorDiv.classList.add('hidden');
+            setSaveButton(true, currentClassId ? "수정사항 저장" : "개설 완료");
+
+            function showError(msg) {
                 errorDiv.classList.remove('hidden');
-                errorMsg.innerText = `[${conflict.name}] 수업과 시간이 겹칩니다.`;
-                setSaveButton(false, "중복 발생");
-            } else {
-                errorDiv.classList.add('hidden');
-                setSaveButton(true, currentClassId ? "수정사항 저장" : "개설 완료");
+                errorMsg.innerText = msg;
+                setSaveButton(false, "검증 실패");
             }
         }
 
@@ -229,29 +259,35 @@
             const btn = document.getElementById('btn-save');
             btn.disabled = !enabled;
             btn.innerText = text;
-            btn.className = enabled ? "flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition transform active:scale-95" : "flex-1 bg-slate-300 text-white font-black py-4 rounded-2xl cursor-not-allowed transition";
+            btn.className = enabled ? "flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-indigo-700 transition transform active:scale-95" : "flex-1 bg-slate-300 text-white font-black py-4 rounded-2xl cursor-not-allowed transition";
         }
 
         async function openEditModal(mode, id = null) {
             currentClassId = id;
+            timeSlots = [];
             const modal = document.getElementById('edit-modal');
             const title = document.getElementById('modal-title-text');
+            
             if(mode === 'update') {
                 const c = classes.find(x => x.id === id);
                 title.innerText = "수업 정보 수정";
                 document.getElementById('cls-name').value = c.name;
-                document.getElementById('cls-day').value = c.day_of_week;
-                document.getElementById('cls-start').value = c.start_time;
-                document.getElementById('cls-end').value = c.end_time;
                 document.getElementById('cls-google-id').value = c.google_folder_id || '';
+                
+                // 기존 데이터 불러오기 (schedules 우선)
+                if (c.schedules && c.schedules.length > 0) {
+                    timeSlots = c.schedules.map(s => ({ ...s, id: Math.random() }));
+                } else {
+                    timeSlots = [{ id: Math.random(), day: c.day_of_week, start: c.start_time, end: c.end_time }];
+                }
             } else {
                 title.innerText = "신규 수업 개설";
                 document.getElementById('cls-name').value = '';
-                document.getElementById('cls-day').value = '월요일';
-                document.getElementById('cls-start').value = '14:00';
-                document.getElementById('cls-end').value = '16:00';
                 document.getElementById('cls-google-id').value = '';
+                timeSlots = [{ id: Math.random(), day: '월요일', start: '14:00', end: '16:00' }];
             }
+            
+            renderSlots();
             modal.classList.remove('hidden');
             validateTime();
         }
@@ -260,107 +296,88 @@
             const name = document.getElementById('cls-name').value.trim();
             if(!name) return alert("수업 명칭을 입력해주세요.");
 
+            // 첫 번째 슬롯은 기존 컬럼 호환용, 전체는 schedules에 JSON으로
+            const firstSlot = timeSlots[0];
             const payload = { 
                 name, 
-                day_of_week: document.getElementById('cls-day').value, 
-                start_time: document.getElementById('cls-start').value, 
-                end_time: document.getElementById('cls-end').value, 
+                day_of_week: firstSlot.day, 
+                start_time: firstSlot.start, 
+                end_time: firstSlot.end, 
+                schedules: timeSlots.map(({day, start, end}) => ({day, start, end})),
                 google_folder_id: document.getElementById('cls-google-id').value.trim() || null
             };
 
             const btn = document.getElementById('btn-save');
-            const originalText = btn.innerText;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...';
             btn.disabled = true;
 
             try {
-                let res;
-                if(currentClassId) {
-                    res = await _supabase.from('classes').update(payload).eq('id', currentClassId).select();
-                } else {
-                    res = await _supabase.from('classes').insert([payload]).select();
-                }
+                let res = currentClassId ? 
+                    await _supabase.from('classes').update(payload).eq('id', currentClassId) :
+                    await _supabase.from('classes').insert([payload]);
 
                 if(res.error) throw res.error;
-                
                 closeModal('edit-modal');
-                await init(); // Refresh Grid
-                
+                await init();
             } catch(e) {
-                console.error("Save Failed:", e);
-                // Schema Error Hint
-                if(e.code === '42703') alert("저장 실패: DB에 시간 설정 컬럼이 없습니다. SQL 업데이트를 진행해주세요.");
-                else alert("저장 실패: " + e.message);
-                
-                btn.innerText = originalText;
+                alert("저장 실패: " + e.message);
+                btn.innerText = "저장 시도";
                 btn.disabled = false;
             }
         }
 
+        // --- Basic UI Utils ---
         function extractFolderId(el) {
             const val = el.value.trim();
-            if (val.includes('drive.google.com') && val.includes('/folders/')) {
+            if (val.includes('/folders/')) {
                 const match = val.match(/\/folders\/([a-zA-Z0-9-_]+)/);
-                if (match && match[1]) {
-                    el.value = match[1];
-                    el.style.backgroundColor = '#ecfdf5';
-                    setTimeout(() => el.style.backgroundColor = '', 800);
-                }
+                if (match) el.value = match[1];
             }
         }
-
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        
         async function deleteClass(id) { 
-            if(confirm("이 수업을 완전히 삭제하시겠습니까?\n(배정된 수강생 정보도 함께 해제됩니다)")) { 
-                const { error } = await _supabase.from('classes').delete().eq('id', id);
-                if(error) alert("삭제 실패: " + error.message);
-                else await init(); 
+            if(confirm("수업을 삭제할까요?")) { 
+                await _supabase.from('classes').delete().eq('id', id);
+                await init(); 
             } 
         }
-        
         async function openAssign(cid) {
             currentClassId = cid;
             const cls = classes.find(c => c.id === cid);
-            document.getElementById('assign-modal-title').innerText = `[${cls.name}] 수강생 배정`;
+            document.getElementById('assign-modal-title').innerText = `[${cls.name}] 배정`;
             const { data } = await _supabase.from('class_members').select('student_id').eq('class_id', cid);
             currentMemberSet = new Set(data ? data.map(m => m.student_id) : []);
             filterGrade('all');
             document.getElementById('assign-modal').classList.remove('hidden');
         }
-
         function filterGrade(grade) {
             currentGrade = grade;
             document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(`tab-${grade}`).classList.add('active');
             renderStudentPool();
         }
-
         function renderStudentPool() {
             const pool = document.getElementById('student-pool');
             const search = document.getElementById('member-search').value.toLowerCase();
-            let filtered = students;
-            if(currentGrade !== 'all') filtered = students.filter(s => s.grade === currentGrade);
-            if(search) filtered = filtered.filter(s => s.name.toLowerCase().includes(search));
+            let filtered = students.filter(s => (currentGrade === 'all' || s.grade === currentGrade) && s.name.toLowerCase().includes(search));
             pool.innerHTML = filtered.map(s => {
                 const isMember = currentMemberSet.has(s.username);
-                return `<div class="flex justify-between items-center p-4 rounded-2xl border ${isMember ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'} transition-all"><span class="text-sm font-black text-slate-700">${s.name} <small class="text-indigo-400 ml-1 font-bold">${s.grade}</small></span><button onclick="toggleMembership('${s.username}', this)" class="text-3xl hover:scale-110 transition active:scale-95">${isMember ? '<i class="fa-solid fa-circle-check text-indigo-600"></i>' : '<i class="fa-solid fa-circle-plus text-slate-200"></i>'}</button></div>`;
+                return `<div class="flex justify-between items-center p-4 rounded-2xl border ${isMember ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'} mb-2">
+                    <span class="text-sm font-black">${s.name} <small class="text-indigo-400 ml-1">${s.grade}</small></span>
+                    <button onclick="toggleMembership('${s.username}', this)" class="text-3xl transition active:scale-95">${isMember ? '<i class="fa-solid fa-circle-check text-indigo-600"></i>' : '<i class="fa-solid fa-circle-plus text-slate-200"></i>'}</button>
+                </div>`;
             }).join('');
         }
-
-        async function toggleMembership(sid, btn) {
-            try {
-                if(currentMemberSet.has(sid)) {
-                    await _supabase.from('class_members').delete().match({class_id:currentClassId, student_id:sid});
-                    currentMemberSet.delete(sid);
-                } else {
-                    await _supabase.from('class_members').insert({class_id:currentClassId, student_id:sid});
-                    currentMemberSet.add(sid);
-                }
-                renderStudentPool();
-            } catch(e) { console.error("Membership Error", e); }
+        async function toggleMembership(sid) {
+            if(currentMemberSet.has(sid)) {
+                await _supabase.from('class_members').delete().match({class_id:currentClassId, student_id:sid});
+                currentMemberSet.delete(sid);
+            } else {
+                await _supabase.from('class_members').insert({class_id:currentClassId, student_id:sid});
+                currentMemberSet.add(sid);
+            }
+            renderStudentPool();
         }
-        
         init();
     </script>
 </body>

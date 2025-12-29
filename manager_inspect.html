@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HQ Inspector | Advanced Control Module</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="config.js"></script>
+
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background: #f8fafc; overflow: hidden; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .student-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .student-card.active { border-color: #4f46e5; background: #eef2ff; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15); }
+        
+        /* [핵심: 장바구니 담긴 카드 봉인 스타일] */
+        .judicial-locked { 
+            opacity: 0.5; 
+            filter: grayscale(0.5); 
+            pointer-events: none; /* 클릭 불가 */
+            position: relative;
+            border-style: dashed !important;
+        }
+        .judicial-locked::before {
+            content: 'IN REVIEW';
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(79, 70, 229, 0.9); color: white;
+            padding: 4px 12px; rounded-full; font-size: 10px; font-weight: 900;
+            z-index: 10; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .radio-label { @apply flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-transparent transition-all; }
+        .radio-label:has(input:checked[value='approve']) { @apply border-emerald-200 bg-emerald-50 text-emerald-700 font-bold; }
+        .radio-label:has(input:checked[value='reject']) { @apply border-rose-200 bg-rose-50 text-rose-700 font-bold; }
+        
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-slate-50">
+
+    <div class="flex-1 flex overflow-hidden">
+        <aside class="w-72 bg-white border-r border-slate-200 flex flex-col z-10 shrink-0">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inspection Targets</span>
+                <span id="st-count" class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+            </div>
+            <div id="student-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll">
+                <div class="text-center py-10 text-slate-300"><i class="fa-solid fa-spinner animate-spin"></i></div>
+            </div>
+        </aside>
+
+        <main class="flex-1 relative bg-slate-50/30 flex flex-col min-w-0">
+            <div id="view-empty" class="flex-1 flex flex-col items-center justify-center text-slate-300 select-none">
+                <i class="fa-solid fa-scale-balanced text-4xl mb-4 opacity-20"></i>
+                <p class="text-xs font-bold opacity-50">판결 대상을 선택하십시오</p>
+            </div>
+            <div id="view-engine" class="flex-1 hidden flex flex-col overflow-hidden animate-fadeIn"></div>
+        </main>
+    </div>
+
+    <script>
+        const STATE = { 
+            cid: new URLSearchParams(window.location.search).get('class_id'), 
+            student: null, 
+            allClasses: [], 
+            investigationCart: [],
+            tempDecisions: {}, 
+            currentLogicData: null 
+        };
+
+        const Util = {
+            safeParseImages: (raw) => { try { if(!raw) return []; if(Array.isArray(raw)) return raw; if(typeof raw === 'string' && raw.trim().startsWith('[')) return JSON.parse(raw); return [raw]; } catch(e){return [];} },
+            findClassName: (cid) => { const found = STATE.allClasses.find(c => String(c.id) === String(cid)); return found ? found.name : `Sector #${cid}`; }
+        };
+
+        const app = {
+            init: async () => {
+                try {
+                    const { data } = await _supabase.from('classes').select('*');
+                    STATE.allClasses = data || [];
+                } catch (e) {}
+                await app.loadStudents();
+            },
+
+            loadStudents: async () => {
+                const { data: logicList } = await _supabase.from('assignment_and_class_logic').select('*');
+                const { data: userList } = await _supabase.from('users').select('username, name, grade');
+                
+                const enrolled = logicList.filter(l => {
+                    let settings = [];
+                    try { settings = typeof l.class_settings === 'string' ? JSON.parse(l.class_settings) : l.class_settings; } catch {}
+                    return Array.isArray(settings) && settings.some(s => String(s.class_id) === String(STATE.cid));
+                });
+
+                document.getElementById('st-count').innerText = enrolled.length;
+                document.getElementById('student-list').innerHTML = enrolled.map(l => {
+                    const u = userList.find(x => x.username === l.student_id);
+                    return `
+                        <div onclick="app.selectStudent('${l.student_id}', '${u?.name || l.student_id}', '${u?.grade || "-"}')" 
+                             class="student-card p-3 rounded-xl border border-slate-100 bg-white group flex justify-between items-center mb-1.5" 
+                             data-name="${u?.name}">
+                            <div>
+                                <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${u?.grade || "-"}</p>
+                                <p class="name-text text-sm font-bold text-slate-700">${u?.name || l.student_id}</p>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-[10px] text-slate-200"></i>
+                        </div>`;
+                }).join('');
+            },
+
+            selectStudent: async (id, name, grade) => {
+                STATE.student = { id, name, grade };
+                document.querySelectorAll('.student-card').forEach(el => el.classList.toggle('active', el.dataset.name === name));
+                document.getElementById('view-empty').classList.add('hidden');
+                document.getElementById('view-engine').classList.remove('hidden');
+                
+                try {
+                    const { data } = await _supabase.from('assignment_and_class_logic').select('*').eq('student_id', id).maybeSingle();
+                    STATE.currentLogicData = data || { homework_settings: [] };
+                } catch(e) { STATE.currentLogicData = { homework_settings: [] }; }
+                
+                app.renderEngine();
+            },
+
+            renderEngine: () => {
+                const container = document.getElementById('view-engine');
+                EngineInspect.render(container, STATE.currentLogicData);
+            }
+        };
+
+        const EngineInspect = {
+            render: async (container, logicData) => {
+                let settings = [];
+                try { settings = typeof logicData.homework_settings === 'string' ? JSON.parse(logicData.homework_settings) : logicData.homework_settings; } catch {}
+                
+                let messages = [];
+                try {
+                    const dateLimit = new Date(); dateLimit.setDate(dateLimit.getDate() - 30);
+                    const { data } = await _supabase.from('homework_messages')
+                        .select('*').eq('student_id', STATE.student.id).eq('is_deleted', false).gte('created_at', dateLimit.toISOString());
+                    
+                    if(data) {
+                        messages = data.sort((a, b) => {
+                            const ap = (a.status.includes('선생이')); const bp = (b.status.includes('선생이'));
+                            if (ap !== bp) return ap ? 1 : -1;
+                            return new Date(b.created_at) - new Date(a.created_at);
+                        });
+                    }
+                } catch(e) {}
+
+                container.innerHTML = `
+                    <div class="h-full flex flex-col bg-white">
+                        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                            <div>
+                                <h2 class="text-xl font-black text-slate-800"><span class="text-indigo-600">${STATE.student.name}</span> Inspection</h2>
+                                <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">COMMAND CENTER: SECTOR #${STATE.cid}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto p-6 custom-scroll">
+                            <div class="flex gap-6 h-full">
+                                <div class="flex-1 space-y-4" id="judicial-feed">
+                                    ${messages.length > 0 ? messages.map(msg => EngineInspect.createCard(msg, settings)).join('') : '<div class="text-center py-20 text-slate-300 font-bold">제출된 숙제가 없습니다.</div>'}
+                                </div>
+                                <div class="w-72 bg-slate-50 rounded-xl border border-slate-200 flex flex-col shadow-inner shrink-0">
+                                    <div class="p-3 border-b border-slate-200 bg-white rounded-t-xl flex justify-between items-center">
+                                        <span class="text-xs font-black text-slate-500 uppercase tracking-tighter">Review Basket</span>
+                                        <span id="inv-cnt" class="bg-indigo-600 text-white text-[10px] font-bold px-2 rounded-full shadow-sm">0</span>
+                                    </div>
+                                    <div id="inv-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scroll"></div>
+                                    <div class="p-2 border-t border-slate-200 bg-white rounded-b-xl">
+                                        <button onclick="EngineInspect.commit()" id="btn-commit" disabled class="w-full py-2 bg-slate-200 text-slate-400 rounded-lg font-bold text-xs">최종 저장 대기 중</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                EngineInspect.refreshCart();
+            },
+
+            createCard: (msg, settings) => {
+                let targetId = msg.class_id;
+                const rule = settings.find(s => String(s.assign_class_id) === String(msg.class_id));
+                if (rule) targetId = rule.check_class_id;
+
+                const isMyJurisdiction = (String(targetId) === String(STATE.cid));
+                const isProcessed = msg.status.includes('선생이');
+                
+                // [중요] 이미 장바구니에 있는지 체크
+                const inCart = STATE.investigationCart.find(c => String(c.id) === String(msg.id));
+
+                const isToday = new Date().toDateString() === new Date(msg.created_at).toDateString();
+                
+                // [Logic] 장바구니에 담기면 카드 잠금 클래스 부여
+                let containerClass = `rounded-2xl p-4 border relative group transition-all duration-300 ${inCart ? 'judicial-locked' : ''} `;
+                containerClass += isProcessed ? 'opacity-60 bg-slate-50 border-slate-200' : (isToday ? 'border-indigo-500 ring-2 ring-indigo-50 shadow-md' : 'border-slate-200 bg-white');
+
+                let submissionBadge = msg.status === 'completed' 
+                    ? `<span class="bg-emerald-100 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded">학생: 이행</span>` 
+                    : (msg.status === 'incomplete' ? `<span class="bg-rose-100 text-rose-600 text-[10px] font-bold px-2 py-0.5 rounded">학생: 미이행</span>` : `<span class="bg-slate-100 text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded">대기중</span>`);
+
+                let resultBadge = isProcessed ? `<span class="text-slate-400 text-xs font-bold bg-slate-100 px-2 py-0.5 rounded">${msg.status}</span>` : (inCart ? '<span class="text-indigo-600 text-[10px] font-black animate-pulse">결재라인 진입</span>' : '');
+
+                const tempDecision = STATE.tempDecisions[msg.id];
+
+                return `
+                    <div class="${containerClass}" id="msg-card-${msg.id}">
+                        ${isProcessed ? `<button onclick="EngineInspect.deleteMsg('${msg.id}')" class="absolute top-3 right-3 text-slate-300 hover:text-red-500 transition z-20"><i class="fa-regular fa-trash-can"></i></button>` : ''}
+                        
+                        <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
+                            <div class="flex items-center gap-2">
+                                <div class="bg-slate-200 text-slate-500 px-2 py-1 rounded text-[10px] font-bold">From: ${Util.findClassName(msg.class_id)}</div>
+                                <span class="text-[10px] text-slate-400 font-mono">${new Date(msg.created_at).toLocaleDateString()}</span>
+                                ${isToday ? `<span class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black">TODAY</span>` : ''}
+                            </div>
+                            <div class="flex gap-2 items-center">${submissionBadge} ${resultBadge}</div>
+                        </div>
+                        <div class="p-3 bg-slate-50/80 rounded-xl text-sm font-bold text-slate-700 whitespace-pre-wrap mb-3">${msg.content}</div>
+                        ${msg.reason ? `<div class="bg-amber-50 p-2 rounded-xl border border-amber-100 mb-3 text-[11px] font-bold text-amber-700">💬 학생 메시지: ${msg.reason}</div>` : ''}
+                        
+                        <div class="flex gap-2 overflow-x-auto pb-2 custom-scroll mb-2">
+                            ${Util.safeParseImages(msg.proof_images).map(src => `<a href="${src}" target="_blank"><img src="${src}" class="w-16 h-16 object-cover rounded-lg border border-slate-200"></a>`).join('')}
+                        </div>
+
+                        ${isMyJurisdiction && !isProcessed && !inCart ? `
+                        <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <label class="radio-label"><input type="radio" name="dec-${msg.id}" value="approve" class="w-4 h-4 text-emerald-600" onchange="EngineInspect.selectDecision('${msg.id}', 'approve')"><span class="text-xs">승인</span></label>
+                                <label class="radio-label"><input type="radio" name="dec-${msg.id}" value="reject" class="w-4 h-4 text-rose-600" onchange="EngineInspect.selectDecision('${msg.id}', 'reject')"><span class="text-xs">반려</span></label>
+                            </div>
+                            <button id="btn-add-${msg.id}" onclick="EngineInspect.addToCart('${msg.id}', '${msg.status}')" disabled class="px-4 py-2 bg-slate-200 text-slate-400 rounded-lg text-xs font-black transition cursor-not-allowed">판결 확정</button>
+                        </div>` : ''}
+                    </div>`;
+            },
+
+            selectDecision: (id, decision) => {
+                STATE.tempDecisions[id] = decision;
+                const btn = document.getElementById(`btn-add-${id}`);
+                if(btn) {
+                    btn.disabled = false;
+                    btn.className = "px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-xs font-black transition shadow-md";
+                }
+            },
+
+            addToCart: (id, msgStatus) => {
+                const decision = STATE.tempDecisions[id];
+                if (!decision) return;
+
+                // [중복 담기 방지]
+                if (STATE.investigationCart.some(item => String(item.id) === String(id))) {
+                    alert("이미 장바구니에 담긴 판결입니다.");
+                    return;
+                }
+
+                const sourceText = msgStatus === 'completed' ? '이행' : '미이행';
+                const actionText = decision === 'approve' ? '승인함' : '반려함';
+                const finalStatusValue = `선생이 ${sourceText}을 ${actionText}`;
+
+                STATE.investigationCart.push({ 
+                    id, 
+                    decision, 
+                    finalStatus: finalStatusValue,
+                    displayStatus: decision === 'approve' ? '승인' : '반려'
+                });
+                
+                delete STATE.tempDecisions[id];
+                app.renderEngine(); // 리스트 새로고침하여 카드 잠금(judicial-locked) 적용
+            },
+
+            refreshCart: () => {
+                const list = document.getElementById('inv-list');
+                const btn = document.getElementById('btn-commit');
+                if(!list) return;
+                document.getElementById('inv-cnt').innerText = STATE.investigationCart.length;
+
+                if (STATE.investigationCart.length === 0) {
+                    list.innerHTML = `<div class="h-full flex items-center justify-center text-slate-300 text-[10px] italic">Queue empty</div>`;
+                    btn.disabled = true; btn.className = "w-full py-2 bg-slate-200 text-slate-400 rounded-lg font-bold text-xs shadow-inner"; btn.innerText = "Awaiting";
+                } else {
+                    list.innerHTML = STATE.investigationCart.map((item, i) => `
+                        <div class="bg-white border border-slate-200 p-3 rounded-xl relative shadow-sm animate-fadeIn">
+                            <button onclick="STATE.investigationCart.splice(${i},1); app.renderEngine()" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 transition"><i class="fa-solid fa-circle-xmark"></i></button>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded font-black ${item.decision === 'approve' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">${item.displayStatus}</span>
+                            <div class="text-[10px] font-bold text-slate-700 mt-1 truncate">${item.finalStatus}</div>
+                        </div>`).join('');
+                    btn.disabled = false; btn.className = "w-full py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-bold text-xs shadow-lg transition-all active:scale-95"; btn.innerText = `최종 저장 실행 (${STATE.investigationCart.length})`;
+                }
+            },
+
+            deleteMsg: async (id) => {
+                if(!confirm("이 기록을 DB에서 영구 삭제 하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
+                try { 
+                    const { error } = await _supabase.from('homework_messages').delete().eq('id', id); 
+                    if(error) throw error;
+                    app.renderEngine(); 
+                } catch(e) { alert("삭제 실패: " + e.message); }
+            },
+
+            commit: async () => {
+                if (!confirm(`총 ${STATE.investigationCart.length}건의 판결을 DB에 영구 저장하시겠습니까?`)) return;
+                const btn = document.getElementById('btn-commit');
+                btn.innerText = "Committing to DB..."; btn.disabled = true;
+
+                try {
+                    for (const item of STATE.investigationCart) {
+                        const { error } = await _supabase.from('homework_messages').update({ status: item.finalStatus }).eq('id', item.id);
+                        if(error) throw error;
+                    }
+                    alert("성공적으로 저장되었습니다.");
+                    STATE.investigationCart = [];
+                    app.renderEngine();
+                } catch(e) { alert("저장 실패: " + e.message); btn.disabled = false; }
+            }
+        };
+
+        window.onload = app.init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="/favicon.ico">
+    <link rel="manifest" href="site.webmanifest">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curriculum Management System</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Apple SD Gothic Neo', sans-serif;
+            background-color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .student-list-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .grade-group.active .student-list-container {
+            max-height: 800px;
+        }
+
+        .grade-group.active .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        .student-item {
+            transition: all 0.2s;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+
+        .student-item.active {
+            background-color: #f1f5f9;
+            border-left-color: #4f46e5;
+            font-weight: 800;
+            color: #4f46e5;
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script src="config.js"></script>
+
+    <header
+        class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-30 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><i
+                    class="fa-solid fa-network-wired"></i></div>
+            <div>
+                <h1 class="text-lg font-bold text-slate-800">커리큘럼 및 숙제 로직 관리</h1>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-left">Enrollment Logic
+                    System</p>
+            </div>
+        </div>
+        <div class="flex gap-3">
+            <button id="btn-global-save" onclick="commitAllChanges()" disabled
+                class="px-6 py-2.5 bg-slate-300 text-white rounded-xl font-bold text-sm cursor-not-allowed transition-all">
+                최종 반영 저장
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+            <div class="p-4 border-b bg-slate-50/50"><span class="text-[11px] font-black text-slate-500 uppercase">구성원
+                    명단</span></div>
+            <nav id="accordion-root" class="flex-1 overflow-y-auto custom-scroll p-3 space-y-1"></nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-slate-50/30 overflow-hidden">
+            <div id="config-empty-state" class="flex-1 flex flex-col items-center justify-center text-slate-300">
+                <p class="font-bold text-sm text-center">리스트에서 학생을 선택하십시오.</p>
+            </div>
+            <div id="config-workspace" class="hidden flex-1 flex flex-col overflow-hidden animate-fadeIn">
+                <div class="p-6 bg-white border-b border-slate-200 flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <div id="cur-avatar"
+                            class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-xl text-indigo-600 font-black">
+                        </div>
+                        <div>
+                            <h2 id="cur-student-name" class="text-lg font-black text-slate-800">이름</h2>
+                            <p id="cur-student-info" class="text-xs font-bold text-slate-400"></p>
+                        </div>
+                    </div>
+                    <button onclick="addToCart()"
+                        class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition shadow-lg">장바구니
+                        담기</button>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scroll p-6 space-y-8">
+                    <section>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-black text-slate-700">수강 수업 설정</h3>
+                            <button onclick="addClassSlot()"
+                                class="text-xs text-indigo-600 font-bold px-2 py-1 bg-indigo-50 rounded hover:bg-indigo-100">+
+                                추가</button>
+                        </div>
+                        <div id="class-slots-container" class="space-y-3"></div>
+                    </section>
+                    <section>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-black text-slate-700">숙제 로직 설정</h3>
+                            <button onclick="addHomeworkSlot()"
+                                class="text-xs text-indigo-600 font-bold px-2 py-1 bg-indigo-50 rounded hover:bg-indigo-100">+
+                                추가</button>
+                        </div>
+                        <div id="hw-slots-container" class="space-y-3"></div>
+                    </section>
+                </div>
+            </div>
+        </main>
+
+        <aside class="w-72 bg-white border-l border-slate-200 flex flex-col shrink-0">
+            <div
+                class="p-4 border-b bg-indigo-50/30 font-black text-[10px] text-indigo-600 flex justify-between uppercase">
+                <span>변경 대기 (CART)</span>
+                <span id="cart-count">0</span>
+            </div>
+            <div id="cart-list" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-3"></div>
+        </aside>
+    </div>
+
+    <script>
+        let allClassData = [], allStudentData = [], cart = {};
+        let currentEditingStudent = null;
+        let activeClassSlots = [], activeHwSlots = [];
+        const gradeList = ['고1', '고2', '고3', '중1', '중2', '중3'];
+
+        async function init() {
+            try {
+                const [cRes, sRes] = await Promise.all([
+                    _supabase.from('classes').select('*').order('name'),
+                    _supabase.from('users').select('*').in('role', ['student']).order('grade')
+                ]);
+                allClassData = cRes.data || [];
+                allStudentData = (sRes.data || []).filter(u => u.username !== '곽명용이브');
+                renderAccordion();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderAccordion() {
+            const container = document.getElementById('accordion-root');
+            container.innerHTML = gradeList.map(grade => {
+                const members = allStudentData.filter(s => s.grade === grade);
+                return `
+                    <div class="grade-group rounded-lg overflow-hidden border border-slate-100 mb-1">
+                        <button onclick="toggleAccordion(this)" class="w-full p-3 flex justify-between items-center bg-white hover:bg-slate-50 transition">
+                            <span class="text-xs font-bold text-slate-700">${grade} <span class="text-indigo-500 font-black ml-1">${members.length}</span></span>
+                            <i class="fa-solid fa-chevron-down arrow-icon text-slate-300 text-[10px] transition-transform"></i>
+                        </button>
+                        <div class="student-list-container bg-slate-50/30">
+                            <div class="p-1">
+                                ${members.map(m => `<div onclick="loadStudentConfig('${m.username}')" id="btn-std-${m.username}" class="student-item p-2.5 rounded text-xs font-bold text-slate-600 hover:bg-white">${m.name} <span class="text-[9px] text-slate-400 font-normal">(${m.username})</span></div>`).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function toggleAccordion(btn) {
+            const group = btn.parentElement;
+            const isActive = group.classList.contains('active');
+            document.querySelectorAll('.grade-group').forEach(g => g.classList.remove('active'));
+            if (!isActive) group.classList.add('active');
+        }
+
+        async function loadStudentConfig(username) {
+            currentEditingStudent = allStudentData.find(s => s.username === username);
+            document.getElementById('config-empty-state').classList.add('hidden');
+            document.getElementById('config-workspace').classList.remove('hidden');
+            document.querySelectorAll('.student-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(`btn-std-${username}`).classList.add('active');
+            document.getElementById('cur-student-name').innerText = currentEditingStudent.name;
+            document.getElementById('cur-student-info').innerText = `${currentEditingStudent.grade} | ID: ${currentEditingStudent.username}`;
+            document.getElementById('cur-avatar').innerText = currentEditingStudent.name[0];
+
+            const { data } = await _supabase.from('assignment_and_class_logic').select('*').eq('student_id', currentEditingStudent.username).single();
+            if (cart[currentEditingStudent.username]) {
+                activeClassSlots = JSON.parse(JSON.stringify(cart[currentEditingStudent.username].class_settings));
+                activeHwSlots = JSON.parse(JSON.stringify(cart[currentEditingStudent.username].homework_settings));
+            } else {
+                activeClassSlots = data ? data.class_settings : [];
+                activeHwSlots = data ? data.homework_settings : [];
+            }
+            renderAllSlots();
+        }
+
+        function renderAllSlots() { renderClassSlots(); renderHwSlots(); }
+        function addClassSlot() { activeClassSlots.push({ class_id: '', type: '정규' }); renderClassSlots(); }
+
+        function renderClassSlots() {
+            const container = document.getElementById('class-slots-container');
+            container.innerHTML = activeClassSlots.map((slot, idx) => `
+                <div class="flex gap-2 items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm animate-fadeIn">
+                    <select onchange="handleClassValidation(${idx}, this.value)" class="flex-1 bg-slate-50 border-none rounded-lg p-2 text-xs font-bold outline-none">
+                        <option value="">수업 선택</option>
+                        ${allClassData.map(c => `<option value="${c.id}" ${slot.class_id == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                    </select>
+                    <select onchange="activeClassSlots[${idx}].type = this.value" class="w-20 bg-slate-50 border-none rounded-lg p-2 text-xs font-bold outline-none">
+                        <option value="정규" ${slot.type === '정규' ? 'selected' : ''}>정규</option>
+                        <option value="선행" ${slot.type === '선행' ? 'selected' : ''}>선행</option>
+                    </select>
+                    <button onclick="activeClassSlots.splice(${idx},1); renderClassSlots();" class="text-slate-300 hover:text-red-400 px-2">×</button>
+                </div>
+            `).join('');
+            if (!activeClassSlots.length) container.innerHTML = '<div class="text-center py-6 text-slate-300 text-[10px] font-bold">배정된 수업 없음</div>';
+            renderHwSlots();
+        }
+
+        function handleClassValidation(idx, classId) {
+            if (!classId) { activeClassSlots[idx].class_id = ''; renderHwSlots(); return; }
+            const isDuplicate = activeClassSlots.some((s, i) => i !== idx && s.class_id == classId);
+            if (isDuplicate) { alert("중복 배정은 불가합니다."); renderClassSlots(); }
+            else { activeClassSlots[idx].class_id = classId; renderHwSlots(); }
+        }
+
+        function addHomeworkSlot() { activeHwSlots.push({ title: '', assign_class_id: '', check_class_id: '' }); renderHwSlots(); }
+
+        function renderHwSlots() {
+            const container = document.getElementById('hw-slots-container');
+            const selectedClasses = activeClassSlots.map(s => allClassData.find(c => c.id == s.class_id)).filter(Boolean);
+            container.innerHTML = activeHwSlots.map((slot, idx) => `
+                <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-3 animate-fadeIn">
+                    <input type="text" id="hw-input-${idx}" value="${slot.title || ''}" onfocus="this.select()" onchange="activeHwSlots[${idx}].title = this.value" placeholder="숙제 명칭 입력" class="w-full bg-slate-50 border-none rounded-lg p-2.5 text-xs font-bold outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all">
+                    <div class="grid grid-cols-2 gap-2">
+                        <select onchange="activeHwSlots[${idx}].assign_class_id = this.value" class="bg-slate-50 border-none rounded-lg p-2 text-[10px] font-bold outline-none">
+                            <option value="">출제 수업</option>
+                            ${selectedClasses.map(c => `<option value="${c.id}" ${slot.assign_class_id == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                        </select>
+                        <select onchange="activeHwSlots[${idx}].check_class_id = this.value" class="bg-slate-50 border-none rounded-lg p-2 text-[10px] font-bold outline-none">
+                            <option value="">검사 수업</option>
+                            ${selectedClasses.map(c => `<option value="${c.id}" ${slot.check_class_id == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button onclick="activeHwSlots.splice(${idx},1); renderHwSlots();" class="w-full text-[10px] text-red-300 hover:text-red-500 pt-1">삭제</button>
+                </div>`).join('');
+            if (!activeHwSlots.length) container.innerHTML = '<div class="text-center py-6 text-slate-300 text-[10px] font-bold">로직 없음</div>';
+        }
+
+        function addToCart() {
+            if (!currentEditingStudent) return;
+            cart[currentEditingStudent.username] = {
+                name: currentEditingStudent.name,
+                class_settings: JSON.parse(JSON.stringify(activeClassSlots)),
+                homework_settings: JSON.parse(JSON.stringify(activeHwSlots))
+            };
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-list');
+            const ids = Object.keys(cart);
+            document.getElementById('cart-count').innerText = ids.length;
+            if (!ids.length) container.innerHTML = '<div class="py-20 text-center text-slate-300 text-xs font-bold">비어있음</div>';
+            else {
+                container.innerHTML = ids.map(id => `
+                <div class="bg-white p-3 rounded-xl border border-indigo-100 flex justify-between items-center shadow-sm">
+                    <div class="cursor-pointer" onclick="loadStudentConfig('${id}')">
+                        <div class="text-xs font-black text-slate-700">${cart[id].name}</div>
+                        <div class="text-[9px] text-indigo-400 font-bold">수업 ${cart[id].class_settings.length} / 숙제 ${cart[id].homework_settings.length}</div>
+                    </div>
+                    <button onclick="delete cart['${id}']; renderCart();" class="text-red-300 px-2 transition">×</button>
+                </div>`).join('');
+            }
+            const btn = document.getElementById('btn-global-save');
+            btn.disabled = ids.length === 0;
+            btn.className = ids.length === 0 ? "px-6 py-2.5 bg-slate-300 text-white rounded-xl font-bold text-sm" : "px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-indigo-700 transition-all";
+        }
+
+        async function commitAllChanges() {
+            if (!confirm("DB에 반영하시겠습니까?")) return;
+            const btn = document.getElementById('btn-global-save');
+            btn.innerText = "저장 중..."; btn.disabled = true;
+            const upsertData = Object.keys(cart).map(sid => ({
+                student_id: sid,
+                class_settings: cart[sid].class_settings,
+                homework_settings: cart[sid].homework_settings,
+                updated_at: new Date().toISOString()
+            }));
+            try {
+                const { error } = await _supabase.from('assignment_and_class_logic').upsert(upsertData, { onConflict: 'student_id' });
+                if (error) throw error;
+                alert("반영 완료!"); cart = {}; location.reload();
+            } catch (e) { alert("오류: " + e.message); btn.innerText = "최종 반영 저장"; btn.disabled = false; }
+        }
+        init();
+    </script>
+</body>
+
+</html>

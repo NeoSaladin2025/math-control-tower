@@ -3,608 +3,137 @@
 <head>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    
     <link rel="manifest" href="site.webmanifest">
-    
     <link rel="apple-touch-icon" href="favicon.ico">
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Operation Center - Portal Edition</title>
+    <title>Weekly Operation Center - Slim Edition</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
     <style>
-        /* [Elite System UI Standard - Preserved] */
         body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
-        
-        /* Grid Structure */
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+        /* Grid Framework */
         .time-slot { height: 100px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; position: relative; box-sizing: border-box; }
         .day-column { min-width: 140px; flex: 1; position: relative; border-right: 1px solid #e2e8f0; }
-        
-        /* Class Card */
+
+        /* Elegant Class Card */
         .class-card {
-            position: absolute; left: 6px; right: 6px; padding: 10px; border-radius: 12px;
+            position: absolute; left: 6px; right: 6px; padding: 12px; border-radius: 16px;
             background: linear-gradient(135deg, #6366f1, #4f46e5); color: white;
-            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10;
-            overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.25); cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10;
+            overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15);
         }
-        .class-card:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 20px rgba(79, 70, 229, 0.4); z-index: 20; }
+        .class-card:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 15px 35px rgba(79, 70, 229, 0.35); z-index: 20; }
+        .class-card:active { transform: scale(0.97); }
 
-        /* Memo Button */
-        .memo-btn {
-            position: absolute; top: 6px; right: 6px; width: 24px; height: 24px;
-            background: rgba(255, 255, 255, 0.2); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; transition: all 0.2s; z-index: 30;
-        }
-        .memo-btn:hover { background: white; color: #4f46e5; transform: scale(1.1); }
-        .memo-btn.active { background: #fbbf24; color: #78350f; border: 1px solid #f59e0b; animation: twinkle 1.5s infinite alternate; }
-        @keyframes twinkle { 0% { box-shadow: 0 0 5px #fbbf24; } 100% { box-shadow: 0 0 15px #fbbf24; } }
+        .card-time { font-size: 10px; font-weight: 800; opacity: 0.85; margin-bottom: 4px; display: block; letter-spacing: 0.5px; }
+        .card-name { font-size: 14px; font-weight: 900; line-height: 1.2; word-break: keep-all; }
 
-        /* Modal Transitions */
-        .modal-content { transform: scale(0.98); opacity: 0; transition: all 0.2s ease-out; }
-        .show .modal-content { transform: scale(1); opacity: 1; }
-        
-        /* Kimjang UI Elements */
-        .student-item { transition: 0.2s; border: 2px solid transparent; }
-        .student-item:hover { background-color: #f1f5f9; }
-        .student-item.selected { border-color: #6366f1; background-color: #e0e7ff; }
-        .student-item.locked { opacity: 0.6; filter: grayscale(1); background: #f8fafc; border-color: #e2e8f0; cursor: help; } 
-        .student-item.in-basket { opacity: 0.4; pointer-events: none; border: 2px dashed #cbd5e1; }
-
-        .option-card { border: 2px solid #e2e8f0; background: white; cursor: pointer; padding: 10px; border-radius: 12px; transition: 0.2s; position: relative; }
-        .option-card.selected { border-color: #6366f1; background-color: #f5f3ff; transform: scale(0.98); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
-        .option-card.negative.selected { border-color: #ef4444; background-color: #fef2f2; }
-        
-        .basket-item { animation: slideIn 0.2s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-
-        .multiplier-tag { font-size: 0.7rem; font-weight: 800; background: #1e293b; color: #fff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-left: 4px; }
-        .multiplier-alert { color: #ef4444; background: #fee2e2; }
+        @keyframes spawn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .animate-spawn { animation: spawn 0.3s ease-out forwards; }
     </style>
 </head>
 <body class="p-6 h-screen flex flex-col box-border">
     <script src="config.js"></script>
 
-    <div class="flex justify-between items-end mb-6 shrink-0">
+    <div class="flex justify-between items-end mb-6 shrink-0 px-2">
         <div>
             <h1 class="text-3xl font-black text-slate-800 tracking-tighter flex items-center gap-3">
-                <i class="fa-solid fa-calendar-week text-indigo-600"></i> 주간 수업 오퍼레이션
+                <i class="fa-solid fa-calendar-check text-indigo-600"></i> 현장 지휘 스케줄러
             </h1>
-            <p class="text-slate-500 font-bold mt-1" id="current-week-range">Loading Date...</p>
+            <p class="text-slate-400 font-bold mt-1 uppercase tracking-[0.3em] text-[10px]">Weekly Operation Command Grid</p>
         </div>
-        <div class="flex gap-2 bg-white p-1 rounded-2xl shadow-sm border border-slate-200">
-            <button onclick="changeWeek(-1)" class="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition text-slate-400"><i class="fa-solid fa-chevron-left"></i></button>
-            <button onclick="setToday()" class="px-4 text-xs font-black text-indigo-600 uppercase tracking-widest">Today</button>
-            <button onclick="changeWeek(1)" class="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-xl transition text-slate-400"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200 text-[11px] font-black text-slate-500">
+            <i class="fa-solid fa-mouse-pointer text-indigo-500 mr-2"></i>클릭 시 Focus 관리 모드 진입
         </div>
     </div>
 
-    <div class="bg-white rounded-[32px] shadow-xl border border-slate-200 overflow-hidden flex flex-col flex-1">
-        <div class="flex border-b border-slate-200 bg-slate-50/80 shrink-0 backdrop-blur-sm z-20">
-            <div class="w-20 shrink-0 border-r border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase tracking-tighter bg-white">Time</div>
+    <div class="bg-white rounded-[32px] shadow-2xl border border-slate-200 overflow-hidden flex flex-col flex-1">
+        <div class="flex border-b border-slate-200 bg-slate-50/80 backdrop-blur-md shrink-0 z-20">
+            <div class="w-20 shrink-0 border-r border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white">Time</div>
             <div class="flex-1 flex" id="day-headers"></div>
         </div>
-        <div class="flex-1 overflow-y-auto relative bg-white">
+
+        <div class="flex-1 overflow-y-auto relative bg-white custom-scroll">
             <div class="flex min-h-full">
-                <div class="w-20 shrink-0 border-r border-slate-200 bg-slate-50/30" id="time-labels"></div>
+                <div class="w-20 shrink-0 border-r border-slate-200 bg-slate-50/30 font-mono" id="time-labels"></div>
                 <div class="flex-1 flex relative" id="schedule-grid-body"></div>
             </div>
         </div>
     </div>
 
-    <div id="clinic-modal" class="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-white w-full max-w-[95vw] h-[90vh] rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-slate-300">
-            
-            <div class="h-20 px-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-md"><i class="fa-solid fa-list-check"></i></div>
-                    <div>
-                        <h2 class="text-xl font-black text-slate-800" id="m-class-title">Class Name</h2>
-                        <div class="flex gap-2 items-center">
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest" id="m-class-time">00:00 - 00:00</span>
-                            <span class="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-bold">MANAGEMENT MODE</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <button onclick="goToHomework()" class="h-10 px-5 bg-amber-400 hover:bg-amber-500 text-white rounded-xl font-black text-sm shadow-sm transition transform active:scale-95 flex items-center gap-2 group">
-                        <i class="fa-solid fa-book group-hover:animate-bounce"></i> <span>숙제 관리</span>
-                    </button>
-                    
-                    <div class="w-px h-6 bg-slate-200 mx-2"></div>
-
-                    <button onclick="closeModal('clinic-modal')" class="w-10 h-10 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 transition text-2xl font-bold">×</button>
-                </div>
-            </div>
-
-            <div class="flex-1 flex overflow-hidden bg-slate-100">
-                
-                <div class="w-1/4 flex flex-col border-r border-slate-200 bg-white h-full">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0 h-14">
-                        <span class="text-xs font-black text-slate-600 uppercase"><i class="fa-solid fa-user-group mr-1"></i> 명단</span>
-                        <span id="m-student-count" class="bg-slate-200 text-slate-600 text-[10px] px-2 py-1 rounded font-bold">0</span>
-                    </div>
-                    <div id="m-student-list" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
-                </div>
-
-                <div class="w-[45%] flex flex-col border-r border-slate-200 bg-slate-50 h-full relative">
-                    <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white shrink-0 h-14">
-                        <span class="text-xs font-black text-slate-600 uppercase"><i class="fa-solid fa-gavel mr-1"></i> 항목 선택</span>
-                        <div id="target-badge" class="opacity-0 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">
-                            <i class="fa-solid fa-check mr-1"></i> 선택됨
-                        </div>
-                    </div>
-                    <div id="point-options-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-3 content-start"></div>
-                    <div class="p-4 border-t border-slate-200 bg-white shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
-                        <button id="btn-add-basket" onclick="addToBasket()" disabled class="w-full h-12 bg-slate-200 text-slate-400 rounded-xl font-black text-sm transition flex items-center justify-center gap-2">
-                            <span>학생과 항목을 선택하세요</span>
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="w-[30%] flex flex-col bg-indigo-50/50 h-full">
-                    <div class="p-4 border-b border-indigo-100 flex justify-between items-center bg-indigo-50 shrink-0 h-14">
-                        <span class="text-xs font-black text-indigo-800 uppercase"><i class="fa-solid fa-basket-shopping mr-1"></i> 처리 대기</span>
-                        <span id="basket-count" class="bg-red-500 text-white text-[10px] px-2 py-1 rounded-full font-bold">0</span>
-                    </div>
-                    <div id="basket-list" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
-                    <div class="p-5 border-t border-indigo-100 bg-white shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
-                        <label class="flex items-center gap-2 mb-3 cursor-pointer select-none">
-                            <input type="checkbox" id="chk-confirm" onchange="toggleSaveBtn()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
-                            <span class="text-xs font-bold text-slate-500">최종 반영 확인</span>
-                        </label>
-                        <button id="btn-final-save" onclick="finalSave()" disabled class="w-full h-14 bg-slate-300 text-white rounded-xl font-black text-lg shadow-sm transition flex items-center justify-center gap-2 cursor-not-allowed">
-                            <i class="fa-solid fa-lock"></i> <span>저장 (Locked)</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="preview-modal" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm hidden flex items-center justify-center">
-        <div class="bg-white w-[350px] rounded-2xl shadow-2xl p-6 border border-slate-200 transform scale-100">
-            <h3 class="font-black text-slate-800 mb-4 flex items-center gap-2 text-lg"><i class="fa-solid fa-magnifying-glass text-indigo-500"></i> 적용 예정 상세</h3>
-            <div id="preview-list" class="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2 border-y border-slate-100 py-2"></div>
-            <button onclick="document.getElementById('preview-modal').classList.add('hidden')" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition">닫기</button>
-        </div>
-    </div>
-
-    <div id="memo-modal" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm hidden flex items-center justify-center">
-        <div class="bg-white w-[400px] h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-amber-200">
-            <div class="p-6 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
-                <h3 class="font-black text-amber-800 flex items-center gap-2"><i class="fa-solid fa-note-sticky text-amber-500"></i> Class Memo</h3>
-                <button onclick="closeModal('memo-modal')" class="text-amber-400 hover:text-amber-600 text-xl">×</button>
-            </div>
-            <div id="memo-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-amber-50/10"></div>
-            <div class="p-4 bg-white border-t border-slate-100"><div class="flex gap-2"><input type="text" id="new-memo-input" placeholder="메시지 입력..." class="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3 font-bold text-slate-700 focus:ring-2 focus:ring-amber-400"><button onclick="addMemo()" class="bg-amber-400 hover:bg-amber-500 text-white w-12 rounded-xl shadow-lg shadow-amber-200 transition active:scale-95"><i class="fa-solid fa-plus"></i></button></div></div>
-        </div>
-    </div>
-
     <script>
-        /**
-         * [System Core] V22.5 Portal Edition + Homework Sync (Incomplete Detection)
-         */
-        
-        let baseDate = new Date();
-        let allRules = [];
-        let classStudentsMap = {}; 
-        let currentClassId = null;
-        let currentMemoClassId = null;
-        
-        let selectedStudentData = null;
-        let selectedRuleIds = new Set();
-        let basketData = {}; 
-        let lockedStudents = new Set();
-        let studentTestPassMap = {}; 
-        let studentHomeworkMap = {}; // Stores homework status
-
+        const START_HOUR = 9;
+        const END_HOUR = 22;
         const dayMap = { '월요일': 0, '화요일': 1, '수요일': 2, '목요일': 3, '금요일': 4, '토요일': 5, '일요일': 6 };
         const dayNamesEng = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-        const START_HOUR = 9; 
-        const END_HOUR = 22;
 
         async function init() {
-            updateWeekDisplay();
-            await loadRules();
-            renderTimeGrid();
-            await fetchClasses();
+            renderBaseGrid();
+            await loadAndRenderClasses();
         }
 
-        async function loadRules() {
-            const { data } = await _supabase.from('point_rules').select('*').eq('is_active', true).order('id');
-            allRules = data || [];
+        function renderBaseGrid() {
+            let timeHtml = '';
+            for (let h = START_HOUR; h <= END_HOUR; h++) {
+                timeHtml += `<div class="h-[100px] flex items-start justify-center pt-3 text-[11px] font-black text-slate-300 border-b border-slate-100">${h}:00</div>`;
+            }
+            document.getElementById('time-labels').innerHTML = timeHtml;
+
+            let headerHtml = '';
+            let gridHtml = '';
+            for (let i = 0; i < 7; i++) {
+                headerHtml += `<div class="flex-1 p-4 text-center border-r border-slate-200 last:border-0"><span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">${dayNamesEng[i]}</span></div>`;
+                gridHtml += `<div class="day-column" id="col-day-${i}">` + Array(END_HOUR - START_HOUR + 1).fill('<div class="time-slot"></div>').join('') + `</div>`;
+            }
+            document.getElementById('day-headers').innerHTML = headerHtml;
+            document.getElementById('schedule-grid-body').innerHTML = gridHtml;
         }
 
-        // --- Management Logic (수정됨: 숙제 미이행 감지 추가) ---
-        async function openClinic(id, name, time) {
-            currentClassId = id;
-            resetManagementState();
-            
-            const modal = document.getElementById('clinic-modal');
-            modal.classList.remove('hidden');
-            setTimeout(() => modal.classList.add('show'), 10);
+        async function loadAndRenderClasses() {
+            const { data: classes, error } = await _supabase.from('classes').select('*');
+            if (error) { console.error("Data Load Error:", error); return; }
 
-            document.getElementById('m-class-title').innerText = name;
-            document.getElementById('m-class-time').innerText = time;
+            classes.forEach(c => {
+                let slots = (c.schedules && Array.isArray(c.schedules) && c.schedules.length > 0) 
+                    ? c.schedules 
+                    : (c.day_of_week ? [{ day: c.day_of_week, start: c.start_time, end: c.end_time }] : []);
 
-            // 1. 학생 명단 가져오기
-            const { data: members } = await _supabase.from('class_members')
-                .select('student_id, last_evaluation_date, users(name, grade, tier)') 
-                .eq('class_id', id);
+                slots.forEach(slot => {
+                    const colIdx = dayMap[slot.day];
+                    if (colIdx === undefined || !slot.start || !slot.end) return;
 
-            const today = new Date().toISOString().split('T')[0];
-            const todayStart = today + 'T00:00:00';
+                    const [sh, sm] = slot.start.split(':').map(Number);
+                    const [eh, em] = slot.end.split(':').map(Number);
+                    const top = (sh - START_HOUR) * 100 + (sm / 60) * 100;
+                    const height = ((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100;
 
-            // [추가] 일주일 전 날짜 계산 (숙제 미이행 감지용)
-            const now = new Date();
-            const oneWeekAgo = new Date(now);
-            oneWeekAgo.setDate(now.getDate() - 7);
-            const searchStart = oneWeekAgo.toISOString().split('T')[0] + 'T00:00:00';
-            
-            classStudentsMap = {};
-            lockedStudents.clear();
-            studentTestPassMap = {}; 
-            studentHomeworkMap = {}; // 초기화
+                    const card = document.createElement('div');
+                    card.className = "class-card animate-spawn";
+                    card.style.top = `${top}px`;
+                    card.style.height = `${height}px`;
 
-            const studentIds = []; 
-
-            if (members) {
-                members.forEach(m => {
-                    studentIds.push(m.student_id); 
-                    if (m.last_evaluation_date === today) {
-                        lockedStudents.add(m.student_id);
-                    }
-                    classStudentsMap[m.student_id] = { 
-                        id: m.student_id, 
-                        name: m.users.name, 
-                        grade: m.users.grade, 
-                        tier: m.users.tier || 'Unranked' 
+                    card.onclick = () => {
+                        const focusUrl = `manager_class_operation_focus.html?class_id=${c.id}&class_name=${encodeURIComponent(c.name)}`;
+                        window.open(focusUrl, '_blank');
                     };
+
+                    card.innerHTML = `
+                        <span class="card-time">${slot.start.slice(0,5)} - ${slot.end.slice(0,5)}</span>
+                        <div class="card-name">${c.name}</div>
+                    `;
+                    document.getElementById(`col-day-${colIdx}`).appendChild(card);
                 });
-            }
-
-            // 2. [Test Logic & Homework Logic]
-            if (studentIds.length > 0) {
-                // (1) 진단평가 로직
-                const { data: testRecs } = await _supabase
-                    .from('test_assignment_records')
-                    .select('student_id, status, current_round')
-                    .in('student_id', studentIds)
-                    .gte('updated_at', todayStart);
-
-                if (testRecs) {
-                    testRecs.forEach(r => {
-                        let passes = 0;
-                        if (r.status === 'completed') passes = 99; 
-                        else if (r.current_round > 1) passes = r.current_round - 1;
-                        if ((studentTestPassMap[r.student_id] || 0) < passes) {
-                            studentTestPassMap[r.student_id] = passes;
-                        }
-                    });
-                }
-
-                // (2) 기존 숙제 메시지 로직
-                const { data: hwMsgs } = await _supabase
-                    .from('homework_messages')
-                    .select('student_id, status')
-                    .eq('class_id', id)
-                    .gte('created_at', todayStart);
-
-                if (hwMsgs) {
-                    hwMsgs.forEach(msg => {
-                        if (msg.status === 'teacher_approved' || msg.status === 'teacher_rejected') {
-                            studentHomeworkMap[msg.student_id] = msg.status;
-                        }
-                    });
-                }
-
-                // (3) [★ NEW] 숙제 미이행(incomplete) 자동 감지 (최근 1주일 조회로 변경)
-                const { data: autoIncomplete } = await _supabase
-                    .from('assignments')
-                    .select('student_id')
-                    .in('student_id', studentIds)
-                    .gte('submitted_at', searchStart)    // [수정] 일주일 전 데이터부터 조회
-                    .eq('completion_status', 'incomplete'); // '미이행' 딱지가 붙은 것만 조회
-
-                if (autoIncomplete) {
-                    autoIncomplete.forEach(d => {
-                        // 'AUTO_INCOMPLETE'라는 상태로 저장해서 기존 로직과 구분
-                        studentHomeworkMap[d.student_id] = 'AUTO_INCOMPLETE';
-                    });
-                }
-            }
-            
-            renderStudentList();
-            renderRuleGrid(); 
-            renderBasket();
-        }
-
-        function resetManagementState() {
-            selectedStudentData = null;
-            selectedRuleIds.clear();
-            basketData = {};
-            lockedStudents.clear();
-            document.getElementById('chk-confirm').checked = false;
-            toggleSaveBtn();
-        }
-
-        function goToHomework() {
-            if(!currentClassId) return alert("수업 정보가 없습니다.");
-            location.href = `class_scheduler_homework.html?class_id=${currentClassId}`;
-        }
-
-        function renderStudentList() {
-            const list = document.getElementById('m-student-list');
-            const ids = Object.keys(classStudentsMap);
-            document.getElementById('m-student-count').innerText = ids.length;
-
-            if (ids.length === 0) { list.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">학생이 없습니다.</div>`; return; }
-
-            list.innerHTML = ids.map(id => {
-                const s = classStudentsMap[id];
-                const isLocked = lockedStudents.has(id);
-                const isInBasket = basketData[id] !== undefined;
-                const isSelected = selectedStudentData && selectedStudentData.id === id;
-
-                let classes = "student-item p-3 rounded-xl bg-white border border-slate-100 cursor-pointer flex justify-between items-center mb-2 hover:shadow-sm";
-                let statusIcon = "";
-                let clickAction = `onclick="selectStudent('${id}')"`;
-
-                if (isLocked) { 
-                    classes += " locked"; 
-                    statusIcon = `<span class="text-[9px] font-bold bg-slate-200 text-slate-500 px-2 py-0.5 rounded"><i class="fa-solid fa-lock mr-1"></i>완료</span>`;
-                    clickAction = `onclick="manualUnlock('${id}', '${s.name}')"`;
-                } else if (isInBasket) { 
-                    classes += " in-basket"; 
-                    statusIcon = `<span class="text-[9px] font-bold bg-indigo-100 text-indigo-500 px-2 py-0.5 rounded"><i class="fa-solid fa-basket-shopping mr-1"></i>대기</span>`; 
-                    clickAction = ""; 
-                } else if (isSelected) { 
-                    classes += " selected"; 
-                }
-
-                return `<div ${clickAction} class="${classes}">
-                    <div><div class="font-bold text-slate-700 text-sm">${s.name}</div><div class="text-[10px] text-slate-400">${s.grade}</div></div>${statusIcon}</div>`;
-            }).join('');
-        }
-
-        async function manualUnlock(studentId, studentName) {
-            if(confirm(`[관리자 권한]\n'${studentName}' 학생의 잠금을 해제하시겠습니까?\n(오늘 완료 표시가 사라집니다)`)) {
-                try {
-                    await _supabase.from('class_members')
-                        .update({ last_evaluation_date: null })
-                        .match({ class_id: currentClassId, student_id: studentId });
-                    
-                    lockedStudents.delete(studentId);
-                    renderStudentList();
-                } catch(e) {
-                    alert("해제 실패: " + e.message);
-                }
-            }
-        }
-
-        // --- Student Selection (수정됨: 자동 감지 룰 적용 추가) ---
-        function selectStudent(id) {
-            selectedStudentData = classStudentsMap[id];
-            selectedRuleIds.clear(); 
-
-            // 1. Diagnostic Test Logic
-            const passCount = studentTestPassMap[id] || 0;
-            if (passCount > 0) {
-                allRules.forEach(r => {
-                    if (r.name === '진단평가1' && passCount >= 1) selectedRuleIds.add(r.id);
-                    if (r.name === '진단평가2' && passCount >= 2) selectedRuleIds.add(r.id);
-                    if (r.name === '진단평가3' && passCount >= 3) selectedRuleIds.add(r.id);
-                    if (r.name === '진단평가4' && passCount >= 4) selectedRuleIds.add(r.id);
-                    if (r.name === '진단평가5' && passCount >= 5) selectedRuleIds.add(r.id);
-                });
-            }
-
-            // 2. Homework Status Logic
-            const hwStatus = studentHomeworkMap[id];
-            
-            // (1) 기존 선생님 승인/반려 로직
-            if (hwStatus) {
-                allRules.forEach(r => {
-                    if (r.name === '숙제 해옴' && hwStatus === 'teacher_approved') selectedRuleIds.add(r.id);
-                    if (r.name === '숙제미이행' && hwStatus === 'teacher_rejected') selectedRuleIds.add(r.id);
-                });
-            }
-            
-            // (2) [★ NEW] 자동 감지된 '미이행(incomplete)' 처리
-            if (hwStatus === 'AUTO_INCOMPLETE') {
-                allRules.forEach(r => {
-                    // 공백 제거 후 '숙제미이행' 룰을 찾음
-                    if (r.name.replace(/\s/g, '') === '숙제미이행') {
-                        selectedRuleIds.add(r.id);
-                    }
-                });
-            }
-
-            document.getElementById('target-badge').style.opacity = '1';
-            document.getElementById('target-badge').innerHTML = `<i class="fa-solid fa-check mr-1"></i> ${selectedStudentData.name}`;
-            
-            renderStudentList(); 
-            renderRuleGrid(); 
-            updateAddBtn();
-        }
-
-        // --- Rules & Basket ---
-        function renderRuleGrid() {
-            const container = document.getElementById('point-options-grid');
-            if(!selectedStudentData) { container.innerHTML = `<div class="col-span-2 text-center py-20 text-slate-400 text-xs">왼쪽에서 학생을 선택해주세요.</div>`; return; }
-
-            const tier = selectedStudentData.tier;
-            container.innerHTML = allRules.map(r => {
-                const isSel = selectedRuleIds.has(r.id);
-                const isNeg = r.xp_change < 0 || r.cp_change < 0;
-                let multi = 1.0, badge = '';
-                if (tier && r.tier_multipliers && r.tier_multipliers[tier]) {
-                    multi = parseFloat(r.tier_multipliers[tier]);
-                    if(multi !== 1.0) badge = `<span class="${multi>1.0&&isNeg?'multiplier-alert':'multiplier-tag'}">x${multi}</span>`;
-                }
-                const xp = Math.round(r.xp_change * multi), cp = Math.round(r.cp_change * multi);
-
-                return `<div onclick="toggleRule(${r.id})" class="option-card ${isNeg?'negative':''} ${isSel?'selected':''}">
-                    <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-bold text-slate-400 uppercase">${r.category}</span>
-                    <div class="text-right text-[10px]"><div class="${xp>=0?'text-indigo-600':'text-red-500'} font-black">${xp} XP ${badge}</div><div class="text-amber-500 font-bold">${cp} CP</div></div></div>
-                    <div class="font-bold text-sm text-slate-700">${r.name}</div></div>`;
-            }).join('');
-        }
-
-        function toggleRule(id) { if(selectedRuleIds.has(id)) selectedRuleIds.delete(id); else selectedRuleIds.add(id); renderRuleGrid(); updateAddBtn(); }
-
-        function updateAddBtn() {
-            const btn = document.getElementById('btn-add-basket');
-            if (selectedStudentData && selectedRuleIds.size > 0) {
-                btn.disabled = false;
-                btn.className = "w-full h-12 bg-indigo-600 text-white rounded-xl font-black text-sm shadow-lg hover:bg-indigo-700 transition active:scale-95 flex items-center justify-center gap-2";
-                btn.innerHTML = `<span>담기 (${selectedRuleIds.size}건)</span> <i class="fa-solid fa-arrow-right"></i>`;
-            } else {
-                btn.disabled = true;
-                btn.className = "w-full h-12 bg-slate-200 text-slate-400 rounded-xl font-black text-sm transition flex items-center justify-center gap-2 cursor-not-allowed";
-                btn.innerHTML = `<span>학생과 항목을 선택하세요</span>`;
-            }
-        }
-
-        function addToBasket() {
-            if(!selectedStudentData || selectedRuleIds.size === 0) return;
-            const rules = [];
-            selectedRuleIds.forEach(rid => {
-                const r = allRules.find(x => x.id === rid);
-                let multi = 1.0;
-                if(selectedStudentData.tier && r.tier_multipliers && r.tier_multipliers[selectedStudentData.tier]) multi = parseFloat(r.tier_multipliers[selectedStudentData.tier]);
-                rules.push({ ...r, appliedMultiplier: multi });
-            });
-            basketData[selectedStudentData.id] = { data: selectedStudentData, rules: rules };
-            selectedStudentData = null; selectedRuleIds.clear(); document.getElementById('target-badge').style.opacity='0';
-            renderStudentList(); renderRuleGrid(); updateAddBtn(); renderBasket(); toggleSaveBtn();
-        }
-
-        function removeFromBasket(id) { delete basketData[id]; renderBasket(); renderStudentList(); toggleSaveBtn(); }
-
-        function renderBasket() {
-            const list = document.getElementById('basket-list');
-            const ids = Object.keys(basketData);
-            document.getElementById('basket-count').innerText = ids.length;
-            if (ids.length === 0) { list.innerHTML = `<div class="text-center py-20 text-slate-400/50 text-xs font-bold">목록이 비어있습니다.</div>`; return; }
-            list.innerHTML = ids.map(id => {
-                const item = basketData[id];
-                return `<div class="basket-item bg-white p-3 rounded-xl border border-indigo-100 shadow-sm flex justify-between items-center group">
-                    <div><div class="font-bold text-slate-700 text-sm">${item.data.name}</div><div class="text-[10px] text-slate-400">${item.rules.length}건</div></div>
-                    <div class="flex gap-1"><button onclick="openPreview('${id}')" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center"><i class="fa-solid fa-magnifying-glass text-xs"></i></button>
-                    <button onclick="removeFromBasket('${id}')" class="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-400 flex items-center justify-center"><i class="fa-solid fa-minus text-xs"></i></button></div></div>`;
-            }).join('');
-        }
-
-        function openPreview(id) {
-            const item = basketData[id];
-            document.getElementById('preview-list').innerHTML = item.rules.map(r => {
-                const xp = Math.round(r.xp_change * r.appliedMultiplier), cp = Math.round(r.cp_change * r.appliedMultiplier);
-                return `<div class="flex justify-between p-2 border-b border-slate-100 last:border-0"><span class="text-xs font-bold text-slate-700">${r.name}</span><div class="text-right text-[10px]"><span class="${xp>=0?'text-indigo-600':'text-red-500'} font-black">${xp} XP</span> <span class="text-amber-500 font-bold">${cp} CP</span></div></div>`;
-            }).join('');
-            document.getElementById('preview-modal').classList.remove('hidden');
-        }
-
-        // --- Final Save (Stamp Logic) ---
-        function toggleSaveBtn() {
-            const chk = document.getElementById('chk-confirm'), btn = document.getElementById('btn-final-save');
-            const ready = chk.checked && Object.keys(basketData).length > 0;
-            btn.disabled = !ready;
-            btn.className = ready ? "w-full h-14 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-lg shadow-lg transition active:scale-95 flex items-center justify-center gap-2" : "w-full h-14 bg-slate-300 text-white rounded-xl font-black text-lg shadow-sm transition flex items-center justify-center gap-2 cursor-not-allowed";
-            btn.innerHTML = ready ? `<i class="fa-solid fa-check"></i> <span>최종 반영 (Save)</span>` : `<i class="fa-solid fa-lock"></i> <span>저장 (Locked)</span>`;
-        }
-
-        async function finalSave() {
-            if(!confirm("최종 반영하시겠습니까?")) return;
-            const btn = document.getElementById('btn-final-save'); btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...`;
-            
-            try {
-                const promises = [];
-                const studentIdsToStamp = [];
-                // [추가] 숙제 상태를 업데이트할 학생 명단
-                const homeworkProcessedStudentIds = [];
-                
-                const today = new Date().toISOString().split('T')[0];
-
-                Object.values(basketData).forEach(item => {
-                    studentIdsToStamp.push(item.data.id);
-                    item.rules.forEach(rule => {
-                        const xp = Math.round(rule.xp_change * rule.appliedMultiplier), cp = Math.round(rule.cp_change * rule.appliedMultiplier);
-                        promises.push(_supabase.rpc('give_points', { p_student_id: item.data.id, p_xp: xp, p_cp: cp, p_rule_name: `[수업] ${rule.name} (x${rule.appliedMultiplier})` }));
-                        
-                        // [추가] 숙제 미이행 규칙이 적용되면 명단에 추가
-                        if (rule.name.replace(/\s/g, '') === '숙제미이행') {
-                            homeworkProcessedStudentIds.push(item.data.id);
-                        }
-                    });
-                });
-
-                // [추가] 숙제 미이행 처리된 건들을 'complete'로 일괄 업데이트
-                if (homeworkProcessedStudentIds.length > 0) {
-                    const checkDate = new Date();
-                    checkDate.setDate(checkDate.getDate() - 14); // 넉넉하게 2주 전부터 조회
-                    const checkDateStr = checkDate.toISOString().split('T')[0];
-                    
-                    promises.push(
-                        _supabase.from('assignments')
-                            .update({ completion_status: 'complete' })
-                            .in('student_id', homeworkProcessedStudentIds)
-                            .eq('completion_status', 'incomplete')
-                            .gte('submitted_at', checkDateStr)
-                    );
-                }
-
-                await Promise.all(promises);
-
-                if(studentIdsToStamp.length > 0) {
-                    await _supabase.from('class_members')
-                        .update({ last_evaluation_date: today })
-                        .eq('class_id', currentClassId)
-                        .in('student_id', studentIdsToStamp);
-                }
-
-                alert("완료되었습니다."); closeModal('clinic-modal');
-            } catch(e) { alert("오류: " + e.message); toggleSaveBtn(); }
-        }
-
-        // --- Grid & Memo Utils ---
-        function renderTimeGrid() {
-            let labels = ''; for(let h=START_HOUR; h<=END_HOUR; h++) labels += `<div class="h-[100px] flex items-start justify-center pt-2 text-[11px] font-bold text-slate-400 border-b border-slate-100 font-mono">${h}:00</div>`;
-            document.getElementById('time-labels').innerHTML = labels;
-            let body = ''; for(let d=0; d<7; d++) { body += `<div class="day-column" id="col-day-${d}">`; for(let h=START_HOUR; h<=END_HOUR; h++) body += `<div class="time-slot" data-hour="${h}"></div>`; body += `</div>`; }
-            document.getElementById('schedule-grid-body').innerHTML = body;
-        }
-        async function fetchClasses() {
-            document.querySelectorAll('.class-card').forEach(e => e.remove());
-            const { data: classes } = await _supabase.from('classes').select('*');
-            const { data: memos } = await _supabase.from('class_memos').select('class_id');
-            const counts = {}; if(memos) memos.forEach(m => counts[m.class_id] = (counts[m.class_id]||0)+1);
-            if(classes) classes.forEach(c => {
-                if(!c.day_of_week) return;
-                const colIdx = dayMap[c.day_of_week]; if(colIdx===undefined) return;
-                const [sh, sm] = c.start_time.split(':').map(Number), [eh, em] = c.end_time.split(':').map(Number);
-                const top = (sh - START_HOUR)*100 + (sm/60)*100, height = ((eh*60+em)-(sh*60+sm))/60*100;
-                const hasMemo = (counts[c.id]||0)>0, icon = hasMemo?'<i class="fa-solid fa-note-sticky"></i>':'<i class="fa-solid fa-plus"></i>';
-                const card = document.createElement('div'); card.className = "class-card group"; card.style.top=`${top}px`; card.style.height=`${height}px`;
-                card.innerHTML = `<div class="flex justify-between items-start"><div class="text-[10px] font-black opacity-80 uppercase leading-none">${c.start_time.slice(0,5)}-${c.end_time.slice(0,5)}</div><div onclick="openMemo(event, ${c.id})" class="memo-btn ${hasMemo?'active':''}">${icon}</div></div><div class="text-sm font-black mt-1 group-hover:underline" onclick="openClinic(${c.id}, '${c.name}', '${c.start_time}-${c.end_time}')">${c.name}</div>`;
-                document.getElementById(`col-day-${colIdx}`).appendChild(card);
             });
         }
-        function closeModal(id) { document.getElementById(id).classList.remove('show'); setTimeout(()=>document.getElementById(id).classList.add('hidden'),300); }
-        function changeWeek(o) { baseDate.setDate(baseDate.getDate()+(o*7)); updateWeekDisplay(); fetchClasses(); }
-        function setToday() { baseDate = new Date(); updateWeekDisplay(); fetchClasses(); }
-        function updateWeekDisplay() { const s=new Date(baseDate), d=baseDate.getDay(), diff=baseDate.getDate()-d+(d===0?-6:1); s.setDate(diff); const e=new Date(s); e.setDate(s.getDate()+6); document.getElementById('current-week-range').innerText=`${s.toLocaleDateString()} - ${e.toLocaleDateString()}`; renderHeader(s); }
-        function renderHeader(s) { let html=''; const t=new Date().toDateString(); for(let i=0;i<7;i++){ const d=new Date(s); d.setDate(s.getDate()+i); const isT=d.toDateString()===t; html+=`<div class="day-column border-r border-slate-200 p-3 text-center ${isT?'bg-indigo-50/50':''}"><div class="text-[10px] font-black ${isT?'text-indigo-600':'text-slate-400'} tracking-widest mb-1">${dayNamesEng[i]}</div><div class="text-xl font-black ${isT?'text-indigo-700':'text-slate-700'}">${d.getDate()}</div></div>`; } document.getElementById('day-headers').innerHTML=html; }
-        async function openMemo(e, cid) { e.stopPropagation(); currentMemoClassId = cid; document.getElementById('memo-modal').classList.remove('hidden'); renderMemoList(); }
-        async function renderMemoList() { const list=document.getElementById('memo-list'); const {data}=await _supabase.from('class_memos').select('*').eq('class_id',currentMemoClassId).order('created_at'); list.innerHTML = data&&data.length? data.map(m=>`<div class="bg-white p-3 rounded-xl border border-amber-100 relative group"><p contenteditable="true" onblur="updateMemo(${m.id},this.innerText)" class="text-sm font-bold text-slate-600 outline-none">${m.content}</p><button onclick="deleteMemo(${m.id})" class="absolute top-2 right-2 text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button></div>`).join(''):'<div class="text-center text-amber-300 text-xs py-10\">메모 없음</div>'; }
-        async function addMemo() { const inp=document.getElementById('new-memo-input'); if(inp.value.trim()){ await _supabase.from('class_memos').insert({class_id:currentMemoClassId, content:inp.value.trim()}); inp.value=''; renderMemoList(); fetchClasses(); } }
-        async function updateMemo(id,v) { await _supabase.from('class_memos').update({content:v}).eq('id',id); }
-        async function deleteMemo(id) { if(confirm("삭제?")) { await _supabase.from('class_memos').delete().eq('id',id); renderMemoList(); fetchClasses(); } }
 
         init();
     </script>

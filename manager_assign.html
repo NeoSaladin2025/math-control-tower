@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>숙제 출제 모듈</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"></script>
+    <script src="config.js"></script>
+
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background: #f8fafc; overflow: hidden; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .student-card { transition: all 0.2s; cursor: pointer; }
+        .student-card:hover { transform: translateY(-1px); border-color: #6366f1; }
+        .student-card.active { border-color: #4f46e5; background: #eef2ff; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15); }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-slate-50">
+
+    <div class="flex-1 flex overflow-hidden">
+        <aside class="w-72 bg-white border-r border-slate-200 flex flex-col z-10 shrink-0">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">출제 대상 목록</span>
+                <span id="st-count" class="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+            </div>
+            <div id="student-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll"></div>
+        </aside>
+
+        <main class="flex-1 relative bg-slate-50/30 flex flex-col min-w-0">
+            <div id="view-empty" class="flex-1 flex flex-col items-center justify-center text-slate-300 select-none">
+                <i class="fa-solid fa-pen-nib text-4xl mb-4 opacity-20"></i>
+                <p class="text-xs font-bold opacity-50">출제할 학생을 선택하세요</p>
+            </div>
+            <div id="view-engine" class="flex-1 hidden flex flex-col overflow-hidden animate-fadeIn"></div>
+        </main>
+    </div>
+
+    <script>
+        const STATE = { cid: new URLSearchParams(window.location.search).get('class_id'), student: null, allClasses: [], assignmentCart: [] };
+        const CONSTANTS = { BUCKET: 'homework_attached_images_and_solutions', KAKAO_KEY: 'fbc037a3bf3b2b051428388f154c4ff4' };
+        const Util = {
+            findClassName: (cid) => {
+                if (!cid) return "Unknown";
+                const found = STATE.allClasses.find(c => String(c.id) === String(cid));
+                return found ? found.name : `Sector #${cid}`;
+            }
+        };
+
+        const app = {
+            init: async () => {
+                if (!STATE.cid) return alert("Class ID Missing!");
+                try {
+                    const { data } = await _supabase.from('classes').select('*');
+                    STATE.allClasses = data || [];
+                } catch (e) {}
+                await app.loadStudents();
+                if (window.Kakao && !Kakao.isInitialized()) Kakao.init(CONSTANTS.KAKAO_KEY);
+            },
+            loadStudents: async () => {
+                const { data: logicList } = await _supabase.from('assignment_and_class_logic').select('*');
+                const { data: userList } = await _supabase.from('users').select('username, name, grade');
+                const enrolled = logicList.filter(l => {
+                    let settings = [];
+                    try { settings = typeof l.class_settings === 'string' ? JSON.parse(l.class_settings) : l.class_settings; } catch {}
+                    return Array.isArray(settings) && settings.some(s => String(s.class_id) === String(STATE.cid));
+                });
+                document.getElementById('st-count').innerText = enrolled.length;
+                document.getElementById('student-list').innerHTML = enrolled.map(l => {
+                    const u = userList.find(x => x.username === l.student_id);
+                    const name = u?.name || l.student_id;
+                    const grade = u?.grade || "-";
+                    return `<div onclick="app.selectStudent('${l.student_id}', '${name}', '${grade}')" class="student-card p-3 rounded-xl border border-slate-100 bg-white group flex justify-between items-center mb-1.5" data-name="${name}"><div><p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${grade}</p><p class="name-text text-sm font-bold text-slate-700 transition-colors">${name}</p></div><i class="fa-solid fa-chevron-right text-[10px] text-slate-200 group-hover:text-indigo-400"></i></div>`;
+                }).join('');
+            },
+            selectStudent: async (id, name, grade) => {
+                STATE.student = { id, name, grade };
+                document.querySelectorAll('.student-card').forEach(el => el.classList.toggle('active', el.dataset.name === name));
+                
+                document.getElementById('view-empty').classList.add('hidden');
+                const container = document.getElementById('view-engine');
+                container.classList.remove('hidden');
+                container.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-400 gap-2"><i class="fa-solid fa-circle-notch animate-spin text-2xl text-indigo-500"></i></div>`;
+
+                let logicData = { homework_settings: [] };
+                try {
+                    const { data } = await _supabase.from('assignment_and_class_logic').select('*').eq('student_id', STATE.student.id).maybeSingle();
+                    if(data) logicData = data;
+                } catch(e) {}
+                EngineAssign.render(container, logicData);
+            }
+        };
+
+        const EngineAssign = {
+            render: (container, logicData) => {
+                let settings = [];
+                try { settings = typeof logicData.homework_settings === 'string' ? JSON.parse(logicData.homework_settings) : logicData.homework_settings; } catch {}
+                if (!Array.isArray(settings)) settings = [];
+
+                const rule = settings.find(s => String(s.assign_class_id) === String(STATE.cid));
+                const targetId = rule ? (rule.check_class_id || STATE.cid) : STATE.cid;
+                const targetTitle = rule ? (rule.title || "정기 숙제") : "일반 숙제";
+                const targetName = Util.findClassName(targetId);
+                const currentClassName = Util.findClassName(STATE.cid);
+
+                container.innerHTML = `
+                    <div class="h-full flex flex-col bg-white">
+                        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                            <div>
+                                <h2 class="text-xl font-black text-slate-800"><span class="text-indigo-600">${STATE.student.name}</span> 출제</h2>
+                                <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">FROM: ${currentClassName}</p>
+                            </div>
+                            <div class="text-right"><p class="text-[10px] font-bold text-slate-400 mb-1">검사 예정</p><div class="bg-slate-800 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-md">${targetName}</div></div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scroll">
+                            <div class="flex gap-6 h-full">
+                                <div class="flex-1 flex flex-col gap-4">
+                                    <textarea id="task-body" placeholder="지시사항 입력..." class="w-full flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold focus:border-indigo-500 outline-none resize-none placeholder-slate-300"></textarea>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center gap-2 hover:bg-slate-50"><i class="fa-regular fa-image text-slate-400"></i><span class="text-xs font-bold text-slate-500">사진</span><input type="file" id="img-upload" class="hidden" accept="image/*"></label>
+                                        <label class="cursor-pointer border border-slate-200 rounded-xl p-3 flex items-center justify-center gap-2 hover:bg-slate-50"><i class="fa-brands fa-html5 text-slate-400"></i><span class="text-xs font-bold text-slate-500">HTML</span><input type="file" id="html-upload" class="hidden" accept=".html"></label>
+                                    </div>
+                                    <button onclick="EngineAssign.add('${targetId}', '${targetTitle}', '${targetName}')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95">리스트 담기</button>
+                                </div>
+                                <div class="w-72 bg-slate-50 rounded-xl border border-slate-200 flex flex-col shadow-inner">
+                                    <div class="p-3 border-b border-slate-200 bg-white rounded-t-xl flex justify-between items-center"><span class="text-xs font-black text-slate-500">Ready Queue</span><span id="cart-cnt" class="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-2 rounded">0</span></div>
+                                    <div id="cart-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scroll"></div>
+                                    <div class="p-2 border-t border-slate-200 bg-white rounded-b-xl"><button onclick="EngineAssign.deploy()" id="btn-deploy" disabled class="w-full py-2 bg-slate-200 text-slate-400 rounded-lg font-bold text-xs">전송 불가</button></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                EngineAssign.refreshCart();
+            },
+            add: (targetId, targetTitle, targetName) => {
+                const body = document.getElementById('task-body').value;
+                const img = document.getElementById('img-upload').files[0];
+                const html = document.getElementById('html-upload').files[0];
+                if (!body) return alert("내용을 입력해주세요.");
+                STATE.assignmentCart.push({ sid: STATE.student.id, name: STATE.student.name, cid: String(STATE.cid), checkClassId: String(targetId), checkTitle: targetTitle, targetName: targetName, content: body, imgFile: img, htmlFile: html });
+                document.getElementById('task-body').value = "";
+                EngineAssign.refreshCart();
+            },
+            refreshCart: () => {
+                const list = document.getElementById('cart-list');
+                const btn = document.getElementById('btn-deploy');
+                document.getElementById('cart-cnt').innerText = STATE.assignmentCart.length;
+                if (STATE.assignmentCart.length === 0) {
+                    list.innerHTML = `<div class="h-full flex items-center justify-center text-slate-300 text-xs italic">대기열 없음</div>`;
+                    btn.disabled = true;
+                    btn.className = "w-full py-2 bg-slate-200 text-slate-400 rounded-lg font-bold text-xs";
+                    btn.innerText = "전송 불가";
+                } else {
+                    list.innerHTML = STATE.assignmentCart.map((item, i) => `<div class="bg-white border border-slate-200 p-2 rounded-lg relative group"><button onclick="STATE.assignmentCart.splice(${i},1); EngineAssign.refreshCart()" class="absolute top-1 right-1 text-slate-300 hover:text-red-500">×</button><span class="text-[9px] bg-slate-100 text-slate-500 px-1 rounded">To: ${item.targetName}</span><p class="text-xs font-bold text-slate-700 mt-1 truncate">${item.content}</p></div>`).join('');
+                    btn.disabled = false;
+                    btn.className = "w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs shadow-md";
+                    btn.innerText = `전송 (${STATE.assignmentCart.length})`;
+                }
+            },
+            deploy: async () => {
+                if (STATE.assignmentCart.length === 0) return;
+                const btn = document.getElementById('btn-deploy');
+                btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> 처리 중...';
+                btn.disabled = true;
+                try {
+                    const payloads = await Promise.all(STATE.assignmentCart.map(async (item) => {
+                        let iUrl = null, hUrl = null;
+                        if (item.imgFile) { const path = `images/${Date.now()}_${Math.random().toString(36).substr(2,5)}.${item.imgFile.name.split('.').pop()}`; await _supabase.storage.from(CONSTANTS.BUCKET).upload(path, item.imgFile); iUrl = _supabase.storage.from(CONSTANTS.BUCKET).getPublicUrl(path).data.publicUrl; }
+                        if (item.htmlFile) { const path = `solutions/${Date.now()}_${Math.random().toString(36).substr(2,5)}.html`; await _supabase.storage.from(CONSTANTS.BUCKET).upload(path, item.htmlFile); hUrl = _supabase.storage.from(CONSTANTS.BUCKET).getPublicUrl(path).data.publicUrl; }
+                        return { class_id: item.cid, student_id: item.sid, content: item.content, status: 'pending', teacher_images: iUrl ? [iUrl] : null, teacher_html: hUrl || null, kName: item.name, kTargetName: item.targetName };
+                    }));
+                    const { error } = await _supabase.from('homework_messages').insert(payloads.map(({kName, kTargetName, ...rest}) => rest));
+                    if (error) throw error;
+                    if (window.Kakao) {
+                        const fullContentBody = payloads.map((p) => `■ ${p.kName} (To: ${p.kTargetName})\n└ 지시사항: ${p.content}`).join('\n\n━━━━━━━━━━━━━━\n\n');
+                        Kakao.Share.sendDefault({ objectType: 'text', text: `[숙제 출제 명령서] ${new Date().toLocaleDateString()}\n총 ${payloads.length}건 하달\n\n${fullContentBody}\n\n[이상 전달 끝]`, link: { mobileWebUrl: location.href, webUrl: location.href }, buttonTitle: 'HQ 접속하기' });
+                    }
+                    alert("출제 완료!"); STATE.assignmentCart = []; EngineAssign.refreshCart();
+                } catch (e) { alert("오류: " + e.message); btn.disabled = false; btn.innerText = "재시도"; }
+            }
+        };
+        window.onload = app.init;
+    </script>
+</body>
+</html>

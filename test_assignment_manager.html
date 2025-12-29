@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <title>진단평가 배정 및 관리 - Elite Secretary v4.1</title>
@@ -10,78 +11,164 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap');
-        
-        body { 
-            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
-            background-color: #0f172a; 
-            color: #e2e8f0; 
-            height: 100vh; 
-            display: flex; 
-            flex-direction: column; 
-            overflow: hidden; 
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-        
+
         /* Tabs */
-        .tab-btn { 
-            padding: 16px 24px; font-weight: 700; color: #64748b; 
-            border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.3s; 
+        .tab-btn {
+            padding: 16px 24px;
+            font-weight: 700;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
         }
-        .tab-btn:hover { color: #cbd5e1; background: rgba(255,255,255,0.02); }
-        .tab-btn.active { color: #818cf8; border-bottom-color: #818cf8; background: rgba(129, 140, 248, 0.05); }
+
+        .tab-btn:hover {
+            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .tab-btn.active {
+            color: #818cf8;
+            border-bottom-color: #818cf8;
+            background: rgba(129, 140, 248, 0.05);
+        }
 
         /* Glass Panel */
-        .glass-panel { 
-            background: rgba(30, 41, 59, 0.7); 
-            backdrop-filter: blur(12px); 
-            border: 1px solid rgba(255,255,255,0.05); 
-            border-radius: 16px; 
-            display: flex; flex-direction: column; overflow: hidden; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         /* Scrollbar */
-        .pro-scroll::-webkit-scrollbar { width: 5px; }
-        .pro-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        .pro-scroll::-webkit-scrollbar-track { background: transparent; }
-        
+        .pro-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .pro-scroll::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        .pro-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
         /* List Items */
-        .list-item { 
-            padding: 12px 14px; border-radius: 10px; cursor: pointer; transition: 0.2s; 
-            border: 1px solid transparent; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;
-            background: rgba(255,255,255,0.02);
+        .list-item {
+            padding: 12px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
         }
-        .list-item:hover { background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); }
-        .list-item.selected { background: rgba(99, 102, 241, 0.2); border-color: #6366f1; }
-        
+
+        .list-item:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .list-item.selected {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+        }
+
         /* Buttons */
-        .diff-btn { 
-            background: #1e293b; border: 1px solid #334155; color: #94a3b8; 
-            transition: 0.2s; font-size: 0.75rem; font-weight: 600; 
+        .diff-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            transition: 0.2s;
+            font-size: 0.75rem;
+            font-weight: 600;
         }
-        .diff-btn:hover { background: #334155; color: white; }
-        .diff-btn.active { background: #4f46e5; border-color: #4f46e5; color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
-        
-        .btn-primary { 
-            background: linear-gradient(135deg, #4f46e5, #4338ca); color: white; 
-            font-weight: 700; transition: 0.2s; 
+
+        .diff-btn:hover {
+            background: #334155;
+            color: white;
         }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4); }
-        .btn-primary:active { transform: translateY(0); }
+
+        .diff-btn.active {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            color: white;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
 
         /* Round Card (Management) */
-        .round-card { 
-            background: #1e293b; border: 1px solid #334155; border-radius: 12px; 
-            padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; 
-            transition: 0.3s; 
+        .round-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s;
         }
-        .round-card.locked { opacity: 0.3; pointer-events: none; filter: grayscale(1); background: #0f172a; border-style: dashed; }
-        .round-card.completed { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
-        .round-card.active { border-color: #6366f1; box-shadow: 0 0 15px rgba(99, 102, 241, 0.1); background: rgba(99, 102, 241, 0.05); }
+
+        .round-card.locked {
+            opacity: 0.3;
+            pointer-events: none;
+            filter: grayscale(1);
+            background: #0f172a;
+            border-style: dashed;
+        }
+
+        .round-card.completed {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .round-card.active {
+            border-color: #6366f1;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+            background: rgba(99, 102, 241, 0.05);
+        }
     </style>
 </head>
+
 <body>
 
-    <div class="h-16 bg-slate-900/90 border-b border-slate-700 flex items-center px-8 justify-between shrink-0 backdrop-blur-sm z-50">
+    <div
+        class="h-16 bg-slate-900/90 border-b border-slate-700 flex items-center px-8 justify-between shrink-0 backdrop-blur-sm z-50">
         <div class="flex gap-6">
             <div class="tab-btn active" onclick="setTab('assign')" id="btn-tab-assign">
                 <i class="fa-solid fa-paper-plane mr-2"></i>시험지 배정
@@ -91,7 +178,8 @@
             </div>
         </div>
         <div class="flex items-center gap-3">
-            <div class="text-[10px] text-slate-500 font-mono tracking-widest uppercase bg-slate-800 px-3 py-1 rounded-full">
+            <div
+                class="text-[10px] text-slate-500 font-mono tracking-widest uppercase bg-slate-800 px-3 py-1 rounded-full">
                 System Ready (Fixed)
             </div>
         </div>
@@ -103,9 +191,11 @@
             <div class="w-1/3 glass-panel p-5">
                 <div class="flex items-center justify-between mb-4">
                     <span class="text-xs font-bold text-slate-400 uppercase">1. Target</span>
-                    <span id="assign-cnt" class="text-xs text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">0명 선택</span>
+                    <span id="assign-cnt"
+                        class="text-xs text-indigo-400 font-bold bg-indigo-500/10 px-2 py-0.5 rounded">0명 선택</span>
                 </div>
-                <select id="sel-class-assign" onchange="loadStudents('assign', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white mb-4 outline-none">
+                <select id="sel-class-assign" onchange="loadStudents('assign', this.value)"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white mb-4 outline-none">
                     <option value="">반 선택 (Class)...</option>
                 </select>
                 <div class="flex-1 border border-slate-700/50 rounded-xl bg-slate-900/30 overflow-hidden relative">
@@ -123,7 +213,8 @@
             <div class="w-1/3 glass-panel p-5">
                 <div class="text-xs font-bold text-slate-400 uppercase mb-4">2. Workbook (Skeleton)</div>
                 <div class="flex flex-col gap-2 mb-4">
-                    <select id="sel-cat-assign" onchange="loadWorkbooks(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white outline-none">
+                    <select id="sel-cat-assign" onchange="loadWorkbooks(this.value)"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white outline-none">
                         <option value="">대분류 (Category)...</option>
                     </select>
                 </div>
@@ -136,7 +227,7 @@
 
             <div class="w-1/3 glass-panel p-5 border-l-4 border-indigo-500 relative">
                 <div class="text-xs font-bold text-slate-400 uppercase mb-6">3. Difficulty & Execute</div>
-                
+
                 <div class="mb-8">
                     <label class="block text-xs font-bold text-slate-300 mb-3">난이도 (Difficulty)</label>
                     <div class="grid grid-cols-5 gap-2">
@@ -164,7 +255,8 @@
                     </div>
                 </div>
 
-                <button onclick="runAssign()" class="w-full py-4 btn-primary rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm mt-auto">
+                <button onclick="runAssign()"
+                    class="w-full py-4 btn-primary rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm mt-auto">
                     <i class="fa-solid fa-bolt"></i> 배정 실행 (Confirm)
                 </button>
             </div>
@@ -173,7 +265,8 @@
         <div id="view-manage" class="hidden gap-6 h-full">
             <div class="w-1/4 glass-panel p-5">
                 <div class="text-xs font-bold text-slate-400 uppercase mb-4">Select Student</div>
-                <select id="sel-class-manage" onchange="loadStudents('manage', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white mb-4 outline-none">
+                <select id="sel-class-manage" onchange="loadStudents('manage', this.value)"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white mb-4 outline-none">
                     <option value="">반 선택...</option>
                 </select>
                 <div class="flex-1 border border-slate-700/50 rounded-xl bg-slate-900/30 overflow-hidden relative">
@@ -189,9 +282,12 @@
                         <i class="fa-solid fa-chart-line text-emerald-400"></i> 진도 관리 대시보드
                     </h2>
                     <div id="dash-info" class="hidden flex items-center gap-3">
-                        <span id="dash-title" class="text-white font-bold text-sm bg-slate-800 px-3 py-1 rounded-lg border border-slate-700"></span>
-                        <span id="dash-diff" class="text-indigo-400 font-bold text-xs bg-indigo-900/30 px-2 py-1 rounded border border-indigo-500/30"></span>
-                        <button onclick="doAction('delete')" class="ml-4 text-xs text-red-500 hover:text-red-400 underline">
+                        <span id="dash-title"
+                            class="text-white font-bold text-sm bg-slate-800 px-3 py-1 rounded-lg border border-slate-700"></span>
+                        <span id="dash-diff"
+                            class="text-indigo-400 font-bold text-xs bg-indigo-900/30 px-2 py-1 rounded border border-indigo-500/30"></span>
+                        <button onclick="doAction('delete')"
+                            class="ml-4 text-xs text-red-500 hover:text-red-400 underline">
                             <i class="fa-solid fa-trash"></i> 배정 취소
                         </button>
                     </div>
@@ -218,7 +314,7 @@
 
         let assignData = { students: new Set(), wbId: null, wbTitle: null, roundCount: 0 };
         let manageData = { currentRecId: null };
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             const check = setInterval(() => { if (typeof _supabase !== 'undefined') { clearInterval(check); initApp(); } }, 100);
         });
@@ -273,12 +369,12 @@
         async function pickWorkbook(id, title, el) {
             document.querySelectorAll('#list-workbook-assign .list-item').forEach(i => i.classList.remove('selected'));
             el.classList.add('selected');
-            
+
             const { count } = await _supabase.from('test_papers')
                 .select('*', { count: 'exact', head: true })
                 .eq('test_master_id', id);
 
-            assignData.wbId = id; 
+            assignData.wbId = id;
             assignData.wbTitle = title;
             assignData.roundCount = count || 0;
 
@@ -296,18 +392,42 @@
         async function loadStudents(mode, cid) {
             const list = document.getElementById(mode === 'assign' ? 'list-stu-assign' : 'list-stu-manage');
             list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i></div>';
-            
+
             if (!cid) return;
-            const { data } = await _supabase.from('class_members').select('student_id').eq('class_id', cid);
-            
-            if (data && data.length > 0) {
-                list.innerHTML = data.map(m => `
+
+            // [수정 포인트] 사장님이 새로 주신 테이블 로직을 적용했어요! 아으응!
+            // assignment_and_class_logic 테이블에서 해당 반(class_id)이 포함된 활성 학생만 가져옵니다.
+            const { data, error } = await _supabase
+                .from('assignment_and_class_logic')
+                .select('student_id, class_settings')
+                .eq('is_active', true); // 활성화된 학생만 
+
+            if (error) {
+                console.error("학생 리스트 로드 실패:", error);
+                list.innerHTML = '<div class="text-center py-10 text-xs text-red-500">데이터 로드 실패</div>';
+                return;
+            }
+
+            // class_settings JSON 내부에서 사장님이 선택한 cid가 있는지 검사해서 필터링해요.
+            const filteredData = data.filter(item => {
+                try {
+                    const settings = typeof item.class_settings === 'string'
+                        ? JSON.parse(item.class_settings)
+                        : item.class_settings;
+                    return settings.some(s => s.class_id === cid);
+                } catch (e) { return false; }
+            });
+
+            if (filteredData && filteredData.length > 0) {
+                list.innerHTML = filteredData.map(m => `
                     <div class="list-item flex items-center gap-3 bg-slate-800/50" onclick="${mode === 'assign' ? `toggleStu('${m.student_id}', this)` : `loadDash('${m.student_id}', this)`}">
                         <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-400">${m.student_id.charAt(0).toUpperCase()}</div>
                         <div class="text-sm text-slate-200 font-bold">${m.student_id}</div>
                         ${mode === 'assign' ? '<div class="w-4 h-4 rounded border border-slate-600 chk-indicator flex items-center justify-center text-[10px]"><i class="fa-solid fa-check hidden text-white"></i></div>' : '<i class="fa-solid fa-chevron-right text-[10px] text-slate-600"></i>'}
                     </div>`).join('');
-            } else list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500">학생 없음</div>';
+            } else {
+                list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500">이 반에 소속된 학생이 없습니다.</div>';
+            }
         }
 
         function toggleStu(sid, el) {
@@ -316,7 +436,7 @@
             else { assignData.students.add(sid); el.classList.add('selected'); ind.classList.add('bg-indigo-500', 'border-indigo-500'); icon.classList.remove('hidden'); }
             document.getElementById('assign-cnt').innerText = `${assignData.students.size}명 선택`;
         }
-        
+
         function toggleAllAssign(chk) {
             document.querySelectorAll('#list-stu-assign .list-item').forEach(i => {
                 const isSel = i.classList.contains('selected');
@@ -345,9 +465,9 @@
 
         /* --- MANAGEMENT LOGIC (FIXED) --- */
         async function loadDash(sid, el) {
-            document.querySelectorAll('#list-stu-manage .list-item').forEach(i => i.classList.remove('selected')); 
+            document.querySelectorAll('#list-stu-manage .list-item').forEach(i => i.classList.remove('selected'));
             el.classList.add('selected');
-            
+
             const board = document.getElementById('dash-board');
             board.innerHTML = '<div class="h-full flex items-center justify-center"><i class="fa-solid fa-spinner fa-spin text-2xl text-slate-600"></i></div>';
 
@@ -392,17 +512,17 @@
                 const isCur = (i === rec.current_round);
                 const isPast = (i < rec.current_round);
                 const hist = rec.history_log?.[i] || {};
-                
+
                 let cardClass = isCur ? 'active' : (isPast ? 'completed' : 'locked');
                 let content = '';
 
                 if (isPast) {
-                    content = `<span class="text-emerald-500 text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> 통과 (${hist.passed_at?.substring(5,10) || ''})</span>`;
+                    content = `<span class="text-emerald-500 text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> 통과 (${hist.passed_at?.substring(5, 10) || ''})</span>`;
                 } else if (isCur) {
                     // 수료 상태(completed)면 현재 라운드도 통과로 표시 가능하나, 일단 로직 유지
                     if (rec.status === 'completed') {
-                         cardClass = 'completed';
-                         content = `<span class="text-emerald-500 text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> 수료 완료</span>`;
+                        cardClass = 'completed';
+                        content = `<span class="text-emerald-500 text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> 수료 완료</span>`;
                     } else {
                         content = `
                             <div class="flex items-center gap-3">
@@ -431,7 +551,7 @@
 
         async function doAction(act) {
             if (!manageData.currentRecId) return;
-            
+
             let msg = "처리하시겠습니까?";
             if (act === 'pass') msg = "통과 처리하시겠습니까?\n(다음 회차가 열립니다)";
             if (act === 'delete') msg = "정말 배정을 취소하시겠습니까?\n기록이 삭제됩니다.";
@@ -452,4 +572,5 @@
         }
     </script>
 </body>
+
 </html>

@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    
     <link rel="manifest" href="site.webmanifest">
-    
     <link rel="apple-touch-icon" href="favicon.ico">
     <meta charset="UTF-8">
     <title>일일 규칙 관리소 - V15.0 Discriminator</title>
@@ -13,19 +12,70 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; padding: 2rem; user-select: none; }
-        
+        body {
+            font-family: 'Apple SD Gothic Neo', sans-serif;
+            background-color: #f8fafc;
+            padding: 2rem;
+            user-select: none;
+        }
+
         /* 쫀득한 토글 스위치 */
-        .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
-        .toggle-checkbox { right: 0; z-index: 1; border-color: #e5e7eb; cursor: pointer; appearance: none; border-width: 0; width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: white; position: absolute; top: 0.125rem; left: 0.125rem; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .toggle-label { width: 3rem; height: 1.5rem; background-color: #e5e7eb; border-radius: 9999px; position: relative; cursor: pointer; transition: all 0.2s; }
-        
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4f46e5;
+        }
+
+        .toggle-checkbox:checked+.toggle-label {
+            background-color: #4f46e5;
+        }
+
+        .toggle-checkbox {
+            right: 0;
+            z-index: 1;
+            border-color: #e5e7eb;
+            cursor: pointer;
+            appearance: none;
+            border-width: 0;
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 9999px;
+            background-color: white;
+            position: absolute;
+            top: 0.125rem;
+            left: 0.125rem;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-label {
+            width: 3rem;
+            height: 1.5rem;
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
         /* 스르륵 열리는 애니메이션 */
-        .multiplier-box { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, opacity 0.3s ease-out; opacity: 0; background-color: #f1f5f9; border-radius: 0 0 16px 16px; }
-        .multiplier-box.open { max-height: 500px; opacity: 1; border-top: 1px dashed #cbd5e1; padding: 16px; }
+        .multiplier-box {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+            background-color: #f1f5f9;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .multiplier-box.open {
+            max-height: 500px;
+            opacity: 1;
+            border-top: 1px dashed #cbd5e1;
+            padding: 16px;
+        }
     </style>
 </head>
+
 <body>
     <script src="config.js"></script>
 
@@ -37,12 +87,14 @@
                 </h2>
                 <p class="text-slate-400 font-bold mt-1 text-sm">티어별 차등 처벌 시스템 (Discriminatory Punishment)</p>
             </div>
-            
+
             <div class="flex gap-2">
-                 <button onclick="addNewRule()" class="bg-white border-2 border-slate-200 hover:border-indigo-400 text-slate-600 font-bold px-6 py-3 rounded-2xl transition shadow-sm flex items-center gap-2">
+                <button onclick="addNewRule()"
+                    class="bg-white border-2 border-slate-200 hover:border-indigo-400 text-slate-600 font-bold px-6 py-3 rounded-2xl transition shadow-sm flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> 항목 추가
                 </button>
-                <button id="btn-save" onclick="saveAll()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2">
+                <button id="btn-save" onclick="saveAll()"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2">
                     <i class="fa-solid fa-save"></i> 전체 저장
                 </button>
             </div>
@@ -64,7 +116,7 @@
 
         // 1. 티어 목록 가져오기 (DB: tier_rules)
         async function loadTiers() {
-            const { data, error } = await _supabase.from('tier_rules').select('tier_name').order('min_xp', {ascending: true});
+            const { data, error } = await _supabase.from('tier_rules').select('tier_name').order('min_xp', { ascending: true });
             if (data) {
                 cachedTiers = data.map(t => t.tier_name);
             } else {
@@ -75,7 +127,12 @@
 
         // 2. 규칙 목록 가져오기
         async function loadRules() {
-            const { data, error } = await _supabase.from('point_rules').select('*').order('id', {ascending: true});
+            const { data, error } = await _supabase
+                .from('point_rules')
+                .select('*')
+                .order('category', { ascending: true }) // 1순위: 카테고리 가나다 순
+                .order('name', { ascending: true });    // 2순위: 이름 가나다 순
+
             if (error) {
                 console.error(error);
                 alert("로딩 실패!");
@@ -95,14 +152,14 @@
 
             container.innerHTML = cachedRules.map((rule, index) => {
                 const multipliers = rule.tier_multipliers || {};
-                
+
                 // 티어별 배율 입력창 생성 HTML
                 const tierInputsHtml = cachedTiers.map(tier => {
                     const val = multipliers[tier] !== undefined ? multipliers[tier] : 1.0;
                     // 티어 이름에 따라 색상 다르게 (다이아는 무서운 색)
                     let badgeColor = 'bg-slate-200 text-slate-600';
-                    if(tier.includes('Diamond') || tier.includes('다이아')) badgeColor = 'bg-cyan-100 text-cyan-700 border border-cyan-200';
-                    if(tier.includes('Gold') || tier.includes('골드')) badgeColor = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+                    if (tier.includes('Diamond') || tier.includes('다이아')) badgeColor = 'bg-cyan-100 text-cyan-700 border border-cyan-200';
+                    if (tier.includes('Gold') || tier.includes('골드')) badgeColor = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
 
                     return `
                     <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
@@ -110,27 +167,28 @@
                         <div class="flex items-center gap-1">
                             <span class="text-xs font-bold text-slate-400">x</span>
                             <input type="number" step="0.1" value="${val}" 
+                                data-tier="${tier}"
                                 onchange="updateMultiplier(${index}, '${tier}', this.value)"
-                                class="w-14 text-right font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded px-1 focus:outline-none focus:border-indigo-500">
+                                class="ipt-multiplier w-14 text-right font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded px-1 focus:outline-none focus:border-indigo-500">
                         </div>
                     </div>`;
                 }).join('');
 
                 return `
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition hover:shadow-md group">
+                <div class="rule-item bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition hover:shadow-md group" data-id="${rule.id || ''}">
                     <div class="p-5 flex items-center gap-4 relative bg-white z-10">
                         <div class="cursor-move text-slate-300 hover:text-slate-500"><i class="fa-solid fa-grip-vertical"></i></div>
                         
                         <div class="w-24">
                             <input type="text" value="${rule.category || ''}" placeholder="분류" 
                                 onchange="updateRule(${index}, 'category', this.value)"
-                                class="w-full text-xs font-bold text-slate-500 bg-slate-50 border-none rounded-lg px-2 py-1 text-center focus:ring-2 focus:ring-indigo-100">
+                                class="ipt-category w-full text-xs font-bold text-slate-500 bg-slate-50 border-none rounded-lg px-2 py-1 text-center focus:ring-2 focus:ring-indigo-100">
                         </div>
 
                         <div class="flex-1">
                             <input type="text" value="${rule.name}" placeholder="규칙 내용 입력" 
                                 onchange="updateRule(${index}, 'name', this.value)"
-                                class="w-full font-bold text-slate-700 text-lg border-none focus:ring-0 placeholder-slate-300 bg-transparent">
+                                class="ipt-name w-full font-bold text-slate-700 text-lg border-none focus:ring-0 placeholder-slate-300 bg-transparent">
                         </div>
 
                         <div class="flex gap-2 cursor-pointer" onclick="toggleMultipliers(${index})" title="클릭해서 티어별 차별 설정하기">
@@ -139,14 +197,14 @@
                                 <input type="number" value="${rule.xp_change}" 
                                     onclick="event.stopPropagation()"
                                     onchange="updateRule(${index}, 'xp_change', this.value)"
-                                    class="text-center font-black ${rule.xp_change >= 0 ? 'text-indigo-600' : 'text-red-500'} bg-slate-50 rounded-lg py-1 border border-slate-100 focus:border-indigo-500">
+                                    class="ipt-xp text-center font-black ${rule.xp_change >= 0 ? 'text-indigo-600' : 'text-red-500'} bg-slate-50 rounded-lg py-1 border border-slate-100 focus:border-indigo-500">
                             </div>
                             <div class="flex flex-col w-20">
                                 <span class="text-[10px] font-bold text-slate-400 text-center uppercase">CP (화폐)</span>
                                 <input type="number" value="${rule.cp_change}" 
                                     onclick="event.stopPropagation()"
                                     onchange="updateRule(${index}, 'cp_change', this.value)"
-                                    class="text-center font-black text-amber-500 bg-slate-50 rounded-lg py-1 border border-slate-100 focus:border-amber-400">
+                                    class="ipt-cp text-center font-black text-amber-500 bg-slate-50 rounded-lg py-1 border border-slate-100 focus:border-amber-400">
                             </div>
                             <div class="flex items-center justify-center w-8 text-slate-300 group-hover:text-indigo-500 transition">
                                 <i class="fa-solid fa-chevron-down transform transition" id="arrow-${index}"></i>
@@ -180,7 +238,7 @@
         function toggleMultipliers(index) {
             const box = document.getElementById(`multi-box-${index}`);
             const arrow = document.getElementById(`arrow-${index}`);
-            
+
             if (box.classList.contains('open')) {
                 box.classList.remove('open');
                 arrow.style.transform = 'rotate(0deg)';
@@ -198,7 +256,7 @@
         function updateRule(index, field, value) {
             if (field === 'xp_change' || field === 'cp_change') value = parseInt(value) || 0;
             cachedRules[index][field] = value;
-            renderList(); // 색상 갱신 등을 위해 리렌더링 (입력 포커스 이슈 있으면 수정 필요하나 여기선 간편하게)
+            // renderList(); // 끊김 방지를 위해 제거
         }
 
         function addNewRule() {
@@ -216,8 +274,8 @@
 
         async function deleteRule(index) {
             const rule = cachedRules[index];
-            if(rule.id) {
-                if(!confirm("이 규칙을 영구 삭제하시겠습니까?")) return;
+            if (rule.id) {
+                if (!confirm("이 규칙을 영구 삭제하시겠습니까?")) return;
                 await _supabase.from('point_rules').delete().eq('id', rule.id);
             }
             cachedRules.splice(index, 1);
@@ -226,43 +284,107 @@
 
         async function saveAll() {
             const btn = document.getElementById('btn-save');
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
             btn.disabled = true;
+            btn.innerText = "안전 저장 중...";
 
             try {
-                // 저장할 데이터 포맷팅
-                const payload = cachedRules.map(r => ({
-                    id: r.id,
-                    category: r.category,
-                    name: r.name,
-                    xp_change: r.xp_change,
-                    cp_change: r.cp_change,
-                    is_active: r.is_active,
-                    tier_multipliers: r.tier_multipliers || {} // ★ 배율 정보 함께 저장
-                }));
+                const items = document.querySelectorAll('.rule-item');
 
-                const { error } = await _supabase.from('point_rules').upsert(payload);
-                if(error) throw error;
-                
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> 저장 완료!';
-                btn.className = "bg-green-600 text-white font-bold px-8 py-3 rounded-2xl shadow-lg transition transform scale-105 flex items-center gap-2";
-                
-                setTimeout(() => {
-                    btn.className = "bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-2xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center gap-2";
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                    loadRules(); 
-                }, 1000);
+                // 1. 데이터 수집
+                const allData = Array.from(items).map(item => {
+                    const rid = item.getAttribute('data-id');
 
-            } catch(e) {
-                alert("오류: " + e.message);
-                btn.innerHTML = originalHtml;
+                    // 배율 데이터 수집
+                    const multiplierInputs = item.querySelectorAll('.ipt-multiplier');
+                    let multipliers = {};
+                    if (multiplierInputs.length > 0) {
+                        multiplierInputs.forEach(ipt => {
+                            const tier = ipt.getAttribute('data-tier');
+                            const val = parseFloat(ipt.value);
+                            multipliers[tier] = isNaN(val) ? 1.0 : val;
+                        });
+                    } else {
+                        multipliers = { "Bronze": 1, "Silver": 1, "Gold": 1, "Diamond": 1 };
+                    }
+
+                    return {
+                        id_val: rid, // 판별용 임시 값
+                        category: item.querySelector('.ipt-category').value,
+                        name: item.querySelector('.ipt-name').value,
+                        xp_change: parseInt(item.querySelector('.ipt-xp').value) || 0,
+                        cp_change: parseInt(item.querySelector('.ipt-cp').value) || 0,
+                        is_active: true,
+                        tier_multipliers: multipliers
+                    };
+                });
+
+                // 2. 그룹 나누기 (신규 vs 기존)
+                const toInsert = []; // ID 없는 놈 (새로 추가)
+                const toUpdate = []; // ID 있는 놈 (수정)
+
+                allData.forEach(d => {
+                    const cleanData = {
+                        category: d.category,
+                        name: d.name,
+                        xp_change: d.xp_change,
+                        cp_change: d.cp_change,
+                        is_active: d.is_active,
+                        tier_multipliers: d.tier_multipliers
+                    };
+
+                    // ID가 진짜 숫자면 '수정' 목록으로, 아니면 '신규' 목록으로
+                    if (d.id_val && d.id_val !== "null" && d.id_val !== "" && !isNaN(parseInt(d.id_val))) {
+                        cleanData.id = parseInt(d.id_val);
+                        toUpdate.push(cleanData);
+                    } else {
+                        // 신규는 id 키 자체를 아예 안 넣음!
+                        toInsert.push(cleanData);
+                    }
+                });
+
+                // [디버깅] 콘솔에서 확인 가능
+                console.log("신규 추가:", toInsert);
+                console.log("기존 수정:", toUpdate);
+
+                // 3. 따로따로 전송 (이게 핵심!)
+                const promises = [];
+
+                // (1) 신규 항목 저장 (insert 사용)
+                if (toInsert.length > 0) {
+                    promises.push(_supabase.from('point_rules').insert(toInsert));
+                }
+
+                // (2) 기존 항목 수정 (upsert 사용)
+                if (toUpdate.length > 0) {
+                    promises.push(_supabase.from('point_rules').upsert(toUpdate));
+                }
+
+                if (promises.length === 0) {
+                    alert("저장할 내용이 없습니다.");
+                    return;
+                }
+
+                // 두 작업 모두 끝날 때까지 대기
+                const results = await Promise.all(promises);
+
+                // 에러 체크
+                for (const res of results) {
+                    if (res.error) throw res.error;
+                }
+
+                alert("완벽하게 저장 성공! ");
+                location.reload();
+
+            } catch (e) {
+                console.error("저장 실패 원인:", e);
+                alert("오류 발생: " + e.message);
+            } finally {
                 btn.disabled = false;
+                btn.innerText = "전체 저장";
             }
         }
-
         init();
     </script>
 </body>
+
 </html>

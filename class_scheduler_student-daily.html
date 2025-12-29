@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일일 관리 시스템 | 시즌XP 관리 모드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="config.js"></script>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f1f5f9;
+            overflow: hidden;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .student-item {
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+            cursor: pointer;
+            background-color: #ffffff;
+        }
+
+        .student-item.selected {
+            background: linear-gradient(90deg, #eef2ff 0%, #ffffff 100%);
+            border-left-color: #4f46e5;
+        }
+
+        .student-item.processed {
+            opacity: 0.45;
+            pointer-events: none;
+            background-color: #f1f5f9;
+            filter: grayscale(1);
+        }
+
+        .rule-card {
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            background-color: #ffffff;
+            border-radius: 18px;
+            position: relative;
+            min-height: 125px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 0 #e2e8f0;
+        }
+
+        .rule-card.selected.positive {
+            border-color: #6366f1;
+            background-color: #f5f3ff;
+            box-shadow: 0 4px 0 #4f46e5;
+        }
+
+        .rule-card.selected.negative {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+            box-shadow: 0 4px 0 #b91c1c;
+        }
+
+        .multiplier-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-weight: 900;
+            font-size: 10px;
+            color: white;
+            background: #6366f1;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+        }
+
+        .rule-name {
+            font-size: 16px;
+            line-height: 1.4;
+            font-weight: 800;
+            color: #1e293b;
+        }
+
+        #rule-viewport {
+            height: calc(100vh - 300px);
+            overflow-y: auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col">
+    <header
+        class="h-16 bg-white border-b border-slate-200 flex justify-between items-center px-8 shrink-0 z-30 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg"><i
+                    class="fa-solid fa-clipboard-user"></i></div>
+            <h1 id="header-cname" class="text-xl font-black text-slate-800 tracking-tight">로딩 중...</h1>
+        </div>
+        <div class="text-right">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">현재 학생 수</p>
+            <p class="text-xl font-black text-indigo-600 leading-none" id="total-student-count">0</p>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-20 shrink-0">
+            <div id="student-list" class="flex-1 overflow-y-auto custom-scroll"></div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-slate-50/50">
+            <div class="p-5 border-b bg-white/60 backdrop-blur-md flex justify-between items-center h-14 shrink-0">
+                <span class="text-xs font-black text-slate-500 uppercase tracking-widest">포인트 규칙 선택</span>
+                <div id="target-badge"
+                    class="opacity-0 bg-indigo-600 text-white px-4 py-1 rounded-full text-[11px] font-black shadow-lg transition-all">
+                    <span id="target-name">학생 선택됨</span>
+                </div>
+            </div>
+            <div id="rule-viewport" class="custom-scroll">
+                <div id="rule-grid"
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 content-start">
+                    <div class="col-span-full py-40 text-center text-slate-300 font-bold uppercase tracking-widest">왼쪽에서
+                        학생을 선택해주세요</div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-slate-200 bg-white shadow-lg z-20">
+                <button id="btn-add-basket" onclick="addToBasket()" disabled
+                    class="w-full h-14 bg-slate-100 text-slate-400 rounded-2xl font-black text-lg transition-all">규칙을
+                    선택해주세요</button>
+            </div>
+        </main>
+
+        <aside class="w-80 bg-white border-l border-slate-200 flex flex-col z-20 shadow-2xl">
+            <div id="basket-list" class="flex-1 overflow-y-auto p-5 space-y-3 custom-scroll"></div>
+            <div class="p-6 border-t border-slate-100 bg-white">
+                <button id="btn-final-save" onclick="finalSave()" disabled
+                    class="w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-lg uppercase shadow-[0_4px_0_#4338ca] active:translate-y-1 transition-all">최종
+                    데이터 저장</button>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        const STATE = {
+            cid: new URLSearchParams(window.location.search).get('class_id'),
+            allRules: [], students: {}, basket: {},
+            selectedStudentId: null, selectedRuleIds: new Set(),
+            allHomeworkMessages: [], processedStudentIds: new Set()
+        };
+
+        async function init() {
+            if (!STATE.cid) return alert("수업 ID가 없습니다.");
+            await loadClassInfo();
+            await loadRules();
+            await loadStudentsAndStatus();
+        }
+
+        async function loadClassInfo() {
+            const { data } = await _supabase.from('classes').select('*').eq('id', STATE.cid).single();
+            if (data) document.getElementById('header-cname').innerText = data.name;
+        }
+
+        async function loadRules() {
+            const { data, error } = await _supabase
+                .from('point_rules')
+                .select('*')
+                .eq('is_active', true) // 활성화된 것만
+                .order('category', { ascending: true }) // 1순위: 카테고리 가나다 순
+                .order('name', { ascending: true });    // 2순위: 이름 가나다 순
+
+            if (error) {
+                console.error("규칙 로딩 실패:", error);
+                return;
+            }
+            STATE.allRules = data || []; // 정렬된 데이터 저장
+        }
+
+        async function loadStudentsAndStatus() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+                // 1. [신규] 일일 로그 테이블에서 오늘 처리된 학생들 가져오기 (블락용)
+                const { data: processedList } = await _supabase.from('daily_point_logs').select('student_id').eq('class_id', STATE.cid).eq('processed_at', today);
+                STATE.processedStudentIds = new Set(processedList?.map(l => String(l.student_id)) || []);
+
+                // 2. 버튼 자동 선택용 숙제 메시지 로드 (최근 24시간)
+                const { data: hwMsgs } = await _supabase.from('homework_messages').select('*').gte('created_at', last24h);
+                STATE.allHomeworkMessages = hwMsgs || [];
+
+                // 3. 유저 및 로직 정보
+                const [logicRes, userRes] = await Promise.all([
+                    _supabase.from('assignment_and_class_logic').select('*'),
+                    _supabase.from('users').select('*')
+                ]);
+
+                const enrolled = (logicRes.data || []).filter(l => {
+                    let s = []; try { s = typeof l.class_settings === 'string' ? JSON.parse(l.class_settings) : l.class_settings; } catch { }
+                    return Array.isArray(s) && s.some(i => String(i.class_id) === String(STATE.cid));
+                });
+
+                STATE.students = {};
+                enrolled.forEach(l => {
+                    const sid = String(l.student_id);
+                    const u = (userRes.data || []).find(x => String(x.username) === sid);
+                    let hwS = []; try { hwS = typeof l.homework_settings === 'string' ? JSON.parse(l.homework_settings) : l.homework_settings; } catch { }
+
+                    // [주인님 명령] 티어 정보는 DB 값 그대로 복붙!
+                    STATE.students[sid] = {
+                        id: sid, name: u?.name || sid,
+                        tier: u?.tier || 'Bronze',
+                        xp: Number(u?.season_xp || 0), cp: Number(u?.cp || 0), hwSettings: hwS
+                    };
+                });
+
+                document.getElementById('total-student-count').innerText = Object.keys(STATE.students).length;
+                renderStudentList();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderStudentList() {
+            const list = document.getElementById('student-list');
+            list.innerHTML = Object.keys(STATE.students).map(id => {
+                const s = STATE.students[id]; const isP = STATE.processedStudentIds.has(id);
+                return `<div onclick="selectStudent('${id}')" class="student-item p-4 border-b flex justify-between items-center bg-white ${STATE.selectedStudentId === id ? 'selected' : ''} ${isP ? 'processed' : ''}">
+                    <div class="font-bold text-slate-700 student-name">${s.name} ${isP ? '<span class="ml-2 text-[8px] bg-slate-200 text-slate-500 px-1 rounded font-black">DONE</span>' : ''}</div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${s.tier}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function selectStudent(id) {
+            if (STATE.processedStudentIds.has(id)) return;
+            STATE.selectedStudentId = id; STATE.selectedRuleIds.clear();
+            const s = STATE.students[id]; renderStudentList();
+
+            // [진단평가 자동 카운팅 로직 추가] -----------------------------------------
+            const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+            const { data: testRecords } = await _supabase
+                .from('test_assignment_records')
+                .select('history_log')
+                .eq('student_id', id);
+
+            let todayPassCount = 0;
+            if (testRecords) {
+                testRecords.forEach(rec => {
+                    const logs = rec.history_log || {};
+                    Object.values(logs).forEach(log => {
+                        if (log.status === 'pass' && log.passed_at && log.passed_at.startsWith(todayStr)) {
+                            todayPassCount++;
+                        }
+                    });
+                });
+            }
+
+            for (let i = 1; i <= todayPassCount; i++) {
+                const ruleName = `진단평가${i}`;
+                const targetRule = STATE.allRules.find(r => r.name.replace(/\s/g, '') === ruleName);
+                if (targetRule) STATE.selectedRuleIds.add(targetRule.id);
+            }
+            // -------------------------------------------------------------------------
+
+            // [복구] 4가지 판결 상황 버튼 자동 선택
+            const target = (s.hwSettings || []).find(h => String(h.check_class_id) === String(STATE.cid));
+            if (target) {
+                const assignCid = String(target.assign_class_id);
+                const msgs = STATE.allHomeworkMessages.filter(m => String(m.student_id) === id && String(m.class_id) === assignCid);
+                msgs.forEach(m => {
+                    const st = (m.status || '').trim();
+                    if (['선생이 이행을 승인함', '선생이 미이행을 반려함'].some(v => st.includes(v))) applyAuto('숙제 해옴');
+                    else if (['선생이 이행을 반려함', '선생이 미이행을 승인함'].some(v => st.includes(v))) applyAuto('숙제미이행');
+                });
+            }
+            document.getElementById('target-badge').style.opacity = '1';
+            document.getElementById('target-name').innerText = `${s.name} (${s.tier})`;
+            renderRuleGrid(); updateAddButton();
+        }
+
+        function applyAuto(name) {
+            const t = name.replace(/\s/g, '');
+            STATE.allRules.forEach(r => { if (r.name.replace(/\s/g, '') === t) STATE.selectedRuleIds.add(r.id); });
+        }
+
+        function renderRuleGrid() {
+            const container = document.getElementById('rule-grid'); if (!STATE.selectedStudentId) return;
+            const s = STATE.students[STATE.selectedStudentId];
+
+            container.innerHTML = STATE.allRules.map(r => {
+                const isS = STATE.selectedRuleIds.has(r.id);
+                let multi = (r.tier_multipliers && r.tier_multipliers[s.tier]) ? parseFloat(r.tier_multipliers[s.tier]) : 1.0;
+                const xp = Math.round(r.xp_change * multi), cp = Math.round(r.cp_change * multi);
+                const colorMode = xp < 0 ? 'negative' : 'positive';
+                const textCol = xp < 0 ? 'text-rose-500' : 'text-indigo-600';
+
+                return `<div onclick="toggleRule(${r.id})" class="rule-card p-5 ${isS ? 'selected ' + colorMode : ''}">
+                        ${multi > 1.0 ? `<div class="multiplier-badge">x${multi.toFixed(1)}</div>` : ''}
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded border uppercase">${r.category}</span>
+                            <div class="text-right text-[11px] font-black leading-tight">
+                                <div class="${textCol}">${xp > 0 ? '+' : ''}${xp} XP</div>
+                                <div class="text-amber-500">${cp > 0 ? '+' : ''}${cp} CP</div>
+                            </div>
+                        </div>
+                        <div class="rule-name">${r.name}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function toggleRule(id) {
+            const rule = STATE.allRules.find(r => r.id === id);
+            const ruleName = rule.name.replace(/\s/g, ''); // 공백 제거 후 비교
+
+            // [설정] 사장님이 말씀하신 상호 배타적 그룹 정의
+            const GROUP_A = ['출석', '결석', '무단결석']; // 이 중 하나만
+            const GROUP_B = ['지각', '지각안함'];       // 이 중 하나만
+
+            // 1. 이미 선택된 상태에서 해제하는 경우는 즉시 허용
+            if (STATE.selectedRuleIds.has(id)) {
+                STATE.selectedRuleIds.delete(id);
+                renderRuleGrid();
+                updateAddButton();
+                return;
+            }
+
+            // 2. [그룹 A 가드] 출석/결석/무단결석 중복 체크
+            if (GROUP_A.includes(ruleName)) {
+                const existingA = Array.from(STATE.selectedRuleIds).find(rid => {
+                    const r = STATE.allRules.find(x => x.id === rid);
+                    return GROUP_A.includes(r.name.replace(/\s/g, ''));
+                });
+
+                if (existingA) {
+                    const existingRule = STATE.allRules.find(x => x.id === existingA);
+                    alert(`⚠️ [${existingRule.name}]이(가) 이미 선택되어 있습니다.\n출석/결석/무단결석은 하나만 선택 가능합니다.`);
+                    return; // 클릭 차단
+                }
+            }
+
+            // 3. [그룹 B 가드] 지각/지각안함 중복 체크
+            if (GROUP_B.includes(ruleName)) {
+                const existingB = Array.from(STATE.selectedRuleIds).find(rid => {
+                    const r = STATE.allRules.find(x => x.id === rid);
+                    return GROUP_B.includes(r.name.replace(/\s/g, ''));
+                });
+
+                if (existingB) {
+                    const existingRule = STATE.allRules.find(x => x.id === existingB);
+                    alert(`⚠️ [${existingRule.name}]이(가) 이미 선택되어 있습니다.\n지각/지각안함은 하나만 선택 가능합니다.`);
+                    return; // 클릭 차단
+                }
+            }
+
+            // 4. 모든 가드 통과 시 선택 허용
+            STATE.selectedRuleIds.add(id);
+            renderRuleGrid();
+            updateAddButton();
+        }
+
+        function updateAddButton() {
+            const b = document.getElementById('btn-add-basket'); const c = STATE.selectedRuleIds.size;
+            b.disabled = !(STATE.selectedStudentId && c > 0);
+            b.className = b.disabled ? "w-full h-14 bg-slate-100 text-slate-400 rounded-2xl font-black text-lg" : "w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-[0_4px_0_#4338ca] active:translate-y-1 transition-all";
+            b.innerText = b.disabled ? "규칙을 선택해주세요" : `대기열에 추가하기 (${c})`;
+        }
+
+        function addToBasket() {
+            const s = STATE.students[STATE.selectedStudentId];
+            const rules = Array.from(STATE.selectedRuleIds).map(rid => {
+                const r = STATE.allRules.find(x => x.id === rid);
+                let m = (r.tier_multipliers && r.tier_multipliers[s.tier]) ? parseFloat(r.tier_multipliers[s.tier]) : 1.0;
+                return { ...r, fXp: Math.round(r.xp_change * m), fCp: Math.round(r.cp_change * m) };
+            });
+            STATE.basket[s.id] = { data: s, rules };
+            STATE.selectedStudentId = null; STATE.selectedRuleIds.clear();
+            renderStudentList(); renderRuleGrid(); renderBasket(); updateAddButton();
+        }
+
+        function renderBasket() {
+            const list = document.getElementById('basket-list'); const ids = Object.keys(STATE.basket);
+            if (ids.length === 0) list.innerHTML = `<div class="h-full flex flex-col items-center justify-center opacity-20 py-20"><p class="text-xs font-bold uppercase tracking-widest">비어있음</p></div>`;
+            else list.innerHTML = ids.map(id => {
+                const item = STATE.basket[id];
+                return `<div class="bg-white p-4 rounded-2xl border flex justify-between items-center shadow-sm">
+                        <div><p class="font-bold text-slate-800 text-sm tracking-tight">${item.data.name}</p><p class="text-[10px] text-indigo-500 font-bold uppercase">${item.rules.length}개 항목</p></div>
+                        <button onclick="delete STATE.basket['${id}']; renderBasket();" class="w-8 h-8 rounded-full bg-rose-50 text-rose-400 flex items-center justify-center transition-all hover:bg-rose-500 hover:text-white"><i class="fa-solid fa-trash-can text-xs"></i></button></div>`;
+            }).join('');
+            const ready = ids.length > 0;
+            document.getElementById('btn-final-save').disabled = !ready;
+            document.getElementById('btn-final-save').className = ready ? "w-full h-14 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-[0_4px_0_#4338ca] active:translate-y-1 transition-all" : "w-full h-14 bg-slate-200 text-slate-400 rounded-2xl font-black";
+        }
+
+        async function finalSave() {
+            if (!confirm("일일 관리를 저장하시겠습니까?")) return;
+            const btn = document.getElementById('btn-final-save');
+            btn.disabled = true;
+            btn.innerText = "저장 중...";
+
+            try {
+                const today = new Date().toISOString().split('T')[0];
+
+                for (const sid in STATE.basket) {
+                    const item = STATE.basket[sid];
+                    let tXp = 0, tCp = 0;
+
+                    // 1. 선택된 모든 규칙의 점수 합산 및 상세 내역 준비
+                    // item.rules 안에는 {name, category, fXp, fCp...} 정보가 다 들어있어요!
+                    item.rules.forEach(r => {
+                        tXp += r.fXp;
+                        tCp += r.fCp;
+                    });
+
+                    // 2. 유저 점수 업데이트 (XP/CP)
+                    const { data: u } = await _supabase.from('users').select('season_xp, cp').eq('username', sid).single();
+                    if (u) {
+                        await _supabase.from('users').update({
+                            season_xp: (Number(u.season_xp) || 0) + tXp,
+                            cp: (Number(u.cp) || 0) + tCp
+                        }).eq('username', sid);
+                    }
+
+                    // 3. [핵심 수정] 일일 로그에 상세 내용(details)까지 한꺼번에 저장!
+                    // 나중에 여기서 '출결' 카테고리만 쏙쏙 뽑아서 분석하시면 돼요!
+                    await _supabase.from('daily_point_logs').insert({
+                        class_id: String(STATE.cid),
+                        student_id: String(sid),
+                        processed_at: today,
+                        details: item.rules // [여기!] 선택된 규칙 배열이 jsonb로 뙇! 들어갑니다.
+                    });
+                }
+
+                alert("일일 관리가 완료되었습니다!");
+                location.reload();
+            } catch (e) {
+                alert("에러 발생: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "최종 데이터 저장";
+            }
+        }
+        window.onload = init;
+    </script>
+</body>
+
+</html>
