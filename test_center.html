@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>진단평가 마스터 시스템 - 통합 컨트롤러</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="config.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; color: #1e293b; height: 100vh; overflow: hidden; display: flex; flex-direction: column; padding: 24px; }
+        .main-panel { background: white; border: 1px solid #e2e8f0; border-radius: 28px; box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; overflow: hidden; }
+        .nav-tab { padding: 22px 48px; font-size: 18px; font-weight: 900; color: #94a3b8; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-bottom: 4px solid transparent; }
+        .nav-tab:hover { color: #64748b; background: rgba(0, 0, 0, 0.02); }
+        .nav-tab.active { color: #4f46e5; border-bottom-color: #4f46e5; background: rgba(79, 70, 229, 0.05); }
+        .pro-scroll::-webkit-scrollbar { width: 6px; }
+        .pro-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <header class="flex border-b border-slate-200 mb-8 bg-white rounded-3xl shadow-sm overflow-hidden shrink-0">
+        <div onclick="UI.switchMenu('maker')" id="menu-maker" class="nav-tab active">
+            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>진단평가 작성
+        </div>
+        <div onclick="UI.switchMenu('assign')" id="menu-assign" class="nav-tab">
+            <i class="fa-solid fa-id-card-clip mr-2"></i>진단평가 배정
+        </div>
+        <div onclick="UI.switchMenu('manage')" id="menu-manage" class="nav-tab">
+            <i class="fa-solid fa-chart-line mr-2"></i>진단평가 관리
+        </div>
+    </header>
+
+    <div class="flex-1 flex gap-8 min-h-0">
+        <aside id="sidebar" class="w-[380px] main-panel p-6 shrink-0 transition-all duration-500 relative">
+            <div id="maker-toggle" class="flex border-2 border-slate-100 rounded-2xl overflow-hidden shadow-sm mb-6 shrink-0">
+                <input type="radio" id="int-radio" name="maker_type" value="internal" class="hidden" checked onchange="UI.onTypeChange('internal')">
+                <label for="int-radio" class="flex-1 px-4 py-3 text-[11px] font-black cursor-pointer bg-white text-slate-500 border-r-2 border-slate-100 peer-checked:bg-indigo-600 peer-checked:text-white text-center transition-all">내부 엔진</label>
+                <input type="radio" id="ext-radio" name="maker_type" value="external" class="hidden" onchange="UI.onTypeChange('external')">
+                <label for="ext-radio" class="flex-1 px-4 py-3 text-[11px] font-black cursor-pointer bg-white text-slate-500 text-center transition-all peer-checked:bg-indigo-600 peer-checked:text-white">외부 엔진</label>
+            </div>
+            <div id="sidebar-data-container" class="flex-1 flex flex-col min-h-0 text-[12px] font-black text-slate-400 uppercase">
+                데이터 리포지토리
+                <div id="side-list" class="flex-1 pro-scroll overflow-y-auto pr-2 space-y-2 mt-4"></div>
+            </div>
+        </aside>
+
+        <main class="flex-1 main-panel relative flex flex-col">
+            <div id="content-display" class="flex-1 flex flex-col min-h-0">
+                <div class="h-full flex flex-col items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-indigo-200"></i>
+                    <span class="font-black uppercase tracking-widest text-sm text-slate-400">시스템 모듈 로딩 중</span>
+                </div>
+            </div>
+            <footer class="mt-auto p-6 border-t border-slate-100 flex justify-between items-center bg-white">
+                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-widest italic">
+                    SYSTEM STATUS: <span id="sys-status" class="text-indigo-500 font-black">ACTIVE</span>
+                </div>
+                <div class="text-[10px] text-slate-300 font-black uppercase tracking-tighter">DIAGNOSTIC MASTER V4.8</div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        const UI = {
+            state: { currentMenu: 'maker' },
+
+            async init() {
+                this.log("런타임 프로세스 초기화 완료");
+                this.switchMenu('maker');
+            },
+
+            switchMenu(menu) {
+                this.state.currentMenu = menu;
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                const activeTab = document.getElementById(`menu-${menu}`);
+                if (activeTab) activeTab.classList.add('active');
+                
+                const sidebar = document.getElementById('sidebar');
+                const container = document.getElementById('content-display');
+
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-slate-300">
+                        <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-indigo-200"></i>
+                        <span class="font-black uppercase tracking-widest text-sm text-slate-400">엔진 인터페이스 구성 중</span>
+                    </div>`;
+
+                if (menu === 'maker') {
+                    sidebar.style.display = 'flex'; 
+                    // 현재 선택된 라디오 버튼 타입에 따라 엔진 로드
+                    const activeType = document.querySelector('input[name="maker_type"]:checked').value;
+                    this.onTypeChange(activeType);
+                } else {
+                    sidebar.style.display = 'none'; 
+                    this.loadEngine(menu);
+                }
+            },
+
+            /**
+             * @method onTypeChange
+             * @description 내부/외부 제작 엔진 전환 시 사이드바 데이터 갱신
+             */
+            onTypeChange(type) {
+                if (type === 'internal') {
+                    this.loadEngine('maker');
+                    // 내부 엔진용 리스트는 MakerCore 내에서 초기화되므로 별도 처리 없음
+                } else {
+                    this.loadEngine('maker_ext');
+                    // 외부 엔진용 패키지 리스트 로드 함수 호출
+                    this.loadExternalPackagesList();
+                }
+            },
+
+            /**
+             * @method loadExternalPackagesList
+             * @description DB에서 외부 패키지 목록을 가져와 사이드바에 출력
+             */
+            async loadExternalPackagesList() {
+                const listContainer = document.getElementById('side-list');
+                listContainer.innerHTML = '<div class="p-4 text-xs text-slate-400 font-black animate-pulse">데이터 동기화 중...</div>';
+                
+                try {
+                    // DB에서 타입이 'external'인 패키지만 조회
+                    const { data, error } = await _supabase
+                        .from('diagnostic_packages')
+                        .select('*')
+                        .eq('type', 'external')
+                        .order('created_at', { ascending: false });
+
+                    if (error) throw error;
+
+                    if (data.length === 0) {
+                        listContainer.innerHTML = '<div class="p-10 text-center text-[10px] text-slate-300 font-black">데이터가 없습니다.</div>';
+                        return;
+                    }
+
+                    // 리스트 렌더링 및 클릭 이벤트 바인딩 (수정 모드 진입용)
+                    listContainer.innerHTML = data.map(pkg => `
+                        <div onclick="MakerExtCore.loadPackageForEdit(${pkg.id})" 
+                             class="p-4 bg-white border border-slate-100 rounded-2xl cursor-pointer hover:border-indigo-500 mb-2 transition-all group shadow-sm">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[9px] font-black text-white bg-indigo-500 px-2 py-0.5 rounded-full uppercase tracking-tighter">EXTERNAL</span>
+                                <i class="fa-solid fa-pen-to-square text-slate-200 group-hover:text-indigo-500 transition-all"></i>
+                            </div>
+                            <p class="text-sm font-black text-slate-700 group-hover:text-indigo-600 truncate">${pkg.title}</p>
+                            <div class="mt-2 flex items-center gap-1">
+                                <span class="text-[10px] text-slate-400 font-mono italic">ROUND COUNT: ${pkg.ext_data?.length || 0}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                } catch (e) {
+                    console.error("[UI] 리스트 로드 실패:", e);
+                    listContainer.innerHTML = '<div class="p-4 text-xs text-rose-400 font-black">연결 오류</div>';
+                }
+            },
+
+            async loadEngine(engineName) {
+                const container = document.getElementById('content-display');
+                this.log(`${engineName.toUpperCase()} 모듈 소환 시작`);
+
+                let coreFile, rendererFile, coreObjectName;
+
+                // 모듈 파일명 및 객체명 매칭
+                if (engineName === 'manage') {
+                    coreFile = 'Manage_Inner_Core.js';
+                    rendererFile = 'Manage_Inner_Renderer.js';
+                    coreObjectName = 'ManageInnerCore';
+                } else if (engineName === 'maker_ext') {
+                    coreFile = 'maker_ext_core.js';
+                    rendererFile = 'maker_ext_renderer.js';
+                    coreObjectName = 'MakerExtCore';
+                } else {
+                    coreFile = `${engineName}_core.js`;
+                    rendererFile = `${engineName}_renderer.js`;
+                    coreObjectName = `${engineName.charAt(0).toUpperCase() + engineName.slice(1)}Core`;
+                }
+
+                try {
+                    // 스크립트 주입
+                    await Promise.all([
+                        this.injectScript(`test_center/${coreFile}`),
+                        this.injectScript(`test_center/${rendererFile}`)
+                    ]);
+
+                    setTimeout(() => {
+                        if (window[coreObjectName] && window[coreObjectName].init) {
+                            window[coreObjectName].init(container);
+                            this.log(`${engineName.toUpperCase()} 가동 완료`);
+                        } else {
+                            throw new Error(`${coreObjectName} 객체 찾기 실패`);
+                        }
+                    }, 200);
+
+                } catch (e) {
+                    console.error(e);
+                    this.log("소환 에러");
+                    container.innerHTML = `
+                        <div class="p-10 text-center flex flex-col items-center justify-center h-full text-rose-500 font-black">
+                            RUNTIME ERROR: ${engineName.toUpperCase()}<br>
+                            <small class="text-slate-400">Path: test_center/${coreFile}</small>
+                        </div>`;
+                }
+            },
+
+            injectScript(src) {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = `${script.src = src}?v=${Date.now()}`;
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.body.appendChild(script);
+                });
+            },
+
+            log(msg) { document.getElementById('sys-status').innerText = msg; }
+        };
+
+        window.onload = () => UI.init();
+    </script>
+</body>
+</html>

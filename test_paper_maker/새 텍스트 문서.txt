@@ -1,0 +1,166 @@
+/**
+ * @engine ExtManage
+ * @description 생성된 외부 시험지 팩(test_papers)을 조회하고 관리(삭제)하는 엔진
+ * @version 1.0.0
+ * @author Elite Secretary (Jisoo)
+ */
+
+window.ExtManage = {
+    state: {
+        catUuid: null,
+        papers: []
+    },
+
+    /**
+     * @function mount
+     * @description FactoryManager에 의해 마운트될 때 실행
+     */
+    mount(cat) {
+        this.state.catUuid = cat.test_id;
+        this.renderLayout(cat.name);
+        this.loadPapers();
+    },
+
+    /**
+     * @function renderLayout
+     */
+    renderLayout(categoryName) {
+        // [Header]
+        document.getElementById('factory-header').innerHTML = `
+            <div class="flex flex-col">
+                <h1 class="text-2xl font-black text-white tracking-tight">외부 시험지 관리 센터</h1>
+                <p class="text-xs text-indigo-400 font-bold uppercase mt-1">External Asset Management & Control</p>
+            </div>
+        `;
+
+        // [Main Content]
+        document.getElementById('factory-main').innerHTML = `
+            <div class="flex flex-col h-full">
+                <div class="flex justify-between items-center mb-6 px-1">
+                    <h2 class="text-xs font-black text-slate-500 uppercase tracking-widest">Deployed Test Papers</h2>
+                    <button onclick="ExtManage.loadPapers()" class="text-indigo-400 hover:text-white transition">
+                        <i class="fa-solid fa-rotate text-sm"></i>
+                    </div>
+                </div>
+
+                <div id="manage-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    </div>
+            </div>
+        `;
+
+        // [Footer]
+        document.getElementById('factory-footer').innerHTML = `
+            <div id="manage-status" class="text-[10px] font-mono text-slate-500 uppercase italic">Monitoring external database records...</div>
+            <div class="text-[10px] text-slate-600">Total <span id="total-paper-cnt" class="text-indigo-400 font-bold">0</span> papers found.</div>
+        `;
+    },
+
+    /**
+     * @function loadPapers
+     * @description 해당 카테고리의 모든 외부 시험지(is_internal: false)를 로드
+     */
+    async loadPapers() {
+        const container = document.getElementById('manage-list-container');
+        container.innerHTML = '<div class="col-span-full py-20 text-center opacity-30"><i class="fa-solid fa-spinner fa-spin text-3xl"></i></div>';
+
+        const { data, error } = await _supabase
+            .from('test_papers')
+            .select('*')
+            .eq('test_id', this.state.catUuid)
+            .eq('is_internal', false)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("Fetch Error:", error);
+            return;
+        }
+
+        this.state.papers = data || [];
+        document.getElementById('total-paper-cnt').innerText = this.state.papers.length;
+        this.renderPaperCards();
+        
+        // 사이드바 리스트도 동기화 (필요시)
+        this.syncSidebar();
+    },
+
+    /**
+     * @function renderPaperCards
+     */
+    renderPaperCards() {
+        const container = document.getElementById('manage-list-container');
+        if (this.state.papers.length === 0) {
+            container.innerHTML = '<div class="col-span-full py-20 text-center text-slate-600 italic">생성된 시험지가 없습니다.</div>';
+            return;
+        }
+
+        container.innerHTML = this.state.papers.map(p => `
+            <div class="bg-slate-800/40 border border-white/5 rounded-2xl p-5 hover:border-indigo-500/30 transition group relative">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-[9px] font-black px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-tighter">External Pack</span>
+                    <button onclick="ExtManage.deletePaper(${p.id}, '${p.title.replace(/'/g, "\\'")}')" class="text-slate-600 hover:text-red-500 transition opacity-0 group-hover:opacity-100">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+                <h3 class="text-sm font-bold text-white mb-2 truncate" title="${p.title}">${p.title}</h3>
+                <div class="space-y-1.5 mb-4">
+                    <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">문항 수</span>
+                        <span class="text-slate-300 font-mono">${p.total_questions} Q</span>
+                    </div>
+                    <div class="flex justify-between text-[10px]">
+                        <span class="text-slate-500">생성일</span>
+                        <span class="text-slate-300 font-mono">${p.created_at.substring(0, 10)}</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1">
+                    ${(p.theme_config?.codes || []).slice(0, 5).map(c => `
+                        <span class="px-1.5 py-0.5 bg-slate-900 text-slate-500 text-[8px] rounded border border-white/5">${c}</span>
+                    `).join('')}
+                    ${(p.theme_config?.codes || []).length > 5 ? `<span class="text-[8px] text-slate-600 font-bold ml-1">+${p.theme_config.codes.length - 5}</span>` : ''}
+                </div>
+            </div>
+        `).join('');
+    },
+
+    /**
+     * @function deletePaper
+     * @param {number} id - test_papers Table ID
+     * @description 특정 시험지 레코드를 삭제 (지배자의 권능)
+     */
+    async deletePaper(id, title) {
+        if (!confirm(`[치명적 경고]\n'${title}' 시험지를 영구 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+        this.setStatus(`Deleting record: ${id}...`);
+        
+        try {
+            const { error } = await _supabase
+                .from('test_papers')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            alert("🗑️ 시험지가 성공적으로 파괴되었습니다.");
+            this.loadPapers(); // 리스트 새로고침
+        } catch (e) {
+            alert("삭제 실패: " + e.message);
+        } finally {
+            this.setStatus("Sync Complete.");
+        }
+    },
+
+    syncSidebar() {
+        const list = document.getElementById('list-skeleton');
+        if (this.state.papers.length > 0) {
+            list.innerHTML = this.state.papers.map(p => `
+                <div class="p-3 bg-slate-800/20 rounded-lg border border-transparent hover:border-indigo-500/20 text-[11px] font-bold text-slate-400 truncate">
+                    ${p.title}
+                </div>
+            `).join('');
+        }
+    },
+
+    setStatus(msg) {
+        document.getElementById('manage-status').innerText = msg;
+    }
+};

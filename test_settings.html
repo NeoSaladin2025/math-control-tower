@@ -2,323 +2,107 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>교재 생성 (Workbook Factory) v2.0</title>
+    <title>Integrated Diagnostic Settings Central</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="config.js"></script>
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap');
-        
-        body { 
-            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
-            background-color: #0f172a; 
-            color: #e2e8f0; 
-            height: 100vh; 
-            overflow: hidden; 
-            display: flex;
-            padding: 24px;
-            gap: 24px;
-        }
-
-        /* Glass Panel Style */
-        .glass-panel { 
-            background: rgba(30, 41, 59, 0.7); 
-            backdrop-filter: blur(12px); 
-            border: 1px solid rgba(255,255,255,0.05); 
-            border-radius: 20px; 
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
-            display: flex; 
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* Input Styles */
-        .pro-input {
-            background: #1e293b;
-            border: 1px solid #334155;
-            color: white;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 0.9rem;
-            outline: none;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .pro-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
-
-        /* Scrollbar */
-        .custom-scroll { overflow-y: auto; }
-        .custom-scroll::-webkit-scrollbar { width: 5px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-
-        /* Unit Row Item */
-        .unit-row {
-            display: flex; gap: 8px; margin-bottom: 8px; align-items: center;
-            opacity: 0; animation: fadeIn 0.3s forwards;
-        }
-        @keyframes fadeIn { to { opacity: 1; } }
-
-        /* List Item */
-        .list-item {
-            padding: 12px; border-radius: 12px; cursor: pointer; transition: all 0.2s;
-            border: 1px solid transparent; margin-bottom: 6px;
-        }
-        .list-item:hover { background: rgba(255,255,255,0.05); }
-        .list-item.active { background: rgba(99,102,241,0.2); border-color: #6366f1; }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-            color: white; font-weight: 700; transition: 0.2s;
-        }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
-        .btn-primary:active { transform: translateY(0); }
-
-        .tag-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #334155; color: #94a3b8; }
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; height: 100vh; display: flex; padding: 24px; gap: 24px; overflow: hidden; }
+        .glass-panel { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; }
+        .pro-input { background: #1e293b; border: 1px solid #334155; color: white; border-radius: 12px; padding: 12px; font-size: 0.9rem; outline: none; width: 100%; transition: all 0.2s; }
+        .pro-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="w-1/4 glass-panel p-5">
-        <div class="mb-6">
-            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">1. Select Platform</h2>
-            <select id="sel-platform" onchange="loadWorkbooks(this.value)" class="pro-input">
-                <option value="">플랫폼(카테고리) 선택...</option>
+    <aside class="w-1/4 glass-panel p-6">
+        <div class="mb-8">
+            <label class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 block">Category Focus</label>
+            <select id="sel-category" onchange="CentralManager.switchEngine(this.value)" class="pro-input font-bold">
                 </select>
         </div>
 
         <div class="flex-1 flex flex-col min-h-0">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Workbook List</h2>
-                <button onclick="resetForm()" class="text-xs text-indigo-400 hover:text-white transition"><i class="fa-solid fa-plus"></i> New</button>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xs font-black text-slate-500 uppercase tracking-widest">Master Repository</h2>
+                <div id="engine-badge" class="text-[9px] px-2 py-0.5 rounded-full font-bold hidden"></div>
             </div>
-            <div id="list-workbook" class="flex-1 custom-scroll space-y-1 pr-1">
-                <div class="text-center py-10 text-xs text-slate-600">플랫폼을 선택하세요.</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="w-3/4 glass-panel p-6 relative">
-        <div class="flex gap-4 mb-6 border-b border-slate-700 pb-6">
-            <div class="flex-1">
-                <label class="block text-xs font-bold text-slate-400 mb-1">교재명 (Workbook Title)</label>
-                <input type="text" id="inp-title" class="pro-input text-lg font-bold text-white bg-slate-800" placeholder="예: [매쓰플랫] 고1-1 개념원리">
-            </div>
-            <div class="w-32">
-                <label class="block text-xs font-bold text-slate-400 mb-1">학년 (Grade)</label>
-                <select id="sel-grade" class="pro-input text-sm">
-                    <option value="중1">중1</option><option value="중2">중2</option><option value="중3">중3</option>
-                    <option value="고1">고1</option><option value="고2">고2</option><option value="고3">고3</option>
-                </select>
-            </div>
-            <div class="w-32">
-                <label class="block text-xs font-bold text-slate-400 mb-1">학기 (Semester)</label>
-                <select id="sel-semester" class="pro-input text-sm">
-                    <option value="1학기">1학기</option><option value="2학기">2학기</option>
-                    <option value="여름방학">여름방학</option><option value="겨울방학">겨울방학</option>
-                </select>
+            <div id="list-master" class="flex-1 custom-scroll overflow-y-auto space-y-2 pr-2">
+                <div class="text-center py-20 text-xs text-slate-600 italic">Select a category to<br>initialize engine.</div>
             </div>
         </div>
+    </aside>
 
-        <div class="flex-1 flex flex-col min-h-0">
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <i class="fa-solid fa-list-ol"></i> 단원 목차 (Table of Contents)
-                </h2>
-                <button onclick="addUnitRow()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-white transition">
-                    <i class="fa-solid fa-plus"></i> 단원 추가
-                </button>
+    <main class="flex-1 glass-panel flex flex-col relative border-indigo-500/10">
+        <div id="engine-header" class="p-8 border-b border-white/5 bg-white/[0.02]"></div>
+        
+        <div id="engine-content" class="flex-1 custom-scroll overflow-y-auto p-8">
+            <div class="h-full flex flex-col items-center justify-center opacity-10">
+                <i class="fa-solid fa-microchip text-7xl mb-4"></i>
+                <p class="text-sm font-bold tracking-widest uppercase">Engine Disconnected</p>
             </div>
-            
-            <div class="flex gap-2 text-[10px] text-slate-500 font-bold uppercase mb-2 px-2">
-                <div class="w-24">Code (ID)</div>
-                <div class="flex-1">Unit Title</div>
-                <div class="w-8 text-center">Del</div>
-            </div>
-
-            <div id="unit-container" class="flex-1 custom-scroll pb-10">
-                </div>
-        </div>
-
-        <div class="mt-6 pt-4 border-t border-slate-700 flex justify-between items-center">
-            <div class="text-xs text-slate-500">
-                <span id="status-msg">Ready to build.</span>
-            </div>
-            <button onclick="saveWorkbook()" class="btn-primary px-8 py-3 rounded-xl shadow-lg flex items-center gap-2">
-                <i class="fa-solid fa-save"></i> 뼈대 저장 (Save Skeleton)
-            </button>
         </div>
         
-        <input type="hidden" id="hdn-master-id">
-    </div>
+        <div id="engine-footer" class="p-6 bg-slate-900/50 border-t border-white/5 flex justify-between items-center"></div>
+    </main>
 
     <script>
-        /*
-         * [Elite Secretary Logic - Daughter #2]
-         * UUID 제거 완료. 직관적인 BigInt ID 사용.
-         * 교재명(Title) 중심의 데이터 구조.
+        /**
+         * @object CentralManager
+         * @description HTML 본체에서 엔진을 스위칭하고 전역 상태를 관리함
          */
-        
-        // 초기화
-        document.addEventListener('DOMContentLoaded', () => {
-            const check = setInterval(() => {
-                if (typeof _supabase !== 'undefined') {
-                    clearInterval(check);
-                    initPage();
+        const CentralManager = {
+            state: { categories: [], activeEngine: null },
+
+            async init() {
+                // [1] 카테고리 정보 로드
+                const { data } = await _supabase.from('test_category').select('*').order('name');
+                if (data) {
+                    this.state.categories = data;
+                    document.getElementById('sel-category').innerHTML = 
+                        '<option value="">카테고리를 선택하세요...</option>' + 
+                        data.map(c => `<option value="${c.test_id}">${c.name}</option>`).join('');
                 }
-            }, 100);
-        });
+            },
 
-        async function initPage() {
-            // 1. 카테고리(플랫폼) 로드 - test_category 테이블
-            const { data: cats, error } = await _supabase.from('test_category').select('*').order('name');
-            if (cats) {
-                const sel = document.getElementById('sel-platform');
-                sel.innerHTML = '<option value="">플랫폼(카테고리) 선택...</option>' + 
-                                cats.map(c => `<option value="${c.test_id}">${c.name}</option>`).join('');
+            async switchEngine(catId) {
+                const cat = this.state.categories.find(c => c.test_id == catId);
+                if (!cat) return;
+
+                const badge = document.getElementById('engine-badge');
+                badge.classList.remove('hidden', 'bg-emerald-500/20', 'text-emerald-400', 'bg-amber-500/20', 'text-amber-400');
+                
+                // [2] 엔진 타입 결정 (Internal vs External)
+                const isInternal = cat.is_internal;
+                const engineName = isInternal ? 'InternalEngine' : 'ExternalEngine';
+                const scriptPath = `./test_settings/${isInternal ? 'engine_internal.js' : 'engine_external.js'}`;
+
+                // UI 배지 업데이트
+                badge.innerText = isInternal ? 'INTERNAL' : 'EXTERNAL';
+                badge.classList.add('block', isInternal ? 'bg-emerald-500/20' : 'bg-amber-500/20', isInternal ? 'text-emerald-400' : 'text-amber-400');
+
+                // [3] 기존 엔진 스크립트 정리 및 신규 엔진 장착
+                const oldScript = document.getElementById('engine-runtime');
+                if (oldScript) oldScript.remove();
+
+                const script = document.createElement('script');
+                script.id = 'engine-runtime';
+                script.src = `${scriptPath}?v=${Date.now()}`; // 캐싱 방지
+                script.onload = () => {
+                    if (window[engineName]) {
+                        console.log(`[System] ${engineName} Mounted.`);
+                        this.state.activeEngine = window[engineName];
+                        this.state.activeEngine.mount(cat);
+                    }
+                };
+                document.head.appendChild(script);
             }
-            addUnitRow(); // 기본 행 하나 추가
-        }
+        };
 
-        // 플랫폼 선택 시 해당 플랫폼의 교재 목록 로드
-        async function loadWorkbooks(platformId) {
-            const list = document.getElementById('list-workbook');
-            list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>';
-            resetForm(); // 입력폼 초기화
-
-            if (!platformId) {
-                list.innerHTML = '<div class="text-center py-10 text-xs text-slate-600">플랫폼을 선택하세요.</div>';
-                return;
-            }
-
-            // test_master 테이블 조회 (test_id 기준)
-            const { data, error } = await _supabase.from('test_master')
-                .select('*')
-                .eq('test_id', platformId)
-                .order('updated_at', { ascending: false });
-
-            if (data && data.length > 0) {
-                list.innerHTML = data.map(wb => `
-                    <div class="list-item bg-slate-800/50" onclick='loadDetail(${JSON.stringify(wb)})'>
-                        <div class="text-sm font-bold text-slate-200 mb-1">${wb.title}</div>
-                        <div class="flex gap-2">
-                            <span class="tag-badge">${wb.grade || '-'}</span>
-                            <span class="tag-badge">${wb.semester || '-'}</span>
-                            <span class="tag-badge text-indigo-400">${(wb.range_data || []).length} Units</span>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500">등록된 교재가 없습니다.<br>새로 생성해주세요.</div>';
-            }
-        }
-
-        // 교재 상세 불러오기 (수정 모드)
-        function loadDetail(wb) {
-            document.getElementById('hdn-master-id').value = wb.id; // BigInt ID
-            document.getElementById('inp-title').value = wb.title;
-            document.getElementById('sel-grade').value = wb.grade || '고1';
-            document.getElementById('sel-semester').value = wb.semester || '1학기';
-
-            // 단원 리스트 렌더링
-            const container = document.getElementById('unit-container');
-            container.innerHTML = '';
-            
-            const units = wb.range_data || [];
-            if (units.length > 0) {
-                units.forEach(u => addUnitRow(u.code, u.title));
-            } else {
-                addUnitRow();
-            }
-
-            // UI Highlight
-            document.querySelectorAll('#list-workbook .list-item').forEach(el => el.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            
-            setStatus(`Editing: ${wb.title}`);
-        }
-
-        // 폼 초기화 (신규 생성 모드)
-        function resetForm() {
-            document.getElementById('hdn-master-id').value = '';
-            document.getElementById('inp-title').value = '';
-            document.getElementById('sel-grade').selectedIndex = 0;
-            document.getElementById('sel-semester').selectedIndex = 0;
-            document.getElementById('unit-container').innerHTML = '';
-            addUnitRow();
-            setStatus('New Workbook Mode');
-            
-            document.querySelectorAll('#list-workbook .list-item').forEach(el => el.classList.remove('active'));
-        }
-
-        // 단원 입력 행 추가
-        function addUnitRow(code = '', title = '') {
-            const div = document.createElement('div');
-            div.className = 'unit-row';
-            div.innerHTML = `
-                <input type="text" class="pro-input w-24 text-center font-mono text-xs unit-code" placeholder="101" value="${code}">
-                <input type="text" class="pro-input flex-1 text-sm unit-title" placeholder="단원명 (예: 다항식의 연산)" value="${title}">
-                <button onclick="this.parentElement.remove()" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-red-400 transition">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            `;
-            document.getElementById('unit-container').appendChild(div);
-            // 새로 추가된 행의 첫 인풋에 포커스
-            if (!code) div.querySelector('.unit-code').focus();
-        }
-
-        // 저장 로직 (RPC 호출)
-        async function saveWorkbook() {
-            const platformId = document.getElementById('sel-platform').value;
-            if (!platformId) return alert("플랫폼을 먼저 선택해주세요.");
-
-            const id = document.getElementById('hdn-master-id').value || null; // 수정 시 ID, 신규 시 null
-            const title = document.getElementById('inp-title').value.trim();
-            const grade = document.getElementById('sel-grade').value;
-            const semester = document.getElementById('sel-semester').value;
-
-            if (!title) return alert("교재명(Title)은 필수입니다.");
-
-            // 단원 데이터 수집
-            const rows = document.querySelectorAll('.unit-row');
-            const rangeData = [];
-            rows.forEach(row => {
-                const c = row.querySelector('.unit-code').value.trim();
-                const t = row.querySelector('.unit-title').value.trim();
-                if (c && t) rangeData.push({ code: c, title: t });
-            });
-
-            if (rangeData.length === 0) return alert("최소 1개 이상의 단원을 입력해주세요.");
-
-            if (!confirm(`${title}\n총 ${rangeData.length}개 단원\n저장하시겠습니까?`)) return;
-
-            try {
-                // RPC 호출: rpc_upsert_test_master
-                const { data, error } = await _supabase.rpc('rpc_upsert_test_master', {
-                    p_id: id,
-                    p_test_id: platformId,
-                    p_title: title,
-                    p_grade: grade,
-                    p_semester: semester,
-                    p_range_data: rangeData
-                });
-
-                if (error) throw error;
-
-                alert("✅ 교재 뼈대가 저장되었습니다!");
-                loadWorkbooks(platformId); // 목록 갱신
-
-            } catch (e) {
-                console.error(e);
-                alert("저장 실패: " + e.message);
-            }
-        }
-
-        function setStatus(msg) {
-            document.getElementById('status-msg').innerText = msg;
-        }
+        document.addEventListener('DOMContentLoaded', () => CentralManager.init());
     </script>
 </body>
 </html>

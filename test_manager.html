@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>진단평가 관리 센터 | Beyond Math</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', 'Apple SD Gothic Neo', sans-serif; }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+        /* 성적 카드 애니메이션 */
+        .result-card { transition: all 0.2s ease-in-out; }
+        .result-card:hover { transform: translateY(-2px); }
+
+        /* Pass/Fail 도장 스타일 */
+        .stamp-pass { color: #10b981; border: 2px solid #10b981; transform: rotate(-12deg); }
+        .stamp-fail { color: #ef4444; border: 2px solid #ef4444; transform: rotate(-12deg); }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen overflow-hidden flex flex-col">
+
+    <nav class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-50 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-chart-line text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-black text-slate-800 italic tracking-tighter">DIAGNOSTIC MANAGER</h1>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Beyond Math Education System</p>
+            </div>
+        </div>
+        <div id="selected-student-info" class="hidden flex items-center gap-3 bg-indigo-50 px-4 py-2 rounded-2xl border border-indigo-100">
+            <i class="fa-solid fa-user-graduate text-indigo-500"></i>
+            <span id="target-name" class="font-black text-indigo-700 text-sm">-</span>
+        </div>
+    </nav>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col">
+            <div class="p-5 border-b border-slate-50 bg-slate-50/30">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" placeholder="학생 이름 검색..." 
+                        class="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                </div>
+            </div>
+            <div id="student-list" class="flex-1 overflow-y-auto custom-scroll p-4 space-y-2">
+                <div class="p-4 rounded-2xl border border-slate-100 bg-white shadow-sm flex items-center justify-between cursor-pointer hover:border-indigo-500 transition-all group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-black text-xs">보라인</div>
+                        <div>
+                            <p class="text-sm font-black text-slate-700 group-hover:text-indigo-600">중3보라인</p>
+                            <p class="text-[10px] font-bold text-slate-400">최근 제출: 2시간 전</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-200 group-hover:text-indigo-500"></i>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col">
+            
+            <header class="p-6 bg-white border-b border-slate-200 flex justify-center shadow-sm">
+                <div class="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+                    <button onclick="changeMode('internal')" id="mode-internal" 
+                        class="px-12 py-2.5 rounded-xl text-sm font-black transition-all bg-white text-indigo-600 shadow-md border border-slate-100">
+                        <i class="fa-solid fa-shield-halved mr-2"></i>내부 진단 결과
+                    </button>
+                    <button onclick="changeMode('external')" id="mode-external" 
+                        class="px-12 py-2.5 rounded-xl text-sm font-black transition-all text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-earth-americas mr-2"></i>외부 진단 결과
+                    </button>
+                </div>
+            </header>
+
+            <div id="content-area" class="flex-1 overflow-y-auto p-8 custom-scroll bg-slate-50/50">
+                
+                <div id="welcome-view" class="h-full flex flex-col items-center justify-center text-center">
+                    <div class="w-24 h-24 bg-white rounded-[40px] shadow-xl flex items-center justify-center mb-6 border border-slate-100">
+                        <i class="fa-solid fa-fingerprint text-4xl text-slate-200"></i>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-800">관리할 학생을 선택해 주세요.</h2>
+                    <p class="text-slate-400 text-sm mt-2 font-medium italic uppercase tracking-widest">Select a student to monitor performance</p>
+                </div>
+
+                <div id="result-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="result-card bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 relative overflow-hidden group">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-lg uppercase tracking-widest">Completed</span>
+                            <span class="text-[10px] font-bold text-slate-300">2026.01.02</span>
+                        </div>
+                        <h4 class="text-lg font-black text-slate-800 mb-6 leading-tight">수학(상) 다항식의 연산 완성 진단평가</h4>
+                        
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Score</p>
+                                <p class="text-4xl font-black text-slate-900 italic">85<span class="text-sm font-normal text-slate-400 ml-1">pts</span></p>
+                            </div>
+                            
+                            <div class="stamp-pass px-3 py-1 rounded-lg font-black text-[14px] opacity-80">PASS</div>
+                        </div>
+
+                        <div class="mt-6 pt-6 border-t border-slate-50 flex gap-2">
+                            <button class="flex-1 bg-slate-900 text-white py-3 rounded-2xl text-[11px] font-black hover:bg-indigo-600 transition-all">상세 분석</button>
+                            <button class="px-4 py-3 bg-slate-100 text-slate-400 rounded-2xl hover:text-rose-500 transition-all"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // 기초 UI 전환 로직
+        function changeMode(mode) {
+            const intBtn = document.getElementById('mode-internal');
+            const extBtn = document.getElementById('mode-external');
+            
+            if(mode === 'internal') {
+                intBtn.className = "px-12 py-2.5 rounded-xl text-sm font-black transition-all bg-white text-indigo-600 shadow-md border border-slate-100";
+                extBtn.className = "px-12 py-2.5 rounded-xl text-sm font-black transition-all text-slate-400 hover:text-slate-600";
+            } else {
+                extBtn.className = "px-12 py-2.5 rounded-xl text-sm font-black transition-all bg-white text-rose-600 shadow-md border border-slate-100";
+                intBtn.className = "px-12 py-2.5 rounded-xl text-sm font-black transition-all text-slate-400 hover:text-slate-600";
+            }
+            console.log(`모드 전환: ${mode}`);
+        }
+    </script>
+</body>
+</html>

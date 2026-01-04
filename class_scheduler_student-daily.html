@@ -242,36 +242,73 @@
 
         async function selectStudent(id) {
             if (STATE.processedStudentIds.has(id)) return;
-            STATE.selectedStudentId = id; STATE.selectedRuleIds.clear();
-            const s = STATE.students[id]; renderStudentList();
 
-            // [진단평가 자동 카운팅 로직 추가] -----------------------------------------
-            const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-            const { data: testRecords } = await _supabase
-                .from('test_assignment_records')
-                .select('history_log')
-                .eq('student_id', id);
+            STATE.selectedStudentId = id;
+            STATE.selectedRuleIds.clear(); // 초기화
+            const s = STATE.students[id];
+            renderStudentList();
 
-            let todayPassCount = 0;
-            if (testRecords) {
-                testRecords.forEach(rec => {
-                    const logs = rec.history_log || {};
-                    Object.values(logs).forEach(log => {
-                        if (log.status === 'pass' && log.passed_at && log.passed_at.startsWith(todayStr)) {
-                            todayPassCount++;
+            // [진단평가 자동 카운팅 로직 시작] ---------------------------------------------
+            try {
+                // 1. 오늘 날짜(KST 00:00:00) 기준 설정 (기존과 동일)
+                const now = new Date();
+                const kstOffset = 9 * 60 * 60 * 1000;
+                const todayKST = new Date(now.getTime() + kstOffset);
+                todayKST.setUTCHours(0, 0, 0, 0);
+                const startOfTodayUTC = new Date(todayKST.getTime() - kstOffset).toISOString();
+
+                console.log(`[SYSTEM] ${s.name} 진단평가(내부+외부) 통합 조회 시작`);
+
+                // 2. 학생의 모든 배정 데이터 조회 (외부 진단은 status가 assigned일 수 있으므로 필터 완화)
+                const { data: assignments, error } = await _supabase
+                    .from('student_assignments')
+                    .select('id, status, pass_at, ext_status')
+                    .eq('student_id', id);
+
+                if (error) throw error;
+
+                let totalTodayPassCount = 0;
+
+                if (assignments) {
+                    assignments.forEach(asg => {
+                        // (A) 내부 진단 체크: 메인 pass_at이 오늘인 경우
+                        // (ext_status가 없는 순수 내부 진단이거나, 메인 pass_at이 찍힌 경우)
+                        if (asg.status === 'pass' && asg.pass_at && asg.pass_at >= startOfTodayUTC) {
+                            // 외부 진단 회차별 카운트와 겹치지 않게 하기 위해
+                            // 보따리가 없는 경우에만 메인 날짜로 카운트하거나, 
+                            // 혹은 보따리가 있어도 메인 패스가 오늘이면 1개로 인정
+                            if (!asg.ext_status || Object.keys(asg.ext_status).length === 0) {
+                                totalTodayPassCount++;
+                            }
+                        }
+
+                        // (B) 외부 진단 체크: 보따리(ext_status) 내부의 회차별 pass_at이 오늘인 경우
+                        if (asg.ext_status && typeof asg.ext_status === 'object') {
+                            Object.values(asg.ext_status).forEach(round => {
+                                if (round.status === 'pass' && round.pass_at && round.pass_at >= startOfTodayUTC) {
+                                    totalTodayPassCount++;
+                                }
+                            });
                         }
                     });
-                });
-            }
+                }
 
-            for (let i = 1; i <= todayPassCount; i++) {
-                const ruleName = `진단평가${i}`;
-                const targetRule = STATE.allRules.find(r => r.name.replace(/\s/g, '') === ruleName);
-                if (targetRule) STATE.selectedRuleIds.add(targetRule.id);
+                console.log(`[SYSTEM] 최종 집계된 오늘 PASS 개수: ${totalTodayPassCount}`);
+
+                // 3. 합산된 개수만큼 '진단평가1', '진단평가2'... 버튼 자동 선택
+                for (let i = 1; i <= totalTodayPassCount; i++) {
+                    const ruleName = `진단평가${i}`;
+                    const targetRule = STATE.allRules.find(r => r.name.replace(/\s/g, '') === ruleName);
+                    if (targetRule) {
+                        STATE.selectedRuleIds.add(targetRule.id);
+                    }
+                }
+            } catch (err) {
+                console.error("[SYSTEM] 진단 카운팅 중 예외:", err);
             }
             // -------------------------------------------------------------------------
 
-            // [복구] 4가지 판결 상황 버튼 자동 선택
+            // [기존] 숙제 상태 자동 선택 (유지)
             const target = (s.hwSettings || []).find(h => String(h.check_class_id) === String(STATE.cid));
             if (target) {
                 const assignCid = String(target.assign_class_id);
@@ -282,9 +319,12 @@
                     else if (['선생이 이행을 반려함', '선생이 미이행을 승인함'].some(v => st.includes(v))) applyAuto('숙제미이행');
                 });
             }
+
+            // UI 갱신
             document.getElementById('target-badge').style.opacity = '1';
             document.getElementById('target-name').innerText = `${s.name} (${s.tier})`;
-            renderRuleGrid(); updateAddButton();
+            renderRuleGrid();
+            updateAddButton();
         }
 
         function applyAuto(name) {

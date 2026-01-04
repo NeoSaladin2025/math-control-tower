@@ -2,18 +2,18 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Test Paper Factory - Professional v3.1</title>
+    <title>시험지 생성 공장 - 출제 전용 시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="config.js"></script>
 
     <style>
-        /* Professional Styling System */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap');
+        /* [한글 최적화] 수학과 사장님을 위한 직관적인 스타일링 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&display=swap');
         
         body { 
-            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
+            font-family: 'Noto Sans KR', sans-serif; 
             background-color: #020617; 
             color: #e2e8f0; 
             height: 100vh; 
@@ -23,412 +23,127 @@
             gap: 24px;
         }
 
-        /* Glassmorphism Containers */
+        /* 유리창 스타일 패널 */
         .glass-panel { 
             background: rgba(15, 23, 42, 0.9); 
-            backdrop-filter: blur(12px); 
+            backdrop-filter: blur(16px); 
             border: 1px solid rgba(255,255,255,0.05); 
             border-radius: 20px; 
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            box-shadow: 0 15px 35px -10px rgba(0,0,0,0.6);
             display: flex; 
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Scrollbar Customization */
-        .pro-scroll::-webkit-scrollbar { width: 5px; }
+        .pro-scroll::-webkit-scrollbar { width: 4px; }
         .pro-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .pro-scroll::-webkit-scrollbar-track { background: transparent; }
 
-        /* Form Elements */
         .pro-input {
             background: #1e293b; border: 1px solid #334155; color: white;
-            border-radius: 10px; padding: 12px; font-size: 0.9rem; outline: none; width: 100%;
-            transition: all 0.2s;
+            border-radius: 12px; padding: 14px; font-size: 0.9rem; outline: none; width: 100%;
+            transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .pro-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        .pro-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
 
-        /* List Items (Workbook Selector) */
+        /* 사이드바 항목 */
         .list-item {
-            padding: 12px; border-radius: 12px; cursor: pointer; transition: 0.2s;
-            border: 1px solid transparent; margin-bottom: 6px; background: rgba(255,255,255,0.03);
+            padding: 14px; border-radius: 14px; cursor: pointer; transition: 0.2s;
+            border: 1px solid transparent; margin-bottom: 8px; background: rgba(255,255,255,0.02);
         }
-        .list-item:hover { background: rgba(99, 102, 241, 0.1); }
-        .list-item.selected { background: #4f46e5; color: white; border-color: #6366f1; }
-
-        /* Unit Chip Styles (Ingredient) */
-        .unit-chip {
-            font-size: 11px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
-            border: 1px solid #334155; background: #0f172a; color: #94a3b8; transition: all 0.2s;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .unit-chip:hover { border-color: #6366f1; color: white; transform: translateY(-1px); }
-        
-        /* State: Active (Selected in Current Round) */
-        .unit-chip.active { 
-            background: #4f46e5; border-color: #4f46e5; color: white; font-weight: bold; 
-            box-shadow: 0 0 10px rgba(79, 70, 229, 0.4);
-        }
-
-        /* State: Locked (Used in Other Rounds) - The "Protection" Logic */
-        .unit-chip.used-elsewhere {
-            border-color: #d97706; /* Amber-600 */
-            color: #fbbf24; /* Amber-400 */
-            background: rgba(217, 119, 6, 0.1);
-            opacity: 0.8;
-        }
-        .unit-chip.used-elsewhere:hover {
-            opacity: 1;
-            background: rgba(217, 119, 6, 0.2);
-            box-shadow: 0 0 10px rgba(217, 119, 6, 0.2);
-        }
-
-        /* Round Card */
-        .round-card {
-            background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 16px; padding: 16px; margin-bottom: 12px; border-left: 4px solid transparent;
-            transition: all 0.2s;
-        }
-        .round-card.focused { 
-            border-left-color: #6366f1; background: rgba(30, 41, 59, 0.8); 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2); 
-        }
-
-        /* Action Buttons */
-        .btn-action {
-            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-            color: white; font-weight: 700; border-radius: 12px; transition: 0.2s;
-        }
-        .btn-action:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
+        .list-item:hover { background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.2); }
+        .list-item.selected { background: rgba(79, 70, 229, 0.15); border-color: #4f46e5; }
     </style>
 </head>
 <body>
 
-    <div class="w-80 glass-panel p-5">
-        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">1. Select Skeleton</h2>
-        
-        <select id="sel-platform" onchange="loadWorkbooks(this.value)" class="pro-input mb-4 text-xs">
-            <option value="">플랫폼(카테고리) 선택...</option>
-        </select>
+    <aside class="w-80 glass-panel p-6 shrink-0">
+        <header class="mb-8">
+            <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">I. 환경 설정</h2>
+            <select id="sel-platform" onchange="FactoryShell.onCategoryChange(this.value)" class="pro-input text-xs font-bold">
+                <option value="">카테고리를 선택하세요...</option>
+            </select>
+        </header>
 
-        <div id="list-workbook" class="flex-1 pro-scroll overflow-y-auto pr-1">
-            <div class="text-center py-20 text-xs text-slate-600">플랫폼을 먼저 선택해주세요.</div>
-        </div>
-    </div>
-
-    <div class="flex-1 glass-panel p-6 relative">
-        <div class="flex gap-4 mb-6 pb-6 border-b border-slate-700 items-end">
-            <div class="flex-1">
-                <label class="block text-xs font-bold text-slate-400 mb-1">패키지 타이틀 (Pack Title)</label>
-                <input type="text" id="inp-pack-title" class="pro-input text-lg font-bold" placeholder="예: [매쓰플랫] 고1-1 중간고사 대비팩">
-            </div>
-            <button onclick="addRound()" class="h-[50px] px-6 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold flex items-center gap-2 transition">
-                <i class="fa-solid fa-plus"></i> 회차 추가
-            </button>
-        </div>
-
-        <div class="flex gap-6 flex-1 min-h-0">
-            <div id="round-container" class="w-1/2 pro-scroll overflow-y-auto pr-2">
-                <div class="text-center py-20 text-xs text-slate-600">
-                    <i class="fa-solid fa-layer-group text-3xl mb-4 opacity-30"></i><br>
-                    우측 상단 '회차 추가' 버튼을 눌러<br>새로운 시험지를 생성하세요.
+        <section class="flex-1 flex flex-col min-h-0">
+            <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-1">II. 마스터 자산 리스트</h2>
+            <div id="list-container" class="flex-1 pro-scroll overflow-y-auto pr-2">
+                <div class="text-center py-24 opacity-20 pointer-events-none">
+                    <i class="fa-solid fa-folder-tree text-3xl mb-4"></i>
+                    <p class="text-[10px] font-bold tracking-widest uppercase">카테고리를 선택하면<br>자산 목록이 나타납니다</p>
                 </div>
             </div>
+        </section>
+    </aside>
 
-            <div class="w-1/2 bg-slate-900/50 rounded-xl border border-slate-700/50 p-4 flex flex-col">
-                <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 flex justify-between">
-                    <span>Unit Ingredients</span>
-                    <span id="unit-count" class="text-slate-500">0 units</span>
-                </h3>
-                <div id="unit-pool" class="flex-1 pro-scroll overflow-y-auto grid grid-cols-1 gap-2 content-start">
-                    <div class="text-center py-20 text-xs text-slate-600">교재를 먼저 선택해주세요.</div>
-                </div>
+    <main class="flex-1 glass-panel p-8 relative">
+        <header id="engine-header" class="mb-8 min-h-[60px]"></header>
+
+        <section id="engine-main" class="flex-1 min-h-0">
+            <div class="h-full flex flex-col items-center justify-center opacity-10 grayscale pointer-events-none">
+                <i class="fa-solid fa-wand-magic-sparkles text-8xl mb-6"></i>
+                <p class="text-sm font-black tracking-[0.4em] uppercase">작업 엔진 대기 중</p>
             </div>
-        </div>
+        </section>
 
-        <div class="mt-6 pt-4 border-t border-slate-700 flex justify-end">
-            <button onclick="savePacks()" class="btn-action px-10 py-4 flex items-center gap-3">
-                <i class="fa-solid fa-cloud-upload"></i>
-                <span>시험지 팩 DB 동기화 (Save)</span>
-            </button>
-        </div>
-    </div>
+        <footer id="engine-footer" class="mt-8 pt-6 border-t border-slate-800"></footer>
+    </main>
 
     <script>
         /**
-         * [Elite Secretary Core Logic]
-         * Manages the lifecycle of Test Paper Packs.
-         * Enforces strict type handling (UUID vs BigInt) and Duplicate Entry Protection.
+         * @object FactoryShell
+         * @description 출제 전용 엔진 오케스트레이터 (관리는 타 시스템에서 수행)
          */
-        
-        // --- Global State Management ---
-        let currentWorkbook = null;  // Currently selected Master (Skeleton)
-        let rounds = [];             // Array of round objects: { id, roundNum, codes: [] }
-        let focusedRoundId = null;   // ID of the round currently being edited
+        const FactoryShell = {
+            state: { categories: [], currentCat: null },
 
-        // --- Initialization ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const checkInt = setInterval(() => {
-                if (typeof _supabase !== 'undefined') {
-                    clearInterval(checkInt);
-                    initPage();
-                }
-            }, 100);
-        });
-
-        async function initPage() {
-            try {
-                // Fetch Categories (UUID based)
-                const { data: cats } = await _supabase.from('test_category').select('*').order('name');
-                if (cats) {
-                    document.getElementById('sel-platform').innerHTML = 
-                        '<option value="">플랫폼(카테고리) 선택...</option>' + 
-                        cats.map(c => `<option value="${c.test_id}">${c.name}</option>`).join('');
-                }
-            } catch (error) {
-                console.error("Initialization Error:", error);
-            }
-        }
-
-        // --- Workbook Loading Logic ---
-        async function loadWorkbooks(testId) {
-            const list = document.getElementById('list-workbook');
-            list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500">Loading...</div>';
-            
-            if (!testId) {
-                list.innerHTML = '<div class="text-center py-10 text-xs text-slate-600">플랫폼을 선택하세요.</div>';
-                return;
-            }
-
-            // Fetch Workbooks from 'test_master' using UUID 'test_id'
-            const { data, error } = await _supabase.from('test_master')
-                .select('*')
-                .eq('test_id', testId)
-                .order('updated_at', { ascending: false });
-
-            if (data && data.length > 0) {
-                list.innerHTML = data.map(wb => `
-                    <div class="list-item" onclick='selectWorkbook(${JSON.stringify(wb)}, this)'>
-                        <div class="text-sm font-bold text-slate-200 mb-1">${wb.title}</div>
-                        <div class="text-[10px] text-slate-500">
-                            ${wb.grade || ''} ${wb.semester || ''} • ${wb.range_data?.length || 0} Units
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                list.innerHTML = '<div class="text-center py-10 text-xs text-slate-500">등록된 교재가 없습니다.</div>';
-            }
-        }
-
-        function selectWorkbook(wb, el) {
-            // UI Update
-            document.querySelectorAll('#list-workbook .list-item').forEach(i => i.classList.remove('selected'));
-            el.classList.add('selected');
-
-            // Set State
-            currentWorkbook = wb;
-            
-            // Set Default Title
-            document.getElementById('inp-pack-title').value = `${wb.title} 팩`;
-
-            // Reset Workspace
-            rounds = [];
-            focusedRoundId = null;
-            renderRounds();
-            renderUnitPool();
-        }
-
-        // --- Round Management Logic ---
-        function addRound() {
-            if (!currentWorkbook) return alert("교재(뼈대)를 먼저 선택해주세요.");
-
-            const id = Date.now();
-            const roundNum = rounds.length + 1;
-            
-            rounds.push({ id, roundNum, codes: [] });
-            
-            renderRounds();
-            focusRound(id); // Auto-focus new round
-        }
-
-        function removeRound(id, e) {
-            e.stopPropagation();
-            if (!confirm("해당 회차를 삭제하시겠습니까?")) return;
-            
-            rounds = rounds.filter(r => r.id !== id);
-            if (focusedRoundId === id) focusedRoundId = null;
-            
-            // Re-index round numbers
-            rounds.forEach((r, idx) => r.roundNum = idx + 1);
-            
-            renderRounds();
-            renderUnitPool();
-        }
-
-        function focusRound(id) {
-            focusedRoundId = id;
-            renderRounds(); 
-            renderUnitPool();
-        }
-
-        // --- Render Functions ---
-        function renderRounds() {
-            const container = document.getElementById('round-container');
-            if (rounds.length === 0) {
-                container.innerHTML = `<div class="text-center py-20 text-xs text-slate-600">
-                    <i class="fa-solid fa-layer-group text-3xl mb-4 opacity-30"></i><br>
-                    우측 상단 '회차 추가' 버튼을 눌러주세요.
-                </div>`;
-                return;
-            }
-
-            container.innerHTML = rounds.map(r => `
-                <div id="round-${r.id}" class="round-card cursor-pointer ${r.id === focusedRoundId ? 'focused' : ''}" onclick="focusRound(${r.id})">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Round ${r.roundNum}</span>
-                        <button onclick="removeRound(${r.id}, event)" class="text-slate-600 hover:text-red-400 transition"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                    <div class="text-sm font-bold text-white mb-2">
-                        ${document.getElementById('inp-pack-title').value} - ${r.roundNum}회
-                    </div>
-                    <div class="flex flex-wrap gap-1">
-                        ${r.codes.length > 0 
-                            ? r.codes.map(c => `<span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] rounded border border-indigo-500/30 font-mono">${c}</span>`).join('') 
-                            : '<span class="text-[10px] text-slate-600">단원 선택 필요</span>'}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderUnitPool() {
-            const container = document.getElementById('unit-pool');
-            const countEl = document.getElementById('unit-count');
-            
-            if (!currentWorkbook) {
-                container.innerHTML = '<div class="text-center py-20 text-xs text-slate-600">교재를 먼저 선택해주세요.</div>';
-                return;
-            }
-
-            const units = currentWorkbook.range_data || [];
-            countEl.innerText = `${units.length} units`;
-
-            // Get codes currently selected in the focused round
-            const currentCodes = focusedRoundId 
-                ? (rounds.find(r => r.id === focusedRoundId)?.codes || []) 
-                : [];
-
-            container.innerHTML = units.map(u => {
-                // Check if active in current round
-                const isActive = currentCodes.includes(u.code);
-                
-                // Check if used in OTHER rounds (Protection Logic)
-                const usedInOtherRounds = rounds
-                    .filter(r => r.id !== focusedRoundId)
-                    .some(r => r.codes.includes(u.code));
-
-                // Determine Classes & Icon
-                let classes = "unit-chip";
-                let icon = "";
-                
-                if (isActive) {
-                    classes += " active";
-                    icon = '<i class="fa-solid fa-check"></i>';
-                } else if (usedInOtherRounds) {
-                    classes += " used-elsewhere"; // Visual Warning (Amber Color)
-                    icon = '<i class="fa-solid fa-lock text-[10px]"></i>';
-                }
-
-                return `
-                    <div class="${classes}" onclick="toggleUnit('${u.code}')">
-                        <div class="flex items-center gap-2 overflow-hidden">
-                            <span class="font-mono text-[10px] opacity-70">${u.code}</span>
-                            <span class="truncate">${u.title}</span>
-                        </div>
-                        ${icon}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // --- Core Logic: Toggle Unit with Protection ---
-        function toggleUnit(code) {
-            if (!focusedRoundId) return alert("먼저 편집할 '회차(Round)'를 선택해주세요.");
-
-            const round = rounds.find(r => r.id === focusedRoundId);
-            if (!round) return;
-
-            const idx = round.codes.indexOf(code);
-            
-            // Logic 1: If already in current round -> Remove it (Toggle OFF)
-            if (idx > -1) {
-                round.codes.splice(idx, 1);
-            } else {
-                // Logic 2: If not in current round -> Check for duplicates in others
-                const otherRoundsUsing = rounds.filter(r => r.id !== focusedRoundId && r.codes.includes(code));
-                
-                if (otherRoundsUsing.length > 0) {
-                    // Alert User
-                    const roundNames = otherRoundsUsing.map(r => r.roundNum + '회').join(', ');
-                    const msg = `[중복 사용 경고]\n이 단원(${code})은 이미 ${roundNames}에 포함되어 있습니다.\n\n잠금을 해제하고 추가하시겠습니까?`;
-                    
-                    if (!confirm(msg)) return; // User cancelled
-                }
-
-                // Logic 3: Add to current round
-                round.codes.push(code);
-            }
-
-            // Refresh UI
-            renderUnitPool();
-            renderRounds();
-        }
-
-        // --- Save Logic (RPC) ---
-        async function savePacks() {
-            const packTitleBase = document.getElementById('inp-pack-title').value.trim();
-            
-            // Validation
-            if (!currentWorkbook) return alert("교재(뼈대)가 선택되지 않았습니다.");
-            if (rounds.length === 0) return alert("생성된 회차가 없습니다.");
-            if (!packTitleBase) return alert("패키지 타이틀을 입력해주세요.");
-            if (rounds.some(r => r.codes.length === 0)) return alert("단원이 선택되지 않은 회차가 있습니다.");
-
-            if (!confirm(`총 ${rounds.length}개의 시험지 팩을 DB에 저장하시겠습니까?`)) return;
-
-            try {
-                let successCount = 0;
-
-                for (const r of rounds) {
-                    const finalTitle = `${packTitleBase} - ${r.roundNum}회`;
-                    
-                    // Call RPC Function
-                    // Ensure types match: test_id (UUID), test_master_id (BigInt)
-                    const { data, error } = await _supabase.rpc('rpc_create_test_paper', {
-                        p_test_id: currentWorkbook.test_id,      // UUID
-                        p_test_master_id: currentWorkbook.id,    // BigInt
-                        p_title: finalTitle,
-                        p_total_questions: r.codes.length,
-                        p_is_internal: false,
-                        p_theme_config: { codes: r.codes }       // JSONB
-                    });
-
+            async init() {
+                try {
+                    const { data, error } = await _supabase.from('test_category').select('*').order('name');
                     if (error) throw error;
-                    successCount++;
+                    this.state.categories = data || [];
+                    const sel = document.getElementById('sel-platform');
+                    sel.innerHTML = '<option value="">카테고리를 선택하세요...</option>' + 
+                        this.state.categories.map(c => `<option value="${c.test_id}">${c.name}</option>`).join('');
+                } catch (e) {
+                    console.error("[시스템] 초기화 오류:", e.message);
                 }
+            },
 
-                alert(`✅ 성공적으로 저장되었습니다! (총 ${successCount}건)`);
-                
-                // Reset Logic
-                rounds = [];
-                focusedRoundId = null;
-                renderRounds();
-                renderUnitPool();
+            onCategoryChange(catId) {
+                this.state.currentCat = this.state.categories.find(c => c.test_id == catId);
+                if (this.state.currentCat) this.mountEngine();
+            },
 
-            } catch (e) {
-                console.error("Save Error:", e);
-                alert("저장 중 오류 발생: " + e.message);
+            mountEngine() {
+                // 내부/외부 여부에 따른 파일명 결정 (무조건 maker 엔진만 로드)
+                const isInternal = this.state.currentCat.is_internal;
+                const engineName = `${isInternal ? 'Int' : 'Ext'}Maker`;
+                const fileName = `engine_${isInternal ? 'int' : 'ext'}_maker.js`;
+
+                // 기존 런타임 제거
+                const oldScript = document.getElementById('engine-runtime');
+                if (oldScript) oldScript.remove();
+
+                // UI 초기화
+                document.getElementById('engine-header').innerHTML = '';
+                document.getElementById('engine-main').innerHTML = '<div class="flex h-full items-center justify-center opacity-30"><i class="fa-solid fa-circle-notch fa-spin text-4xl"></i></div>';
+                document.getElementById('engine-footer').innerHTML = '';
+
+                // 스크립트 로드
+                const script = document.createElement('script');
+                script.id = 'engine-runtime';
+                script.src = `./test_paper_maker/${fileName}?v=${Date.now()}`;
+                script.onload = () => {
+                    if (window[engineName]) {
+                        window[engineName].mount(this.state.currentCat);
+                    }
+                };
+                document.head.appendChild(script);
             }
-        }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => FactoryShell.init());
     </script>
 </body>
 </html>
