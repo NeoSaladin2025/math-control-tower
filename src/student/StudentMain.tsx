@@ -2,67 +2,103 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 interface Props {
-    user: any; // id, username, role, grade 포함
+    user: any; 
 }
 
 const StudentMain: React.FC<Props> = ({ user }) => {
-    // 로직용 상태
     const [isPopupOpen, setIsPopupOpen] = useState(false);
-    const [assignedExams, setAssignedExams] = useState<any[]>([]); // 배정된 시험지 목록
+    const [assignedExams, setAssignedExams] = useState<any[]>([]);
     const [selectedExamId, setSelectedExamId] = useState("");
     const [startNo, setStartNo] = useState(1);
     const [questions, setQuestions] = useState<{ no: number, isCorrect: boolean }[]>([]);
 
-    // 1. 학생에게 배정된 시험지 목록 가져오기 (컴포넌트 로드 시 실행)
     useEffect(() => {
         const fetchExams = async () => {
-            // exams 테이블에서 해당 학생의 학년이나 배정 조건에 맞는 리스트를 가져옵니다.
-            // 여기서는 전체 리스트를 가져오되, 실제로는 학생별 배정 테이블과 조인하면 더 좋아!
             const { data, error } = await supabase
                 .from('exams')
                 .select('id, title')
                 .order('created_at', { ascending: false });
-
             if (!error && data) setAssignedExams(data);
         };
         fetchExams();
     }, []);
 
-    // 2. 입력 시작 (선택한 시험지 기준 20개 생성)
-    const handleStart = () => {
+    /**
+     * 🚀 수정된 로직: 타입 불일치 방지 및 오답 제외
+     */
+    const handleStart = async () => {
         if (!selectedExamId) return alert("시험지를 선택해주세요.");
-        const list = [];
-        for (let i = startNo; i < startNo + 20; i++) {
-            list.push({ no: i, isCorrect: false });
+        
+        try {
+            // DB 조회: 해당 학생/시험지의 'wrong'(이미 맞힌) 문항만 가져옴
+            const { data: solvedData, error } = await supabase
+                .from('student_test_results')
+                .select('question_number')
+                .eq('student_id', user.id)
+                .eq('exam_id', selectedExamId)
+                .eq('status', 'wrong');
+
+            if (error) throw error;
+
+            // 💡 중요: DB에서 온 번호를 강제로 Number 타입으로 변환하여 Set 생성 💋
+            const solvedSet = new Set(
+                (solvedData || []).map(item => Number(item.question_number))
+            );
+
+            console.log("제외할 번호들 (solvedSet):", Array.from(solvedSet)); // 디버깅용
+
+            const list = [];
+            let currentNo = Number(startNo); // 입력값도 숫자로 확실히 변환 🌹
+            
+            // "solvedSet에 없는(아직 안 맞힌) 실제 번호"만 20개 리스트업
+            while (list.length < 20) {
+                // Number vs Number 비교로 타입 에러 원천 차단 💋
+                if (!solvedSet.has(currentNo)) {
+                    list.push({ no: currentNo, isCorrect: false });
+                }
+                currentNo++;
+                
+                if (currentNo > Number(startNo) + 1000) break; 
+            }
+
+            if (list.length === 0) {
+                alert("이후 범위에 더 이상 입력할 문항이 없습니다.");
+                return;
+            }
+
+            setQuestions(list);
+            setIsPopupOpen(false);
+        } catch (e: any) {
+            console.error(e);
+            alert("데이터 조회 중 오류가 발생했습니다.");
         }
-        setQuestions(list);
-        setIsPopupOpen(false);
     };
 
-    // 3. 버튼 토글 (맞음/틀림)
     const toggleResult = (idx: number) => {
         const newList = [...questions];
         newList[idx].isCorrect = !newList[idx].isCorrect;
         setQuestions(newList);
     };
 
-    // 4. 저장 (정답 데이터만 전송)
     const handleSave = async () => {
-        const correctItems = questions
+        const solvedItems = questions
             .filter(q => q.isCorrect)
             .map(q => ({
                 student_id: user.id,
                 exam_id: selectedExamId,
-                question_number: q.no
+                question_number: q.no,
+                status: 'wrong' // 맞힌 문제는 'wrong'으로 저장하는 자기만의 규칙 반영 🌹
             }));
+
+        if (solvedItems.length === 0) return alert("맞은 문항을 선택해주세요.");
 
         try {
             const { error } = await supabase
                 .from('student_test_results')
-                .upsert(correctItems, { onConflict: 'student_id,exam_id,question_number' });
+                .upsert(solvedItems, { onConflict: 'student_id,exam_id,question_number' });
 
             if (error) throw error;
-            alert("정답 입력이 완료되었습니다.");
+            alert("저장되었습니다.");
             setQuestions([]);
             setSelectedExamId("");
         } catch (e: any) {
@@ -89,11 +125,10 @@ const StudentMain: React.FC<Props> = ({ user }) => {
                         <button style={styles.mainCenterBtn} onClick={() => setIsPopupOpen(true)}>
                             진단평가 답안 입력
                         </button>
-                        <p style={styles.hintText}>배정된 평가를 선택하여 정답을 입력하세요.</p>
                     </div>
                 ) : (
                     <div style={styles.gridWrapper}>
-                        <h3 style={styles.gridTitle}>번호를 터치하여 정답을 표시하세요</h3>
+                        <h3 style={styles.gridTitle}>맞은 문항만 터치해서 초록색으로 바꾸세요</h3>
                         <div style={styles.grid}>
                             {questions.map((q, idx) => (
                                 <div 
@@ -116,7 +151,6 @@ const StudentMain: React.FC<Props> = ({ user }) => {
                 )}
             </main>
 
-            {/* 입력 설정 모달 */}
             {isPopupOpen && (
                 <div style={styles.modalOverlay}>
                     <div style={styles.modalContent}>
@@ -152,8 +186,9 @@ const StudentMain: React.FC<Props> = ({ user }) => {
     );
 };
 
+// 스타일 객체는 기존과 동일하게 사용하세요 🌹
 const styles: { [key: string]: React.CSSProperties } = {
-    container: { padding: '30px 50px', backgroundColor: '#ffffff', minHeight: '100vh', width: '100%', boxSizing: 'border-box', fontFamily: "'Pretendard', sans-serif", display: 'flex', flexDirection: 'column' },
+    container: { padding: '30px 50px', backgroundColor: '#ffffff', minHeight: '100vh', width: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '60px' },
     userInfo: { display: 'flex', gap: '10px', alignItems: 'baseline' },
     gradeText: { fontSize: '20px', color: '#636e72', fontWeight: '500' },
@@ -164,7 +199,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     main: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' },
     centerWrapper: { textAlign: 'center' },
     mainCenterBtn: { padding: '40px 80px', backgroundColor: '#00b894', color: 'white', borderRadius: '20px', fontSize: '32px', fontWeight: '900', border: 'none', cursor: 'pointer', boxShadow: '0 20px 40px rgba(0,184,148,0.25)' },
-    hintText: { marginTop: '25px', color: '#b2bec3', fontSize: '18px', fontWeight: '500' },
     modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
     modalContent: { backgroundColor: '#fff', padding: '40px', borderRadius: '24px', width: '360px', textAlign: 'center' },
     modalTitle: { marginTop: 0, color: '#2d3436', marginBottom: '25px' },
@@ -175,7 +209,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     popupStartBtn: { width: '100%', padding: '15px', backgroundColor: '#00b894', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' },
     popupCloseBtn: { width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#b2bec3', border: 'none', cursor: 'pointer', marginTop: '5px' },
     gridWrapper: { textAlign: 'center', width: '100%', maxWidth: '500px' },
-    gridTitle: { marginBottom: '25px', color: '#2d3436' },
+    gridTitle: { marginBottom: '25px', color: '#2d3436', fontSize: '20px', fontWeight: '700' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' },
     qButton: { height: '70px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '22px', fontWeight: '900', borderRadius: '15px', cursor: 'pointer' },
     actionRow: { display: 'flex', gap: '15px', marginTop: '35px' },
