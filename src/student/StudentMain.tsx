@@ -1,0 +1,186 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+
+interface Props {
+    user: any; // id, username, role, grade 포함
+}
+
+const StudentMain: React.FC<Props> = ({ user }) => {
+    // 로직용 상태
+    const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const [assignedExams, setAssignedExams] = useState<any[]>([]); // 배정된 시험지 목록
+    const [selectedExamId, setSelectedExamId] = useState("");
+    const [startNo, setStartNo] = useState(1);
+    const [questions, setQuestions] = useState<{ no: number, isCorrect: boolean }[]>([]);
+
+    // 1. 학생에게 배정된 시험지 목록 가져오기 (컴포넌트 로드 시 실행)
+    useEffect(() => {
+        const fetchExams = async () => {
+            // exams 테이블에서 해당 학생의 학년이나 배정 조건에 맞는 리스트를 가져옵니다.
+            // 여기서는 전체 리스트를 가져오되, 실제로는 학생별 배정 테이블과 조인하면 더 좋아!
+            const { data, error } = await supabase
+                .from('exams')
+                .select('id, title')
+                .order('created_at', { ascending: false });
+
+            if (!error && data) setAssignedExams(data);
+        };
+        fetchExams();
+    }, []);
+
+    // 2. 입력 시작 (선택한 시험지 기준 20개 생성)
+    const handleStart = () => {
+        if (!selectedExamId) return alert("시험지를 선택해주세요.");
+        const list = [];
+        for (let i = startNo; i < startNo + 20; i++) {
+            list.push({ no: i, isCorrect: false });
+        }
+        setQuestions(list);
+        setIsPopupOpen(false);
+    };
+
+    // 3. 버튼 토글 (맞음/틀림)
+    const toggleResult = (idx: number) => {
+        const newList = [...questions];
+        newList[idx].isCorrect = !newList[idx].isCorrect;
+        setQuestions(newList);
+    };
+
+    // 4. 저장 (정답 데이터만 전송)
+    const handleSave = async () => {
+        const correctItems = questions
+            .filter(q => q.isCorrect)
+            .map(q => ({
+                student_id: user.id,
+                exam_id: selectedExamId,
+                question_number: q.no
+            }));
+
+        try {
+            const { error } = await supabase
+                .from('student_test_results')
+                .upsert(correctItems, { onConflict: 'student_id,exam_id,question_number' });
+
+            if (error) throw error;
+            alert("정답 입력이 완료되었습니다.");
+            setQuestions([]);
+            setSelectedExamId("");
+        } catch (e: any) {
+            alert("저장 오류: " + e.message);
+        }
+    };
+
+    return (
+        <div style={styles.container}>
+            <header style={styles.header}>
+                <div style={styles.userInfo}>
+                    <span style={styles.gradeText}>{user?.grade}</span>
+                    <span style={styles.nameText}>{user?.username}</span>
+                </div>
+                <div style={styles.headerRight}>
+                    <button style={styles.subBtn}>비번변경</button>
+                    <button onClick={() => window.location.reload()} style={styles.logoutBtn}>로그아웃</button>
+                </div>
+            </header>
+
+            <main style={styles.main}>
+                {questions.length === 0 ? (
+                    <div style={styles.centerWrapper}>
+                        <button style={styles.mainCenterBtn} onClick={() => setIsPopupOpen(true)}>
+                            진단평가 답안 입력
+                        </button>
+                        <p style={styles.hintText}>배정된 평가를 선택하여 정답을 입력하세요.</p>
+                    </div>
+                ) : (
+                    <div style={styles.gridWrapper}>
+                        <h3 style={styles.gridTitle}>번호를 터치하여 정답을 표시하세요</h3>
+                        <div style={styles.grid}>
+                            {questions.map((q, idx) => (
+                                <div 
+                                    key={q.no}
+                                    onClick={() => toggleResult(idx)}
+                                    style={{
+                                        ...styles.qButton,
+                                        backgroundColor: q.isCorrect ? '#00b894' : '#ff7675'
+                                    }}
+                                >
+                                    {q.no}
+                                </div>
+                            ))}
+                        </div>
+                        <div style={styles.actionRow}>
+                            <button onClick={handleSave} style={styles.saveBtn}>저장하기</button>
+                            <button onClick={() => setQuestions([])} style={styles.cancelBtn}>취소</button>
+                        </div>
+                    </div>
+                )}
+            </main>
+
+            {/* 입력 설정 모달 */}
+            {isPopupOpen && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modalContent}>
+                        <h2 style={styles.modalTitle}>시험 선택</h2>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>시험지 선택</label>
+                            <select 
+                                style={styles.select}
+                                value={selectedExamId}
+                                onChange={e => setSelectedExamId(e.target.value)}
+                            >
+                                <option value="">시험지를 선택하세요</option>
+                                {assignedExams.map(exam => (
+                                    <option key={exam.id} value={exam.id}>{exam.title}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>시작 번호</label>
+                            <input 
+                                type="number"
+                                style={styles.input}
+                                value={startNo}
+                                onChange={e => setStartNo(Number(e.target.value))}
+                            />
+                        </div>
+                        <button onClick={handleStart} style={styles.popupStartBtn}>시작하기</button>
+                        <button onClick={() => setIsPopupOpen(false)} style={styles.popupCloseBtn}>닫기</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+    container: { padding: '30px 50px', backgroundColor: '#ffffff', minHeight: '100vh', width: '100%', boxSizing: 'border-box', fontFamily: "'Pretendard', sans-serif", display: 'flex', flexDirection: 'column' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '60px' },
+    userInfo: { display: 'flex', gap: '10px', alignItems: 'baseline' },
+    gradeText: { fontSize: '20px', color: '#636e72', fontWeight: '500' },
+    nameText: { fontSize: '28px', color: '#2d3436', fontWeight: '800' },
+    headerRight: { display: 'flex', gap: '12px' },
+    subBtn: { padding: '10px 18px', backgroundColor: '#f1f2f6', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' },
+    logoutBtn: { padding: '10px 18px', backgroundColor: '#2d3436', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: '600' },
+    main: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' },
+    centerWrapper: { textAlign: 'center' },
+    mainCenterBtn: { padding: '40px 80px', backgroundColor: '#00b894', color: 'white', borderRadius: '20px', fontSize: '32px', fontWeight: '900', border: 'none', cursor: 'pointer', boxShadow: '0 20px 40px rgba(0,184,148,0.25)' },
+    hintText: { marginTop: '25px', color: '#b2bec3', fontSize: '18px', fontWeight: '500' },
+    modalOverlay: { position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+    modalContent: { backgroundColor: '#fff', padding: '40px', borderRadius: '24px', width: '360px', textAlign: 'center' },
+    modalTitle: { marginTop: 0, color: '#2d3436', marginBottom: '25px' },
+    inputGroup: { textAlign: 'left', marginBottom: '15px' },
+    label: { fontSize: '12px', color: '#636e72', marginLeft: '5px' },
+    select: { width: '100%', padding: '12px', marginTop: '5px', borderRadius: '10px', border: '1px solid #dfe6e9', fontSize: '16px', appearance: 'none', backgroundColor: '#fff' },
+    input: { width: '100%', padding: '12px', marginTop: '5px', borderRadius: '10px', border: '1px solid #dfe6e9', boxSizing: 'border-box', fontSize: '16px' },
+    popupStartBtn: { width: '100%', padding: '15px', backgroundColor: '#00b894', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' },
+    popupCloseBtn: { width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#b2bec3', border: 'none', cursor: 'pointer', marginTop: '5px' },
+    gridWrapper: { textAlign: 'center', width: '100%', maxWidth: '500px' },
+    gridTitle: { marginBottom: '25px', color: '#2d3436' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' },
+    qButton: { height: '70px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', fontSize: '22px', fontWeight: '900', borderRadius: '15px', cursor: 'pointer' },
+    actionRow: { display: 'flex', gap: '15px', marginTop: '35px' },
+    saveBtn: { flex: 2, padding: '20px', backgroundColor: '#2d3436', color: '#fff', borderRadius: '15px', fontSize: '20px', fontWeight: 'bold', border: 'none', cursor: 'pointer' },
+    cancelBtn: { flex: 1, padding: '20px', backgroundColor: '#f1f2f6', borderRadius: '15px', fontSize: '18px', border: 'none', cursor: 'pointer' }
+};
+
+export default StudentMain;

@@ -1,0 +1,31 @@
+{
+  "name": "simple-diagnostic-system",
+  "version": "1.0.0",
+  "description": "Supabase 기반 진단평가 시스템",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "typescript",
+    "supabase",
+    "diagnostic"
+  ],
+  "author": "보희설의_사랑하는_자기",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vite": "^5.1.4"
+  }
+}

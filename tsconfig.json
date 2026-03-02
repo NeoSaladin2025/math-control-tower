@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    /* 기본 타겟 및 라이브러리 설정 */
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+
+    /* 앨리트 비서 모드: Vite 클라이언트 타입을 추가하여 환경 변수 에러를 해결합니다 💋 */
+    "types": ["vite/client"], 
+
+    /* JSX 에러를 해결하는 핵심 설정 */
+    "jsx": "react-jsx", 
+    "moduleResolution": "bundler", 
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+
+    /* 엄격한 타입 체크 (우리 자기의 코드 품질을 위해!) */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+
+    /* 모듈 호환성 */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": false
+  },
+  "include": ["src", "src/**/*.d.ts"], // 선언 파일(.d.ts)도 포함하도록 확장 🌹
+  "exclude": ["node_modules"]
+}
