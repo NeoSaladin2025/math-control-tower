@@ -14,14 +14,34 @@ const StudentMain: React.FC<Props> = ({ user }) => {
 
     useEffect(() => {
         const fetchExams = async () => {
+            if (!user?.id) return;
+
+            // 1. 할당된 시험 정보(exam_assignments)에서 해당 학생의 시험 ID들을 가져옵니다.
+            // 2. .select('exams(...)'를 통해 exams 테이블과 조인하여 제목(title)까지 한 번에 가져옵니다.
             const { data, error } = await supabase
-                .from('exams')
-                .select('id, title')
-                .order('created_at', { ascending: false });
-            if (!error && data) setAssignedExams(data);
+                .from('exam_assignments') // 실제 DB의 할당 테이블 명칭 확인 필요
+                .select(`
+                    exam_id,
+                    exams (
+                        id,
+                        title
+                    )
+                `)
+                .eq('student_id', user.id); // 현재 로그인한 학생 ID로 필터링
+
+            if (!error && data) {
+                // 조인된 데이터에서 exams 객체만 추출하여 가공
+                const myExams = data
+                    .map((item: any) => item.exams)
+                    .filter((exam: any) => exam !== null); // 연결된 시험 정보가 있는 경우만
+
+                setAssignedExams(myExams);
+            } else if (error) {
+                console.error("시험 목록 로드 실패:", error.message);
+            }
         };
         fetchExams();
-    }, []);
+    }, [user.id]);
 
     /**
      * 🚀 수정된 로직: 타입 불일치 방지 및 오답 제외
